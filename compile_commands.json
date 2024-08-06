@@ -1,0 +1,42 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-g",
+      "-c",
+      "main.c"
+    ],
+    "directory": "/Users/bajzc/Cproject/tiger/chap1",
+    "file": "/Users/bajzc/Cproject/tiger/chap1/main.c"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-g",
+      "-c",
+      "prog1.c"
+    ],
+    "directory": "/Users/bajzc/Cproject/tiger/chap1",
+    "file": "/Users/bajzc/Cproject/tiger/chap1/prog1.c"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-g",
+      "-c",
+      "slp.c"
+    ],
+    "directory": "/Users/bajzc/Cproject/tiger/chap1",
+    "file": "/Users/bajzc/Cproject/tiger/chap1/slp.c"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-g",
+      "-c",
+      "util.c"
+    ],
+    "directory": "/Users/bajzc/Cproject/tiger/chap1",
+    "file": "/Users/bajzc/Cproject/tiger/chap1/util.c"
+  }
+]
