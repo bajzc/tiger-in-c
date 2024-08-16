@@ -11,10 +11,10 @@ lex.yy.o: lex.yy.c tokens.h errormsg.h util.h
 	cc -g -c lex.yy.c
 
 lex.yy.c: tiger.lex
-	lex tiger.lex
+	lex -v tiger.lex
 
 util.o: util.c util.h
 	cc -g -c util.c
 
 clean: 
-	rm -f a.out util.o driver.o lex.yy.o lex.yy.c errormsg.o
+	rm -f a.out util.o driver.o lex.yy.o lex.yy.c errormsg.o lextest

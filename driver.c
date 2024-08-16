@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "util.h"
 #include "errormsg.h"
 #include "tokens.h"
@@ -19,7 +20,7 @@ string toknames[] = {
 };
 
 
-string tokname(tok) {
+string tokname(int tok) {
   return tok<257 || tok>299 ? "BAD_TOKEN" : toknames[tok-257];
 }
 
@@ -32,8 +33,11 @@ int main(int argc, char **argv) {
    tok=yylex();
    if (tok==0) break;
    switch(tok) {
-   case ID: case STRING:
+   case ID: 
      printf("%10s %4d %s\n",tokname(tok),EM_tokPos,yylval.sval);
+     break;
+   case STRING:
+     printf("%10s %4d\n>%s<\n",tokname(tok),EM_tokPos,yylval.sval);
      break;
    case INT:
      printf("%10s %4d %d\n",tokname(tok),EM_tokPos,yylval.ival);
