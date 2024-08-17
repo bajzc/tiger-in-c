@@ -1,8 +1,10 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "util.h"
 #include "errormsg.h"
 
 extern int yyparse(void);
+extern int yydebug;
 
 void parse(string fname) 
 {EM_reset(fname);
@@ -14,6 +16,7 @@ void parse(string fname)
 
 int main(int argc, char **argv) {
  if (argc!=2) {fprintf(stderr,"usage: a.out filename\n"); exit(1);}
+ yydebug = 0;
  parse(argv[1]);
  return 0;
 }
