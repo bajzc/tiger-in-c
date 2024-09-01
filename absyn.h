@@ -5,9 +5,22 @@
  * Linked list types end with "..list"
  */
 
-/* Type Definitions */
+// Aviod recursive includes and definitions
+#if ! defined YYLTYPE && ! defined YYLTYPE_IS_DECLARED
+typedef struct YYLTYPE YYLTYPE;
+struct YYLTYPE
+{
+  int first_line;
+  int first_column;
+  int last_line;
+  int last_column;
+};
+# define YYLTYPE_IS_DECLARED 1
+# define YYLTYPE_IS_TRIVIAL 1
+#endif
 
-typedef int A_pos;
+/* Type Definitions */
+typedef YYLTYPE A_pos;
 
 typedef struct A_var_ *A_var;
 typedef struct A_exp_ *A_exp;

@@ -1,29 +1,41 @@
-a.out: parsetest.o y.tab.o lex.yy.o errormsg.o util.o
-	cc -g parsetest.o y.tab.o lex.yy.o errormsg.o util.o
+a.out: parse.o tiger.tab.o lex.yy.o errormsg.o util.o prabsyn.o absyn.o symbol.o table.o
+	cc -g parse.o tiger.tab.o lex.yy.o errormsg.o util.o prabsyn.o absyn.o symbol.o table.o
 
-parsetest.o: parsetest.c errormsg.h util.h
-	cc -g -c parsetest.c
+parse.o: parse.c errormsg.h util.h parse.h tiger.tab.h
+	cc -g -c parse.c
 
-y.tab.o: y.tab.c
-	cc -g -c y.tab.c
+prabsyn.o: prabsyn.c absyn.h
+	cc -g -c prabsyn.c
 
-y.tab.c: tiger.grm
-	yacc -dv tiger.grm
+absyn.o: absyn.c tiger.tab.h
+	cc -g -c absyn.c
 
-y.tab.h: y.tab.c
-	echo "y.tab.h was created at the same time as y.tab.c"
+symbol.o: symbol.c table.h
+	cc -g -c symbol.c
+
+table.o: table.c
+	cc -g -c table.c
+
+tiger.tab.o: tiger.tab.c
+	cc -g -c tiger.tab.c
+
+tiger.tab.c: tiger.y
+	bison -dv tiger.y
+
+tiger.tab.h: tiger.tab.c
+	@echo "tiger.tab.h was created at the same time as tiger.tab.c"
 
 errormsg.o: errormsg.c errormsg.h util.h
 	cc -g -c errormsg.c
 
-lex.yy.o: lex.yy.c y.tab.h errormsg.h util.h
+lex.yy.o: lex.yy.c tiger.tab.h errormsg.h util.h
 	cc -g -c lex.yy.c
 
-#lex.yy.c: tiger.lex
-#	lex tiger.lex
+lex.yy.c: tiger.lex
+	flex tiger.lex
 
 util.o: util.c util.h
 	cc -g -c util.c
 
 clean: 
-	rm -f a.out util.o parsetest.o lex.yy.o errormsg.o y.tab.c y.tab.h y.tab.o
+	rm -f a.out *.o lex.yy.c tiger.output tiger.tab.c tiger.tab.h
