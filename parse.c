@@ -9,6 +9,8 @@
 #include "absyn.h"
 #include "errormsg.h"
 #include "prabsyn.h"
+#include "types.h"
+#include "semant.h"
 #include "parse.h"
 
 extern int yyparse(void);
@@ -28,11 +30,15 @@ int main(int argc, char **argv) {
     fprintf(stderr, "usage: a.out filename\n");
     exit(1);
   }
-  printf("start\n");
+  fprintf(stderr,"call parse\n");
   if (parse(argv[1]) == NULL) {
     fprintf(stderr, "parser error\n");
     exit(1);
   }
-  pr_exp(stdout, absyn_root, 0);
+  /* fprintf(stderr,"call pr_exp\n"); */
+  /* pr_exp(stdout, absyn_root, 0); */
+	/* fflush(stdout); */
+  fprintf(stderr, "\ncall SEM_transProg\n");
+  SEM_transProg(absyn_root);
   return 0;
 }

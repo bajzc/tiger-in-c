@@ -29,7 +29,7 @@ Ty_ty Ty_Void(void);
 
 Ty_ty Ty_Record(Ty_fieldList fields);
 Ty_ty Ty_Array(Ty_ty ty);
-Ty_ty Ty_Name(S_symbol sym, Ty_ty ty);
+Ty_ty Ty_Name(S_symbol sym, Ty_ty ty); // 用于递归类型占位
 
 Ty_tyList Ty_TyList(Ty_ty head, Ty_tyList tail);
 Ty_field Ty_Field(S_symbol name, Ty_ty ty);

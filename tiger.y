@@ -8,10 +8,7 @@
 
 int yylex(void); /* function prototype */
 
-void yyerror(char *s)
-{
-  EM_error(EM_tokPos, "%s", s);
-}
+void yyerror(char *s);
 
 A_exp absyn_root = NULL;
 %}
@@ -87,11 +84,11 @@ exp:
   { $$ = A_VarExp(@$, $1); }
 | NIL
   { $$ = A_NilExp(@$); }
-/* Sequencing (exp,exp{,exp ...}) */
+/* Sequencing (exp;exp{;exp ...}) */
 | LPAREN exp_sequence RPAREN
   { $$ = A_SeqExp(@1, $2); }
 | LPAREN RPAREN
-  { $$ = NULL; } // TODO
+  { $$ = NULL; }
 | INT
   { $$ = A_IntExp(@$, $1); }
 | STRING
@@ -101,7 +98,7 @@ exp:
   { $$ = A_OpExp(@$, A_minusOp, A_IntExp(@$, 0), $2); }
 /* Function call */
 | ID LPAREN RPAREN
-  { $$ = A_CallExp(@$, S_Symbol($1), NULL); } // TODO
+  { $$ = A_CallExp(@$, S_Symbol($1), NULL); }
 | ID LPAREN exp_list RPAREN
   { $$ = A_CallExp(@$, S_Symbol($1), $3); }
 /* Arithmetic */
@@ -256,3 +253,9 @@ lvalue:
   { $$ = A_SubscriptVar(@$, $1, $3); }
 | ID LBRACK exp RBRACK
   { $$ = A_SubscriptVar(@$, A_SimpleVar(@1, S_Symbol($1)), $3); }
+%%
+void yyerror(char *s)
+{
+  EM_error(yylloc, "%s", s);
+
+}

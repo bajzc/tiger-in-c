@@ -21,7 +21,7 @@
   do {                                                                         \
     comment_nest -= 1;                                                         \
     if (comment_nest < 0)                                                      \
-      EM_error(EM_tokPos, "comment doesn't match");                            \
+      EM_error(yylloc, "comment doesn't match");                               \
     else if (comment_nest == 0)                                                \
       BEGIN(INITIAL);                                                          \
   } while (0)
@@ -34,9 +34,7 @@
     columnPos += yyleng;                                                       \
   }
 
-int charPos = 1;
 int columnPos = 1;
-
 int comment_nest = 0;
 
 char string_buf[1024];
@@ -44,15 +42,8 @@ char *str_ptr;
 
 int yywrap(void)
 {
- charPos=1;
+ columnPos=1;
  return 1;
-}
-
-
-void adjust(void)
-{
- EM_tokPos=charPos;
- charPos+=yyleng;
 }
 
 %}
@@ -61,20 +52,20 @@ void adjust(void)
 /* location tracking */
 %option yylineno
 %%
-" "	 {adjust();}
-\n	 {adjust(); EM_newline(); columnPos = 1;}
-\t       {adjust();}
-"/*"     {adjust(); COMMENT_IN;}
-\"  	 {adjust(); str_ptr = string_buf; BEGIN(STR);}
+" "	 {}
+\n	 {columnPos = 1;}
+\t       {}
+"/*"     {COMMENT_IN;}
+\"  	 {str_ptr = string_buf; BEGIN(STR);}
 <STR>{ /* https://www.cs.virginia.edu/~cr4bd/flex-manual/Start-Conditions.html */
-\" 	 {adjust(); *str_ptr = '\0'; yylval.sval = String(string_buf);
+\" 	 {*str_ptr = '\0'; yylval.sval = String(string_buf);
 	  BEGIN(INITIAL); return STRING;}
-\\[0-9]{3} {adjust();
+\\[0-9]{3} {
             char x = (char)(C2N(yytext[1])*100+C2N(yytext[2])*10+C2N(yytext[3]));
 			*str_ptr++ = x;}
-\\n 	 {adjust(); *str_ptr++ = '\n';}
-\\t 	 {adjust(); *str_ptr++ = '\t';}
-\\\^.    {adjust();
+\\n 	 {*str_ptr++ = '\n';}
+\\t 	 {*str_ptr++ = '\t';}
+\\\^.    {
         switch(yytext[2]){
 		case '@':
 		  *str_ptr++ = 0x00; // NULL
@@ -113,9 +104,9 @@ void adjust(void)
 		default:
 		  assert(0);
 		}}
-\\\\     {adjust(); *str_ptr++ = '\\';}
-\\\"     {adjust(); *str_ptr++ = '\"';}
-\\(\t|\n|" ")+\\ {adjust();}
+\\\\     {*str_ptr++ = '\\';}
+\\\"     {*str_ptr++ = '\"';}
+\\(\t|\n|" ")+\\ {}
 [^\\\n\"]+        {
             char *yptr = yytext;
             while ( *yptr )
@@ -123,53 +114,53 @@ void adjust(void)
             }
 }
 <COMMENT>{
-"/*"     {adjust(); COMMENT_IN;}
-\n 	 {adjust(); EM_newline();}
-"*/"	 {adjust(); COMMENT_OUT;}
-. 	 {adjust(); continue;}
+"/*"     {COMMENT_IN;}
+\n 	 {columnPos = 1;}
+"*/"	 {COMMENT_OUT;}
+. 	 {continue;}
 }
-","	 {adjust(); return COMMA;}
-":"      {adjust(); return COLON;}
-";"      {adjust(); return SEMICOLON;}
-"("      {adjust(); return LPAREN;}
-")"	 {adjust(); return RPAREN;}
-"["      {adjust(); return LBRACK;}
-"]"	 {adjust(); return RBRACK;}
-"{"	 {adjust(); return LBRACE;}
-"}"	 {adjust(); return RBRACE;}
-"."	 {adjust(); return DOT;}
-"+"	 {adjust(); return PLUS;}
-"-" 	 {adjust(); return MINUS;}
-"*"	 {adjust(); return TIMES;}
-"/"   	 {adjust(); return DIVIDE;}
-":="  	 {adjust(); return ASSIGN;}
-"="      {adjust(); return EQ;}
-"<>"     {adjust(); return NEQ;}
-"<"  	 {adjust(); return LT;}
-"<="  	 {adjust(); return LE;}
-">"  	 {adjust(); return GT;}
-">="  	 {adjust(); return GE;}
-"&"  	 {adjust(); return AND;}
-"|"  	 {adjust(); return OR;}
-while	 {adjust(); return WHILE;}
-for  	 {adjust(); return FOR;}
-to 	     {adjust(); return TO;}
-break    {adjust(); return BREAK;}
-let      {adjust(); return LET;}
-in       {adjust(); return IN;}
-end      {adjust(); return END;}
-function {adjust(); return FUNCTION;}
-var      {adjust(); return VAR;}
-type     {adjust(); return TYPE;}
-array    {adjust(); return ARRAY;}
-if       {adjust(); return IF;}
-then     {adjust(); return THEN;}
-else     {adjust(); return ELSE;}
-do       {adjust(); return DO;}
-of       {adjust(); return OF;}
-nil      {adjust(); return NIL;}
+","	 {return COMMA;}
+":"      {return COLON;}
+";"      {return SEMICOLON;}
+"("      {return LPAREN;}
+")"	 {return RPAREN;}
+"["      {return LBRACK;}
+"]"	 {return RBRACK;}
+"{"	 {return LBRACE;}
+"}"	 {return RBRACE;}
+"."	 {return DOT;}
+"+"	 {return PLUS;}
+"-" 	 {return MINUS;}
+"*"	 {return TIMES;}
+"/"   	 {return DIVIDE;}
+":="  	 {return ASSIGN;}
+"="      {return EQ;}
+"<>"     {return NEQ;}
+"<"  	 {return LT;}
+"<="  	 {return LE;}
+">"  	 {return GT;}
+">="  	 {return GE;}
+"&"  	 {return AND;}
+"|"  	 {return OR;}
+while	 {return WHILE;}
+for  	 {return FOR;}
+to 	 {return TO;}
+break    {return BREAK;}
+let      {return LET;}
+in       {return IN;}
+end      {return END;}
+function {return FUNCTION;}
+var      {return VAR;}
+type     {return TYPE;}
+array    {return ARRAY;}
+if       {return IF;}
+then     {return THEN;}
+else     {return ELSE;}
+do       {return DO;}
+of       {return OF;}
+nil      {return NIL;}
 
-[a-zA-Z][a-zA-Z0-9_]* {adjust(); yylval.sval=String(yytext); return ID;}
-[0-9]+	 {adjust(); yylval.ival=atoi(yytext); return INT;}
+[a-zA-Z][a-zA-Z0-9_]* {yylval.sval=String(yytext); return ID;}
+[0-9]+	 {yylval.ival=atoi(yytext); return INT;}
 
-.	 {adjust(); EM_error(EM_tokPos,"illegal token");}
+.	 {EM_error(yylloc, "illegal token");}

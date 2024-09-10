@@ -74,15 +74,18 @@ static char str_ty[][12] = {
 /* This will infinite loop on mutually recursive types */
 void Ty_print(Ty_ty t)
 {
+	fflush(stderr);
   if (t == NULL) printf("null");
   else { printf("%s", str_ty[t->kind]);
          if (t->kind == Ty_name) {
 	   printf(", %s", S_name(t->u.name.sym)); }
        }
+	fflush(stdout);
 }
 
 void TyList_print(Ty_tyList list)
 {
+	fflush(stderr);
   if (list == NULL) printf("null");
   else {
     printf("TyList( ");
@@ -91,5 +94,6 @@ void TyList_print(Ty_tyList list)
     TyList_print(list->tail);
     printf(")");
   }
+	fflush(stdout);
 }
 

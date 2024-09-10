@@ -73,6 +73,9 @@ struct A_exp_
 	      struct {A_decList decs; A_exp body;} let;
 	      struct {S_symbol typ; A_exp size, init;} array;
 	    } u;
+			 // The Language Manual is not clear about this: (exp) should or should not produce value
+			 // here is a compromise
+			 /* int noValue; // set when exp in parentheses, ignore when it's algebra exp */
      };
 
 struct A_dec_ 

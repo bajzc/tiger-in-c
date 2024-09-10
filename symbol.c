@@ -4,6 +4,8 @@
 #include "symbol.h"
 #include "table.h"
 
+int vLevel = 0, tLevel = 0;
+
 struct S_symbol_ {string name; S_symbol next;};
 
 static S_symbol mksymbol(string name, S_symbol next)
@@ -48,23 +50,42 @@ S_table S_empty(void)
  return TAB_empty();
 }
 
+static struct S_symbol_ marksym = {"<mark>",0};
+
 void S_enter(S_table t, S_symbol sym, void *value) {
-  TAB_enter(t,sym,value);
+	if(sym!=&marksym)
+  fprintf(stderr, "S_enter[v%d][t%d]: new %s %p\n",vLevel,tLevel, S_name(sym), value);
+  TAB_enter(t, sym, value);
 }
 
 void *S_look(S_table t, S_symbol sym) {
   return TAB_look(t,sym);
 }
 
-static struct S_symbol_ marksym = {"<mark>",0};
-
-void S_beginScope(S_table t)
-{ S_enter(t,&marksym,NULL);
+void S_beginScope(S_table t, int isV) {
+  if (isV){
+    fprintf(stderr, "beginScope[v%d->%d][t%d]\n", vLevel, vLevel + 1, tLevel);
+		vLevel++;
+	}
+  else{
+    fprintf(stderr, "beginScope[v%d][t%d->%d]\n", vLevel, tLevel, tLevel + 1);
+		tLevel++;
+	}
+  S_enter(t, &marksym, NULL);
 }
 
-void S_endScope(S_table t)
-{S_symbol s;
-  do s=TAB_pop(t);
+void S_endScope(S_table t, int isV) {
+  if (isV){
+	  fprintf(stderr, "endScope[v%d->%d][t%d]\n", vLevel, vLevel - 1, tLevel);
+		vLevel--;
+	}
+  else{
+    fprintf(stderr, "endScope[v%d][t%d->%d]\n", vLevel, tLevel, tLevel - 1);
+		tLevel--;
+	}
+  S_symbol s;
+  do
+    s = TAB_pop(t);
   while (s != &marksym);
 }
 
