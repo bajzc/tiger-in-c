@@ -1,0 +1,6 @@
+*.o
+*cache*
+*.json
+test*
+vgcore*
+.idea
