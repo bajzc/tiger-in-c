@@ -1,9 +1,11 @@
-CC = clang
-CFLAGS = -g3 -O0 -Wall
-# CFLAGS = $(CFLAGS) -fsanitize=address
+CC = cc
+CFLAGS = -g3 -O0 -Wall -D DEBUG=1 -D DEBUG2=0
+# CFLAGS += -fsanitize=address
 
-a.out: parse.o tiger.tab.o lex.yy.o errormsg.o util.o prabsyn.o absyn.o symbol.o table.o types.o semant.o env.o
-	$(CC) $(CFLAGS) parse.o tiger.tab.o lex.yy.o errormsg.o util.o prabsyn.o absyn.o symbol.o table.o types.o semant.o env.o
+all: a.out
+
+a.out: parse.o tiger.tab.o lex.yy.o errormsg.o util.o prabsyn.o absyn.o symbol.o table.o types.o semant.o env.o escape.o translate.o temp.o riscvframe.o
+	$(CC) $(CFLAGS) *.o
 
 env.o: env.c
 	$(CC) $(CFLAGS) -c env.c
@@ -49,6 +51,18 @@ lex.yy.c: tiger.lex
 
 util.o: util.c util.h
 	$(CC) $(CFLAGS) -c util.c
+
+escape.o: escape.c
+	$(CC) $(CFLAGS) -c escape.c
+
+translate.o: translate.c
+	$(CC) $(CFLAGS) -c translate.c
+
+temp.o: temp.c
+	$(CC) $(CFLAGS) -c temp.c
+
+riscvframe.o: riscvframe.c
+	$(CC) $(CFLAGS) -c riscvframe.c
 
 clean: 
 	rm -f a.out *.o lex.yy.c tiger.output tiger.tab.c tiger.tab.h

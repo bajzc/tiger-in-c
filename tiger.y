@@ -13,6 +13,8 @@ void yyerror(char *s);
 A_exp absyn_root = NULL;
 %}
 
+%locations
+
 %union {
 	int pos;
 	int ival;
@@ -71,7 +73,6 @@ A_exp absyn_root = NULL;
 %left TIMES DIVIDE
 %left UMINUS
 
-%locations
 %%
 
 program:
@@ -128,7 +129,7 @@ exp:
   { $$ = A_IfExp(@$, $1, $3, A_IntExp(@3, 0)); }
 | exp OR exp
   { $$ = A_IfExp(@$, $1, A_IntExp(@2, 1), $3); }
-/* Record FIXIT */
+/* Record FIX */
 | ID LBRACE record_list RBRACE
   { $$ = A_RecordExp(@$, S_Symbol($1), $3); }
 | ID LBRACE RBRACE
