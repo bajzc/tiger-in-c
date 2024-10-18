@@ -60,14 +60,12 @@ F_frame F_newFrame(Temp_label name, U_boolList formals) {
   frame->frame_label = name;
   frame->stack_size = 0;
   bool escape;
-  F_accessList l = NULL;
 
   if (formals) { // the static links
     escape = formals->head;
-    frame->formals_list = checked_malloc(sizeof(*l));
-    l = frame->formals_list;
-    l->head = F_allocLocal(frame, escape);
-    assert(l->head->kind == inFrame);
+    frame->formals_list = NULL;
+    F_allocLocal(frame, escape);
+    assert(frame->formals_list->head->kind == inFrame);
     debug("%s: installed static links\n", Temp_labelstring(name));
     formals = formals->tail;
   } else { // the global stack
@@ -78,9 +76,7 @@ F_frame F_newFrame(Temp_label name, U_boolList formals) {
 
   while (formals) {
     escape = formals->head;
-    l->tail = checked_malloc(sizeof(*l));
-    l = l->tail;
-    l->head = F_allocLocal(frame, escape); // TODO how to make sure they are in a0-a7?
+    F_allocLocal(frame, escape); // TODO how to make sure they are in a0-a7?
     debug("%s: install new param (escape=%d)\n", Temp_labelstring(name),
           escape);
     formals = formals->tail;
@@ -101,6 +97,4 @@ void F_printAccess(F_access access) {
   }
 }
 
-string F_frameLable(F_frame f){
-	return Temp_labelstring(f->frame_label);
-}
+string F_frameLable(F_frame f) { return Temp_labelstring(f->frame_label); }
