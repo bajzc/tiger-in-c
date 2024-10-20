@@ -18,6 +18,12 @@ static string fileName = "";
 
 extern FILE *yyin;
 
+/**
+ * @brief print error message and quit
+ * @param pos position of current token(s), updated by Bison
+ * @param message error message to print
+ * @param ... vargs
+ */
 void EM_error(A_pos pos, char *message, ...) {
   va_list ap;
   anyErrors = TRUE;
@@ -38,6 +44,10 @@ void EM_error(A_pos pos, char *message, ...) {
   exit(-1);
 }
 
+/**
+ * @brief redirect file descriptor of parser
+ * @param fname file name(path)
+ */
 void EM_reset(string fname) {
   anyErrors = FALSE;
   fileName = fname;

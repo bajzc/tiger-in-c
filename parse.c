@@ -34,14 +34,16 @@ int main(int argc, char **argv) {
     printf("parser error\n");
     exit(1);
   }
-  /* fflush(stdout); */
+  fflush(stdout);
   debug("call Esc_findEscape()\n");
-	Esc_findEscape(absyn_root);
+	// Esc_findEscape(absyn_root);
 
+#if DEBUG2
   debug("call pr_exp()\n");
 	fflush(stderr);
   pr_exp(stdout, absyn_root, 0);
 	fflush(stdout);
+#endif
 
   debug("call SEM_transProg()\n");
   SEM_transProg(absyn_root);

@@ -1,6 +1,6 @@
-CC = cc
-CFLAGS = -g3 -O0 -Wall -D DEBUG=1 -D DEBUG2=0
-CFLAGS += -fsanitize=address
+CC = gcc
+CFLAGS = -g -O0 -Wall -D DEBUG=1 -D DEBUG2=0
+CFLAGS += -fsanitize=leak
 
 all: a.out
 

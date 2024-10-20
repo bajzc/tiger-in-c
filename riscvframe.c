@@ -5,23 +5,56 @@
 #include "frame.h"
 #include "util.h"
 
-#define WORD_SIZE 8 // pointer size in bytes in RV64
-#define ARG_IN_REG 8   // a0-a7
+#define ARG_IN_REG 8 // a0-a7
+const int F_wordSize = 4;
+F_fragList F_fragments = NULL;
 
 struct F_access_ {
   enum { inFrame, inReg } kind;
   union {
     int offset;
     Temp_temp reg;
-
   } u;
 };
 
 struct F_frame_ {
   Temp_label frame_label;
-  int stack_size;            // the number of locals allocated so far
+  int stack_size; // the number of locals allocated so far
   F_accessList formals_list; // the locations of all the formals
 };
+
+/* |  ..       ..  |                  */
+/* |  ARGUMENT 2   | <- incoming arguments */
+/* |  ARGUMENT 1   |                  */
+/* |  STATIC LINKS | <- FRAME POINTER */
+/* ---------------------------------- */
+/* |  LOCAL VAR    | <- current frame */
+/* |  ..    ..     |                  */
+/* |  return addr  |                  */
+/* | temp save reg |                  */
+/* -----------------                  */
+/* |  ARGUMENT m   |                  */
+/* |  ARGUMENT ..  |                  */
+/* |  ARGUMENT 1   |                  */
+/* |  STATIC LINKS | <- STACK POINTER */
+/* ---------------------------------- */
+/* |               | <- next frame    */
+
+F_frag F_string(Temp_label lab, string str) {
+  F_frag f = F_StringFrag(lab, str);
+  F_fragments = F_FragList(f, F_fragments);
+  return f;
+}
+
+Temp_temp F_FP(void) { return Temp_newtemp(); }
+
+T_exp F_Exp(F_access acc, T_exp framePtr) {
+  if (acc->kind == inReg) {
+    return T_Temp(acc->u.reg);
+  } else {
+    return T_Mem(T_Binop(T_plus, framePtr, T_Const(acc->u.offset)));
+  }
+}
 
 static F_access InFrame(int offset) {
   F_access f = checked_malloc(sizeof(*f));
@@ -41,9 +74,8 @@ F_access F_allocLocal(F_frame f, bool escape) {
   F_access ret = NULL;
   assert(f);
   if (escape) {
-    debug("%s: call InFrame(%d)\n", Temp_labelstring(f->frame_label),
-          f->stack_size * WORD_SIZE * -1);
-    ret = InFrame(f->stack_size * WORD_SIZE * -1);
+    debug("%s: call InFrame(%d)\n", Temp_labelstring(f->frame_label), f->stack_size * F_wordSize * -1);
+    ret = InFrame(f->stack_size * F_wordSize * -1);
     f->stack_size += 1;
   } else
     ret = InReg(Temp_newtemp());
@@ -55,7 +87,7 @@ F_access F_allocLocal(F_frame f, bool escape) {
 }
 
 F_frame F_newFrame(Temp_label name, U_boolList formals) {
-  debug("%s\n", Temp_labelstring(name));
+  debug("'%s'\n", Temp_labelstring(name));
   F_frame frame = checked_malloc(sizeof(*frame));
   frame->frame_label = name;
   frame->stack_size = 0;
@@ -77,8 +109,7 @@ F_frame F_newFrame(Temp_label name, U_boolList formals) {
   while (formals) {
     escape = formals->head;
     F_allocLocal(frame, escape); // TODO how to make sure they are in a0-a7?
-    debug("%s: install new param (escape=%d)\n", Temp_labelstring(name),
-          escape);
+    debug("%s: install new param (escape=%d)\n", Temp_labelstring(name), escape);
     formals = formals->tail;
   }
 
@@ -91,10 +122,40 @@ F_accessList F_formals(F_frame f) { return f->formals_list; }
 void F_printAccess(F_access access) {
   assert(access);
   if (access->kind == inFrame) {
-    printf("Frame[%d]\n", access->u.offset);
+    debug("Frame[%d]\n", access->u.offset);
   } else {
-    printf("Temp Reg[%d]\n", access->u.reg->num);
+    debug("Temp Reg[%d]\n", access->u.reg->num);
   }
 }
 
-string F_frameLable(F_frame f) { return Temp_labelstring(f->frame_label); }
+string F_frameLabel(F_frame f) { return Temp_labelstring(f->frame_label); }
+
+T_exp F_externalCall(string s, T_expList args) {
+  // TODO adjust for underscore label when linking
+  return T_Call(T_Name(Temp_namedlabel(s)), args);
+}
+
+F_frag F_StringFrag(Temp_label lab, string str) {
+  F_frag f = checked_malloc(sizeof(*f));
+  f->kind = F_stringFrag;
+  f->u.stringg.label = lab;
+  f->u.stringg.str = str;
+  return f;
+}
+
+F_frag F_ProcFrag(T_stm body, F_frame frame) {
+  F_frag f = checked_malloc(sizeof(*f));
+  f->kind = F_procFrag;
+  f->u.proc.body = body;
+  f->u.proc.frame = frame;
+  return f;
+}
+
+F_fragList F_FragList(F_frag head, F_fragList tail) {
+  F_fragList l = checked_malloc(sizeof(*l));
+  l->head = head;
+  l->tail = tail;
+  return l;
+}
+
+T_stm F_procEntryExit1(F_frame frame, T_stm stm) { return stm; }

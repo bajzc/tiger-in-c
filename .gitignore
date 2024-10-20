@@ -4,3 +4,4 @@
 test*
 vgcore*
 .idea
+/lex.yy.c
