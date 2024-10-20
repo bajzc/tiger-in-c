@@ -446,10 +446,11 @@ void transDec(S_table venv, S_table tenv, A_dec d, Tr_level level) {
               str_ty[resultTy->kind], str_ty[funRetTy->kind]);
       }
       S_endScope(venv, 1);
-			
+
 #if DEBUG
-			debug("call Tr_printFormals on function %s(%s)\n", S_name(f->name), F_frameLable(level->frame));
-			Tr_printFormals(Tr_formals(level));
+      debug("call Tr_printFormals on function %s(%s)\n", S_name(f->name),
+            F_frameLable(level->frame));
+      Tr_printFormals(Tr_formals(level));
 #endif
 
       level = level->parent;
@@ -560,4 +561,7 @@ Ty_ty transTy(S_table tenv, A_ty a) {
 
 void SEM_transProg(A_exp exp) {
   transExp(E_base_venv(), E_base_tenv(), exp, Tr_outermost());
+  debug("call Tr_printFormals on function printlist(%s)\n",
+        Temp_labelstring(Tr_outermost()->name));
+  Tr_printFormals(Tr_formals(Tr_outermost()));
 }

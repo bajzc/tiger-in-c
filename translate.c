@@ -8,17 +8,20 @@ struct Tr_access_ {
   F_access access;
 };
 
-static Tr_level OUTER_MOST;
+static Tr_level OUTER_MOST = NULL;
 
 Tr_level Tr_outermost(void) {
-  debug("init outermost level\n");
-  Tr_level t = checked_malloc(sizeof(*t));
-  t->frame = F_newFrame(Temp_namedlabel("global"), NULL);
-  t->parent = NULL;
-  t->name = Temp_namedlabel("prelude");
-  t->formals = NULL;
-  OUTER_MOST = t;
-  return t;
+  if (!OUTER_MOST) {
+    debug("init outermost level\n");
+    Tr_level t = checked_malloc(sizeof(*t));
+    t->frame = F_newFrame(Temp_namedlabel("global"), NULL);
+    t->parent = NULL;
+    t->name = Temp_namedlabel("prelude");
+    t->formals = NULL;
+    OUTER_MOST = t;
+    return t;
+  }
+	return OUTER_MOST;
 }
 
 Tr_access Tr_allocLocal(Tr_level level, bool escape) {
@@ -57,10 +60,8 @@ Tr_accessList Tr_formals(Tr_level level) {
   for (; f; f = f->tail, l = l->tail) {
     Tr_accessList p = checked_malloc(sizeof(*p));
     p->head = checked_malloc(sizeof(*(p->head)));
-    p->head->access = 
-            f->head;
-    p->head->level =
-            level;
+    p->head->access = f->head;
+    p->head->level = level;
     p->tail = NULL;
     l->tail = p;
   }
@@ -68,12 +69,11 @@ Tr_accessList Tr_formals(Tr_level level) {
 }
 
 void Tr_printFormals(Tr_accessList formals) {
-  debug("-----\n");
-  fflush(stderr);
+  debug("vvvvv\n");
   Tr_access p = NULL;
   assert(formals->head);
-  printf("static links: ");
   F_printAccess(formals->head->access);
+  debug("^ static links\n");
   formals = formals->tail;
   while (formals) {
     p = formals->head;
@@ -81,5 +81,5 @@ void Tr_printFormals(Tr_accessList formals) {
     formals = formals->tail;
   }
   fflush(stdout);
-  debug("-----\n");
+  debug("^^^^^\n");
 }

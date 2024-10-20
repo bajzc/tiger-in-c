@@ -91,9 +91,9 @@ F_accessList F_formals(F_frame f) { return f->formals_list; }
 void F_printAccess(F_access access) {
   assert(access);
   if (access->kind == inFrame) {
-    printf("Frame[%d]\n", access->u.offset);
+    debug("Frame[%d]\n", access->u.offset);
   } else {
-    printf("Temp Reg[%d]\n", access->u.reg->num);
+    debug("Temp Reg[%d]\n", access->u.reg->num);
   }
 }
 
