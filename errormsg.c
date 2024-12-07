@@ -4,13 +4,13 @@
  *
  */
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
-#include "util.h"
-#include "symbol.h"
+
 #include "absyn.h"
 #include "errormsg.h"
+#include "util.h"
 
 bool anyErrors = FALSE;
 
@@ -24,7 +24,7 @@ extern FILE *yyin;
  * @param message error message to print
  * @param ... vargs
  */
-void EM_error(A_pos pos, char *message, ...) {
+_Noreturn void EM_error(A_pos pos, char *message, ...){
   va_list ap;
   anyErrors = TRUE;
 
@@ -53,7 +53,7 @@ void EM_reset(string fname) {
   fileName = fname;
   yyin = fopen(fname, "r");
   if (!yyin) {
-    EM_error((A_pos){0}, "cannot open");
+    EM_error((A_pos) {0}, "cannot open");
     exit(1);
   }
 }

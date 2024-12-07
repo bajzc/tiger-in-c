@@ -109,14 +109,16 @@ Tr_exp Tr_eqExpString(Tr_exp l, A_oper op, Tr_exp r) {
  * @param l list of field expr
  * @param size number of fields in record
  */
-Tr_exp Tr_recordExp(Tr_exp* l, size_t size) {
+Tr_exp Tr_recordExp(Tr_exp *l, size_t size) {
   T_exp r = T_Temp(Temp_newtemp());
   // initRecord(size_t size_in_byte);
 
-  T_exp res_head = T_Eseq(T_Seq(
-      T_Move(r, F_externalCall("initRecord",
-                               T_ExpList(T_Const(size * F_wordSize), NULL))),
-      NULL), r);
+  T_exp res_head = T_Eseq(
+      T_Seq(T_Move(r,
+                   F_externalCall("initRecord",
+                                  T_ExpList(T_Const(size * F_wordSize), NULL))),
+            NULL),
+      r);
   T_stm *rightmost = &(res_head->u.ESEQ.stm->u.SEQ.right);
   for (int i = 0; i < size; i++) {
     if (l[i] != NULL) {
@@ -131,7 +133,7 @@ Tr_exp Tr_recordExp(Tr_exp* l, size_t size) {
 }
 
 Tr_exp Tr_arrayExp(Tr_exp init, size_t size) {
-  T_exp
+  // TODO
 }
 
 Tr_exp Tr_seqExp() {
@@ -348,18 +350,17 @@ Tr_level Tr_newLevel(Tr_level parent, Temp_label name, U_boolList formals) {
 
 Tr_accessList Tr_formals(Tr_level level) {
   F_accessList f = F_formals(level->frame);
-  Tr_accessList l, l_head = NULL;
+  Tr_accessList l = NULL, l_head = NULL;
   if (f == NULL) {
     return NULL;
-  } else if (f->head) {
-    l = checked_malloc(sizeof(*l));
-    l_head = l;
-    l->head = checked_malloc(sizeof(*(l->head)));
-    l->head->level = level;
-    l->head->access = f->head;
-    l->tail = NULL;
-    f = f->tail;
   }
+  l = checked_malloc(sizeof(*l));
+  l_head = l;
+  l->head = checked_malloc(sizeof(*(l->head)));
+  l->head->level = level;
+  l->head->access = f->head;
+  l->tail = NULL;
+  f = f->tail;
   for (; f; f = f->tail, l = l->tail) {
     Tr_accessList p = checked_malloc(sizeof(*p));
     p->head = checked_malloc(sizeof(*(p->head)));

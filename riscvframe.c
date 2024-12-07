@@ -51,9 +51,8 @@ Temp_temp F_FP(void) { return Temp_newtemp(); }
 T_exp F_Exp(F_access acc, T_exp framePtr) {
   if (acc->kind == inReg) {
     return T_Temp(acc->u.reg);
-  } else {
-    return T_Mem(T_Binop(T_plus, framePtr, T_Const(acc->u.offset)));
   }
+  return T_Mem(T_Binop(T_plus, framePtr, T_Const(acc->u.offset)));
 }
 
 static F_access InFrame(int offset) {
@@ -74,7 +73,8 @@ F_access F_allocLocal(F_frame f, bool escape) {
   F_access ret = NULL;
   assert(f);
   if (escape) {
-    debug("%s: call InFrame(%d)\n", Temp_labelstring(f->frame_label), f->stack_size * F_wordSize * -1);
+    debug("%s: call InFrame(%d)\n", Temp_labelstring(f->frame_label),
+          f->stack_size * F_wordSize * -1);
     ret = InFrame(f->stack_size * F_wordSize * -1);
     f->stack_size += 1;
   } else
@@ -109,7 +109,8 @@ F_frame F_newFrame(Temp_label name, U_boolList formals) {
   while (formals) {
     escape = formals->head;
     F_allocLocal(frame, escape); // TODO how to make sure they are in a0-a7?
-    debug("%s: install new param (escape=%d)\n", Temp_labelstring(name), escape);
+    debug("%s: install new param (escape=%d)\n", Temp_labelstring(name),
+          escape);
     formals = formals->tail;
   }
 

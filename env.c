@@ -1,10 +1,11 @@
 /* env.c */
 
+#include <stdio.h>
+
 #include "env.h"
 #include "symbol.h"
 #include "types.h"
 #include "util.h"
-#include <stdio.h>
 
 E_enventry E_VarEntry(Ty_ty ty, Tr_access access) {
   E_enventry entry = checked_malloc(sizeof(*entry));

@@ -1,6 +1,7 @@
 CC = gcc
-CFLAGS = -g -O0 -Wall -D DEBUG=1 -D DEBUG2=0
-CFLAGS += -fsanitize=leak
+CFLAGS = -g -O2 -Wall -D DEBUG=1 -D DEBUG2=0
+#CFLAGS += -fsanitize=address
+# CFLAGS += -fanalyzer
 
 all: a.out
 

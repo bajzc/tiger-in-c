@@ -4,11 +4,12 @@
  * All types and functions declared in this header file begin with "Ty_"
  * Linked list types end with "..list"
  */
-
-#include "types.h"
-#include "symbol.h"
-#include "util.h"
 #include <stdio.h>
+
+
+#include "symbol.h"
+#include "types.h"
+#include "util.h"
 
 static struct Ty_ty_ tynil = {Ty_nil};
 Ty_ty Ty_Nil(void) { return &tynil; }

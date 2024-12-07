@@ -1,7 +1,8 @@
-#include "tree.h"
 #include <stdio.h>
+
 #include "symbol.h"
 #include "temp.h"
+#include "tree.h"
 #include "util.h"
 
 T_expList T_ExpList(T_exp head, T_expList tail) {
@@ -38,6 +39,14 @@ T_stm T_Label(Temp_label label) {
   return p;
 }
 
+/**
+ * @brief jump to exp, common use: T_Jump(l,Temp_LabelList(l,NULL));
+ * @param exp destination address, may be a literal label, as in NAME(lab), or
+ * it may be an address calculated by any other kind of expression
+ * @param labels The list of labels labs specifies all the possible locations
+ * that the expression e can evaluate to; this is necessary for dataflow
+ * analysis later
+ */
 T_stm T_Jump(T_exp exp, Temp_labelList labels) {
   T_stm p = (T_stm) checked_malloc(sizeof *p);
   p->kind = T_JUMP;
@@ -114,6 +123,10 @@ T_exp T_Eseq(T_stm stm, T_exp exp) {
   return p;
 }
 
+/**
+ * @brief The symbolic constant name (corresponding to an assembly language
+ * label)
+ */
 T_exp T_Name(Temp_label name) {
   T_exp p = (T_exp) checked_malloc(sizeof *p);
   p->kind = T_NAME;

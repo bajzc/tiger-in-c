@@ -1,8 +1,9 @@
+#include <stdio.h>
+#include <string.h>
+
 #include "symbol.h"
 #include "table.h"
 #include "util.h"
-#include <stdio.h>
-#include <string.h>
 
 int vLevel = 0, tLevel = 0;
 
@@ -84,5 +85,5 @@ void S_endScope(S_table t, int isV) { // is venv
 }
 
 void S_dump(S_table t, void (*show)(S_symbol sym, void *binding)) {
-  TAB_dump(t, (void (*)(void *, void *))show);
+  TAB_dump(t, (void (*)(void *, void *)) show);
 }

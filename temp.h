@@ -5,11 +5,13 @@
 #ifndef TEMP_H
 #define TEMP_H
 
-#include "symbol.h"
 #include <stdio.h>
+#include "symbol.h"
 
 typedef struct Temp_temp_ *Temp_temp;
-struct Temp_temp_ {int num;};
+struct Temp_temp_ {
+  int num;
+};
 Temp_temp Temp_newtemp(void);
 
 typedef struct Temp_tempList_ *Temp_tempList;
