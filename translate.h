@@ -64,6 +64,10 @@ Tr_exp Tr_recordExp(Tr_exp *l, int size);
 Tr_exp Tr_arrayExp(Tr_exp init, int size);
 Tr_exp Tr_whileExp(Tr_exp cond, Tr_exp body, Temp_label done);
 Tr_exp Tr_breakExp(Temp_label done);
+Tr_exp Tr_forExp(Tr_exp body, Tr_exp var, Tr_exp lo, Tr_exp hi,
+                 Temp_label done);
+Tr_exp Tr_assignExp(Tr_exp lvalue, Tr_exp exp);
+Tr_exp Tr_seqExp(Tr_exp *seqs, int size);
 
 static Tr_exp Tr_Ex(T_exp ex);
 static Tr_exp Tr_Nx(T_stm nx);
@@ -77,7 +81,7 @@ static struct Cx unCx(Tr_exp e);
 
 Tr_exp Tr_simpleVar(Tr_access, Tr_level);
 Tr_exp Tr_fieldVar(Tr_exp record, int offset);
-Tr_exp Tr_subscriptvar(Tr_exp arr, Tr_exp index);
+Tr_exp Tr_subscriptVar(Tr_exp arr, Tr_exp index);
 Tr_exp Tr_nilExp(void);
 Tr_exp Tr_intExp(int a);
 Tr_exp Tr_stringExp(string s);

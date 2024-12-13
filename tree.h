@@ -91,7 +91,7 @@ struct T_exp_ {
 
 T_expList T_ExpList(T_exp head, T_expList tail);
 T_stmList T_StmList(T_stm head, T_stmList tail);
-T_stm T_Seq(T_stm left, T_stm right);
+T_stm T_Seq(T_stm , T_stm );
 T_stm T_Label(Temp_label label);
 T_stm T_Jump(T_exp exp, Temp_labelList labels);
 T_stm T_Cjump(T_relOp op, T_exp left, T_exp right, Temp_label true,

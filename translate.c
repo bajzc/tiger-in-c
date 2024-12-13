@@ -1,6 +1,7 @@
 /* translate.c */
 #include "translate.h"
 #include "absyn.h"
+#include "errormsg.h"
 #include "frame.h"
 #include "temp.h"
 #include "tree.h"
@@ -52,7 +53,7 @@ Tr_exp Tr_stringExp(string s) {
   return Tr_Ex(T_Name(lab));
 }
 
-Tr_exp Tr_callExp() {
+Tr_exp Tr_callExp(Temp_label name){
   // TODO
   return NULL;
 }
@@ -142,47 +143,58 @@ Tr_exp Tr_arrayExp(Tr_exp init, int size) {
       a));
 }
 
-Tr_exp Tr_seqExp() {
-  // TODO
+Tr_exp Tr_seqExp(Tr_exp *seqs, int size) {
+  if (size < 1) {
+    EM_error((A_pos) {0}, "bug? this should cause a syntax error");
+  } else if (size == 1) {
+    return seqs[0];
+  }
+  T_exp seq = T_Eseq(NULL, unEx(seqs[size - 1]));
+  T_stm *rightmost = &seq->u.ESEQ.stm;
+  for (int i = 0; i < size - 1; i++) {
+    *rightmost = T_Seq(unNx(seqs[i]), NULL);
+    rightmost = &(*rightmost)->u.SEQ.right;
+  }
+  return Tr_Ex(seq);
 }
 
-Tr_exp Tr_assignExp() {
-  // TODO
+Tr_exp Tr_assignExp(Tr_exp lvalue, Tr_exp exp) {
+  return Tr_Nx(T_Move(unEx(lvalue), unEx(exp)));
 }
 
 Tr_exp Tr_ifExp(Tr_exp test, Tr_exp then, Tr_exp elsee) {
   // TODO optimise
-  /* if (elsee != NULL) { */
-  /*   debug("if-else-then statement\n"); */
-  /*   if (then->kind == Tr_nx && elsee->kind == Tr_nx) { */
-  /*     debug("'then' and 'elsee' are statements\n"); */
-  /*     T_stm st = NULL, sf = NULL; */
-  /*     Temp_label t = Temp_newlabel(), f = Temp_newlabel(); */
-  /*     st = T_Seq(T_Label(t), then->u.nx); */
-  /*     sf = T_Seq(T_Label(f), elsee->u.nx); */
-  /*     doPatch(test->u.cx.trues, t); */
-  /*     doPatch(test->u.cx.falses, f); */
-  /*     return Tr_Nx((T_Seq(unCx(test).stm, T_Seq(st, sf)))); */
-  /*   } else if (then->kind == Tr_cx || elsee->kind == Tr_cx) { */
-  /*     debug("'then' or 'elsee' is conditional statement\n"); */
-  /*     T_stm st = NULL, sf = NULL; */
-  /*     Temp_label t= Temp_newlabel(), f=Temp_newlabel(); */
-  /*     if(then->kind==Tr_cx){ */
-
-  /*     } */
-  /*   } else { */
-  /*     debug("tradt 'then' and 'elsee' as expressions\n"); */
-  /*   } */
-  /* } else { */
-  /*   debug("if-else statement\n"); */
-  /*   if (then->kind == Tr_nx) { */
-  /*     debug("'then' is a statement\n"); */
-  /*   } else if (then->kind == Tr_cx) { */
-  /*     debug("'then' is a conditional statement\n"); */
-  /*   } else { */
-  /*     debug("treat 'then' as expression\n"); */
-  /*   } */
-  /* } */
+  // if (elsee != NULL) {
+  //   debug("if-else-then statement\n");
+  //   if (then->kind == Tr_nx && elsee->kind == Tr_nx) {
+  //     debug("'then' and 'elsee' are statements\n");
+  //     T_stm st = NULL, sf = NULL;
+  //     Temp_label t = Temp_newlabel(), f = Temp_newlabel();
+  //     st = T_Seq(T_Label(t), then->u.nx);
+  //     sf = T_Seq(T_Label(f), elsee->u.nx);
+  //     doPatch(test->u.cx.trues, t);
+  //     doPatch(test->u.cx.falses, f);
+  //     return Tr_Nx((T_Seq(unCx(test).stm, T_Seq(st, sf))));
+  //   } else if (then->kind == Tr_cx || elsee->kind == Tr_cx) {
+  //     debug("'then' or 'elsee' is conditional statement\n");
+  //     T_stm st = NULL, sf = NULL;
+  //     Temp_label t= Temp_newlabel(), f=Temp_newlabel();
+  //     if(then->kind==Tr_cx){
+  //
+  //     }
+  //  } else {
+  //     debug("tradt 'then' and 'elsee' as expressions\n");
+  //   }
+  // } else {
+  //   debug("if-else statement\n");
+  //   if (then->kind == Tr_nx) {
+  //     debug("'then' is a statement\n");
+  //  } else if (then->kind == Tr_cx) {
+  //     debug("'then' is a conditional statement\n");
+  //   } else {
+  //     debug("treat 'then' as expression\n");
+  //   }
+  // }
   struct Cx cx = unCx(test);
   Temp_temp r = Temp_newtemp(); // result of test
   Temp_label t = Temp_newlabel(), f = Temp_newlabel();
@@ -217,8 +229,17 @@ Tr_exp Tr_whileExp(Tr_exp cond, Tr_exp body, Temp_label done) {
                               T_Label(done)))))));
 }
 
-Tr_exp Tr_forExp() {
-  // TODO
+Tr_exp Tr_forExp(Tr_exp body, Tr_exp var, Tr_exp lo, Tr_exp hi,
+                 Temp_label done) {
+  Temp_label test = Temp_newlabel(), body_start = Temp_newlabel();
+  return Tr_Nx(T_Seq(T_Move(unEx(var), unEx(lo)),
+    T_Seq(T_Label(test),
+      T_Seq(T_Cjump(T_le, unEx(var), unEx(hi), body_start, done),
+        T_Seq(T_Label(body_start),
+          T_Seq(unNx(body),
+            T_Seq(T_Move(unEx(var), T_Binop(T_plus, unEx(var), T_Const(1))),
+              T_Seq(T_Jump(T_Name(test), Temp_LabelList(test, NULL)),
+                T_Label(done)))))))));
 }
 
 Tr_exp Tr_breakExp(Temp_label done) {
@@ -293,6 +314,7 @@ static T_exp unEx(Tr_exp e) {
 
 static T_stm unNx(Tr_exp e) {
   debug("call unNx");
+  assert(e);
   switch (e->kind) {
     case Tr_ex:
       return T_Exp(e->u.ex);

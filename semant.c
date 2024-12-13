@@ -108,6 +108,14 @@ static int fieldNumber(Ty_fieldList record) {
   return i;
 }
 
+static int seqNumber(A_expList l) {
+  int i = 0;
+  for (; l; l = l->tail) {
+    i++;
+  }
+  return i;
+}
+
 struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
                       Temp_label breakk) {
   assert(a);
@@ -232,13 +240,17 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
                    actual_ty(S_look(tenv, a->u.record.typ)));
     }
     case A_seqExp: {
-      struct expty last_ty = expTy(NULL, Ty_Void());
+      struct expty e;
       if (a->u.seq == NULL)
-        return last_ty;
+        EM_error(a->pos, "empty expression");
+      int fieldCount = seqNumber(a->u.seq);
+      Tr_exp *seqs = checked_malloc(sizeof(Tr_exp) * fieldCount);
+      int i = 0;
       for (A_expList l = a->u.seq; l; l = l->tail) {
-        last_ty = transExp(venv, tenv, l->head, level, breakk);
+        e = transExp(venv, tenv, l->head, level, breakk);
+        seqs[i++] = e.exp;
       }
-      return last_ty;
+      return expTy(Tr_seqExp(seqs, fieldCount), e.ty);
     }
     case A_assignExp: {
       struct expty lvalue = transVar(venv, tenv, a->u.assign.var, level);
@@ -248,7 +260,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
       } else if (lvalue.ty->kind != exp.ty->kind)
         EM_error(a->pos, "assign %s type to %s\n", str_ty[exp.ty->kind],
                  str_ty[lvalue.ty->kind]);
-      return expTy(NULL, Ty_Void());
+      return expTy(Tr_assignExp(lvalue.exp, exp.exp), Ty_Void());
     }
     case A_ifExp: {
       assert(a->u.iff.test);
@@ -321,14 +333,18 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
       if (hi.ty->kind != Ty_int)
         EM_error(a->u.forr.hi->pos, "upper bound(%s) should be an integer",
                  str_ty[hi.ty->kind]);
+      Temp_label new_break = Temp_newlabel();
       S_beginScope(venv, 1);
       S_beginScope(tenv, 0);
+      struct expty body;
+      Tr_exp var;
       beginBreakScope();
       {
-        // TODO ensure not assign to var in this scope
-        S_enter(venv, a->u.forr.var,
-                E_VarEntry(lo.ty, Tr_allocLocal(level, a->u.forr.escape)));
-        struct expty body = transExp(venv, tenv, a->u.forr.body, level, breakk);
+        // FIXME ensure not assign to var in this scope
+        Tr_access var_acc = Tr_allocLocal(level, a->u.forr.escape);
+        S_enter(venv, a->u.forr.var, E_VarEntry(lo.ty, var_acc));
+        body = transExp(venv, tenv, a->u.forr.body, level, breakk);
+        var = Tr_simpleVar(var_acc, level);
         if (body.ty->kind != Ty_void)
           EM_error(a->u.forr.body->pos,
                    "for-loop's body must produce no value (%s)",
@@ -337,7 +353,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
       S_endScope(tenv, 0);
       S_endScope(venv, 1);
       endBreakScope();
-      return expTy(NULL, Ty_Void());
+      return expTy(Tr_forExp(body.exp, var, lo.exp, hi.exp, breakk), Ty_Void());
     }
     case A_breakExp:
       if (breakLevel <= 0)
@@ -425,7 +441,7 @@ struct expty transVar(S_table venv, S_table tenv, A_var v, Tr_level level) {
         EM_error(v->u.subscript.exp->pos,
                  "array subscript(%s) is not an integer",
                  str_ty[index.ty->kind]);
-      return expTy(NULL, actual_ty(array.ty->u.array));
+      return expTy(Tr_subscriptVar(array.exp, index.exp), actual_ty(array.ty->u.array));
     }
     default:
       assert(0);
