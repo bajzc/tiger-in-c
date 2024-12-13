@@ -60,14 +60,14 @@ static Ty_ty actual_ty(Ty_ty ty) {
 }
 
 static Ty_tyList makeFormalTyList(S_table tenv, A_fieldList params) {
-  Ty_tyList l, l_head = NULL;
+  Ty_tyList l_head = NULL;
   if (params) {
-    l = Ty_TyList(actual_ty(S_look(tenv, params->head->typ)), NULL);
+    Ty_tyList l = Ty_TyList(actual_ty(S_look(tenv, params->head->typ)), NULL);
     l_head = l;
     params = params->tail;
-  }
-  for (; params; params = params->tail, l = l->tail) {
-    l->tail = Ty_TyList(actual_ty(S_look(tenv, params->head->typ)), NULL);
+    for (; params; params = params->tail, l = l->tail) {
+      l->tail = Ty_TyList(actual_ty(S_look(tenv, params->head->typ)), NULL);
+    }
   }
 #if DEBUG2
   TyList_print(l_head);
@@ -232,9 +232,9 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
                    actual_ty(S_look(tenv, a->u.record.typ)));
     }
     case A_seqExp: {
-      struct expty last_ty;
+      struct expty last_ty = expTy(NULL, Ty_Void());
       if (a->u.seq == NULL)
-        return expTy(NULL, Ty_Void());
+        return last_ty;
       for (A_expList l = a->u.seq; l; l = l->tail) {
         last_ty = transExp(venv, tenv, l->head, level, breakk);
       }
@@ -588,16 +588,16 @@ Ty_ty transTy(S_table tenv, A_ty a) {
     }
     case A_recordTy: {
       A_fieldList l = a->u.record;
-      Ty_fieldList L, L_head = NULL;
+      Ty_fieldList L_head = NULL;
       if (l) {
-        L = Ty_FieldList(Ty_Field(l->head->name, S_look(tenv, l->head->typ)),
-                         NULL);
+        Ty_fieldList L = Ty_FieldList(
+            Ty_Field(l->head->name, S_look(tenv, l->head->typ)), NULL);
         L_head = L;
         l = l->tail;
+        for (; l; l = l->tail, L = L->tail)
+          L->tail = Ty_FieldList(
+              Ty_Field(l->head->name, S_look(tenv, l->head->typ)), NULL);
       }
-      for (; l; l = l->tail, L = L->tail)
-        L->tail = Ty_FieldList(
-            Ty_Field(l->head->name, S_look(tenv, l->head->typ)), NULL);
       return Ty_Record(L_head);
     }
     case A_arrayTy: {
