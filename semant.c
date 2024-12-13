@@ -261,7 +261,8 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
       struct expty then = transExp(venv, tenv, a->u.iff.then, level, breakk);
       if (a->u.iff.elsee) {
         // if-then-else
-        struct expty elsee = transExp(venv, tenv, a->u.iff.elsee, level, breakk);
+        struct expty elsee =
+            transExp(venv, tenv, a->u.iff.elsee, level, breakk);
         if (then.ty->kind != elsee.ty->kind) {
           // see LANG MANUAL A.3.2.nil and MERGE.TIG:22-28
           if (then.ty->kind == Ty_nil && elsee.ty->kind == Ty_record)
@@ -297,8 +298,10 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
                  str_ty[test.ty->kind]);
       beginBreakScope();
       Temp_label new_break = Temp_newlabel();
-      debug("new break label '%s' created at line %d\n",Temp_labelstring(new_break), a->pos.first_line);
-      struct expty body = transExp(venv, tenv, a->u.whilee.body, level, new_break);
+      debug("new break label '%s' created at line %d\n",
+            Temp_labelstring(new_break), a->pos.first_line);
+      struct expty body =
+          transExp(venv, tenv, a->u.whilee.body, level, new_break);
       endBreakScope();
       if (body.ty->kind != Ty_void)
         EM_error(a->u.whilee.body->pos,
@@ -339,7 +342,8 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
     case A_breakExp:
       if (breakLevel <= 0)
         EM_error(a->pos, "'break' statement not in loop");
-      debug("break at line %d jump to label: %s\n", a->pos.first_line,Temp_labelstring(breakk));
+      debug("break at line %d jump to label: %s\n", a->pos.first_line,
+            Temp_labelstring(breakk));
       return expTy(Tr_breakExp(breakk), Ty_Void());
     case A_letExp: {
       S_beginScope(venv, 1);
@@ -411,7 +415,8 @@ struct expty transVar(S_table venv, S_table tenv, A_var v, Tr_level level) {
     case A_subscriptVar: {
       // ID LBRACK exp RBRACK
       struct expty array = transVar(venv, tenv, v->u.subscript.var, level);
-      struct expty index = transExp(venv, tenv, v->u.subscript.exp, level, NULL);
+      struct expty index =
+          transExp(venv, tenv, v->u.subscript.exp, level, NULL);
       if (array.ty->kind != Ty_array)
         EM_error(v->u.subscript.var->pos,
                  "subscripted value(%s) is not an array",
@@ -473,7 +478,8 @@ void transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
           }
           debug2("install function params finished\n");
         }
-        struct expty resultExp = transExp(venv, tenv, l->head->body, level, breakk);
+        struct expty resultExp =
+            transExp(venv, tenv, l->head->body, level, breakk);
         Ty_ty resultTy = actual_ty(resultExp.ty);
         Ty_ty funRetTy = actual_ty(funEntry->u.fun.result);
         if (resultTy->kind != funRetTy->kind) {

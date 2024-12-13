@@ -35,7 +35,7 @@ struct Cx {
 struct Tr_exp_ {
   enum { Tr_ex, Tr_nx, Tr_cx } kind;
   union {
-    // an expresion
+    // an expression
     T_exp ex;
     // no result
     T_stm nx;
@@ -60,8 +60,10 @@ Tr_accessList Tr_formals(Tr_level level);
 Tr_access Tr_allocLocal(Tr_level level, bool escape);
 void Tr_printFormals(Tr_accessList formals);
 Tr_exp Tr_eqExpString(Tr_exp l, A_oper op, Tr_exp r);
-Tr_exp Tr_recordExp(Tr_exp *l, size_t size);
-Tr_exp Tr_arrayExp(Tr_exp init, size_t size);
+Tr_exp Tr_recordExp(Tr_exp *l, int size);
+Tr_exp Tr_arrayExp(Tr_exp init, int size);
+Tr_exp Tr_whileExp(Tr_exp cond, Tr_exp body, Temp_label done);
+Tr_exp Tr_breakExp(Temp_label done);
 
 static Tr_exp Tr_Ex(T_exp ex);
 static Tr_exp Tr_Nx(T_stm nx);

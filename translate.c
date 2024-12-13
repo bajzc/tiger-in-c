@@ -88,9 +88,8 @@ Tr_exp Tr_opExp(Tr_exp l, A_oper op, Tr_exp r) {
     case A_geOp:
       s = T_Cjump(T_ge, L, R, NULL, NULL);
     patch:
-      patchList t = PatchList(&(s->u.CJUMP.true), NULL);
-      patchList f = PatchList(&(s->u.CJUMP.false), NULL);
-      return Tr_Cx(t, f, s);
+      return Tr_Cx(PatchList(&(s->u.CJUMP.true), NULL),
+                   PatchList(&(s->u.CJUMP.false), NULL), s);
   }
   assert(0);
 }
@@ -109,16 +108,16 @@ Tr_exp Tr_eqExpString(Tr_exp l, A_oper op, Tr_exp r) {
  * @param l list of field expr
  * @param size number of fields in record
  */
-Tr_exp Tr_recordExp(Tr_exp *l, size_t size) {
+Tr_exp Tr_recordExp(Tr_exp *l, int size) {
   T_exp r = T_Temp(Temp_newtemp());
   // initRecord(size_t size_in_byte);
-
   T_exp res_head = T_Eseq(
       T_Seq(T_Move(r,
                    F_externalCall("initRecord",
                                   T_ExpList(T_Const(size * F_wordSize), NULL))),
             NULL),
       r);
+
   T_stm *rightmost = &(res_head->u.ESEQ.stm->u.SEQ.right);
   for (int i = 0; i < size; i++) {
     if (l[i] != NULL) {
@@ -132,8 +131,15 @@ Tr_exp Tr_recordExp(Tr_exp *l, size_t size) {
   return Tr_Ex(res_head);
 }
 
-Tr_exp Tr_arrayExp(Tr_exp init, size_t size) {
-  // TODO
+Tr_exp Tr_arrayExp(Tr_exp init, int size) {
+  T_exp a = T_Temp(Temp_newtemp());
+  return Tr_Ex(T_Eseq(
+      T_Seq(
+          T_Move(a, F_externalCall(
+                        "initArray",
+                        T_ExpList(unEx(init), T_ExpList(T_Const(size), NULL)))),
+          NULL),
+      a));
 }
 
 Tr_exp Tr_seqExp() {
@@ -185,7 +191,6 @@ Tr_exp Tr_ifExp(Tr_exp test, Tr_exp then, Tr_exp elsee) {
   if (elsee != NULL) {
     T_exp then_t = unEx(then);
     T_exp elsee_t = unEx(elsee);
-    // TODO Should we jump to a "join" label after each branch?
     return Tr_Nx(
         T_Seq(cx.stm, T_Seq(T_Seq(T_Label(t), T_Move(T_Temp(r), then_t)),
                             T_Seq(T_Label(f), T_Move(T_Temp(r), elsee_t)))));
@@ -195,6 +200,29 @@ Tr_exp Tr_ifExp(Tr_exp test, Tr_exp then, Tr_exp elsee) {
         T_Seq(cx.stm, T_Seq(T_Seq(T_Label(t), T_Move(T_Temp(r), then_t)),
                             T_Seq(T_Label(f), T_Move(T_Temp(r), T_Const(0))))));
   }
+}
+
+Tr_exp Tr_whileExp(Tr_exp cond, Tr_exp body, Temp_label done) {
+  struct Cx cx = unCx(cond);
+  Temp_label t = Temp_newlabel();
+  Temp_label test = Temp_newlabel();
+  doPatch(cx.trues, t);
+  doPatch(cx.falses, done);
+  return Tr_Nx(T_Seq(
+      T_Label(test),
+      T_Seq(cx.stm,
+            T_Seq(T_Label(t),
+                  T_Seq(unNx(body),
+                        T_Seq(T_Jump(T_Name(test), Temp_LabelList(test, NULL)),
+                              T_Label(done)))))));
+}
+
+Tr_exp Tr_forExp() {
+  // TODO
+}
+
+Tr_exp Tr_breakExp(Temp_label done) {
+  return Tr_Nx(T_Jump(T_Name(done), Temp_LabelList(done, NULL)));
 }
 
 static Tr_exp Tr_Ex(T_exp ex) {
@@ -264,6 +292,7 @@ static T_exp unEx(Tr_exp e) {
 }
 
 static T_stm unNx(Tr_exp e) {
+  debug("call unNx");
   switch (e->kind) {
     case Tr_ex:
       return T_Exp(e->u.ex);
