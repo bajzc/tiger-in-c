@@ -5,3 +5,6 @@ test*
 vgcore*
 .idea
 /lex.yy.c
+a.out
+tiger.tab.c
+tiger.tab.h

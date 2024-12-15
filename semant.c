@@ -138,7 +138,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
         Tr_exp *argv = checked_malloc(sizeof(Tr_exp) * argc);
         int i = 0;
         while (e && l) {
-          struct expty eTy = transExp(venv, tenv, e->head, level, break_label);
+          struct expty eTy = transExp(venv, tenv, e->head, level, breakk);
           if (eTy.ty->kind == Ty_nil && l->head->kind == Ty_record)
             ; // OK
           else if (eTy.ty->kind != l->head->kind)
