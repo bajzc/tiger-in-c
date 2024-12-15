@@ -134,8 +134,11 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
       if (funTy && funTy->kind == E_funEntry) {
         Ty_tyList l = funTy->u.fun.formals;
         A_expList e = a->u.call.args;
+        int argc = seqNumber(e);
+        Tr_exp *argv = checked_malloc(sizeof(Tr_exp) * argc);
+        int i = 0;
         while (e && l) {
-          struct expty eTy = transExp(venv, tenv, e->head, level, breakk);
+          struct expty eTy = transExp(venv, tenv, e->head, level, break_label);
           if (eTy.ty->kind == Ty_nil && l->head->kind == Ty_record)
             ; // OK
           else if (eTy.ty->kind != l->head->kind)
@@ -159,12 +162,15 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
           }
           e = e->tail;
           l = l->tail;
+          argv[i++] = eTy.exp;
         }
         if (e)
           EM_error(a->pos, "passed more arguments than needed");
         if (l)
           EM_error(a->pos, "passed less arguments than needed");
-        return expTy(NULL, actual_ty(funTy->u.fun.result));
+        return expTy(Tr_callExp(funTy->u.fun.label, argv, argc, level,
+                                funTy->u.fun.level),
+                     actual_ty(funTy->u.fun.result));
       }
       EM_error(a->pos, "function '%s' not declared", S_name(a->u.call.func));
     }

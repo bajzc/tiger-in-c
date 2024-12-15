@@ -53,9 +53,27 @@ Tr_exp Tr_stringExp(string s) {
   return Tr_Ex(T_Name(lab));
 }
 
-Tr_exp Tr_callExp(Temp_label name){
-  // TODO
-  return NULL;
+Tr_exp Tr_callExp(Temp_label name, Tr_exp *argv, int argc,
+                  Tr_level caller_level, Tr_level callee_level) {
+  T_expList l = NULL, l_head = NULL;
+  for (int i = 0; i < argc; i++) {
+    l = T_ExpList(unEx(argv[i]), l);
+    if (i == 0)
+      l_head = l;
+    l = l->tail;
+  }
+  Tr_level c = caller_level;
+  T_exp static_link = T_Temp(F_FP());
+
+  if (callee_level->parent != c) {
+    while (c) {
+      static_link = T_Mem(static_link);
+      if (callee_level->parent == c->parent)
+        break;
+      c = c->parent;
+    }
+  }
+  return Tr_Ex(T_Call(T_Name(name), T_ExpList(static_link, l_head)));
 }
 
 // string comparison is not handled here
