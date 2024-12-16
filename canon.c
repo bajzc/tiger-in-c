@@ -19,6 +19,30 @@ static struct stmExp StmExp(T_stm s, T_exp e) {
   return r;
 }
 
+static expRefList get_call_rlist(T_exp exp) {
+  if (exp->kind != T_CALL)
+    return NULL;
+
+  expRefList list_head = NULL;
+  expRefList *list_tail = NULL;
+
+  T_expList cur_expList = exp->u.CALL.args;
+
+  while (cur_expList) {
+    if (list_tail == NULL) {
+      list_head = ExpRefList(&cur_expList->head, NULL);
+      list_tail = &list_head;
+    } else {
+      *list_tail = ExpRefList(&cur_expList->head, *list_tail);
+      list_tail = &(*list_tail)->tail;
+    }
+
+    cur_expList = cur_expList->tail;
+  }
+
+  return list_head;
+}
+
 T_stm reorder(const expRefList rlist) {
   T_stm result_head = NULL;
   T_stm *result_tail = NULL;
@@ -28,7 +52,6 @@ T_stm reorder(const expRefList rlist) {
     T_exp *e = cur->head;
     if ((*e)->kind == T_ESEQ) {
       // Pull inner ESEQs out and join sequences together
-      // TODO: Do we need to flatten the SEQ now, or during linearize()?
 
       const T_stm seq = do_stm((*e)->u.ESEQ.stm);
       if (result_tail == NULL) {
@@ -58,9 +81,8 @@ static T_stm do_stm(const T_stm stm) {
                                     ExpRefList(&stm->u.CJUMP.right, NULL))),
                  stm);
     case T_MOVE:
-      // TODO T_CALL
-      // if (stm->u.MOVE.dst->kind == T_TEMP && stm->u.MOVE.src->kind == T_CALL)
-      //   return seq(reorder(get_call_rlist(stm->u.MOVE.src)), stm);
+      if (stm->u.MOVE.dst->kind == T_TEMP && stm->u.MOVE.src->kind == T_CALL)
+        return seq(reorder(get_call_rlist(stm->u.MOVE.src)), stm);
       if (stm->u.MOVE.dst->kind == T_TEMP)
         return seq(reorder(ExpRefList(&stm->u.MOVE.src, NULL)), stm);
       if (stm->u.MOVE.dst->kind == T_MEM)
@@ -73,10 +95,8 @@ static T_stm do_stm(const T_stm stm) {
         return do_stm(T_Seq(s, stm));
       }
     case T_EXP:
-      // TODO T_CALL
-      //   if (stm->u.EXP->kind == T_CALL)
-      //     return seq(reorder(get_call_rlist(stm->u.EXP)), stm);
-      //   else
+      if (stm->u.EXP->kind == T_CALL)
+        return seq(reorder(get_call_rlist(stm->u.EXP)), stm);
       return seq(reorder(ExpRefList(&stm->u.EXP, NULL)), stm);
     default:
       return stm;
@@ -101,9 +121,8 @@ static struct stmExp do_exp(const T_exp exp) {
       struct stmExp x = do_exp(exp->u.ESEQ.exp);
       return StmExp(seq(do_stm(exp->u.ESEQ.stm), x.s), x.e);
     }
-    // TODO T_CALL
-    // case T_CALL:
-    //   return StmExp(reorder(get_call_rlist(exp)), exp);
+    case T_CALL:
+      return StmExp(reorder(get_call_rlist(exp)), exp);
     default:
       return StmExp(reorder(NULL), exp);
   }
