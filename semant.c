@@ -639,5 +639,8 @@ void SEM_transProg(A_exp exp) {
   debug("call Tr_printFormals on outermost evn(%s)\n",
         Temp_labelstring(Tr_outermost()->name));
   Tr_printFormals(Tr_formals(Tr_outermost()));
-  printStmList(stderr, C_linearize(unNx(res.exp)));
+  printf("\nOriginal:\n");
+  printStmList(stdout, T_StmList(unNx(res.exp), NULL));
+  printf("\nLinearized:\n");
+  printStmList(stdout, C_linearize(unNx(res.exp)));
 }

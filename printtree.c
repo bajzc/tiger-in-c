@@ -30,8 +30,10 @@ static void pr_stm(FILE *out, T_stm stm, int d) {
       indent(out, d);
       fprintf(out, "SEQ(\n");
       pr_stm(out, stm->u.SEQ.left, d + 1);
-      fprintf(out, ",\n");
-      pr_stm(out, stm->u.SEQ.right, d + 1);
+      if (stm->u.SEQ.right != NULL) {
+        fprintf(out, ",\n");
+        pr_stm(out, stm->u.SEQ.right, d + 1);
+      }
       fprintf(out, ")");
       break;
     case T_LABEL:
