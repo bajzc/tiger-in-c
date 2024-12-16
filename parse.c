@@ -8,6 +8,8 @@
 #include "errormsg.h"
 #include "escape.h"
 #include "parse.h"
+
+#include "prabsyn.h"
 #include "semant.h"
 #include "util.h"
 

@@ -330,7 +330,7 @@ static T_exp unEx(Tr_exp e) {
   assert(0);
 }
 
-static T_stm unNx(Tr_exp e) {
+T_stm unNx(Tr_exp e) {
   debug("call unNx");
   assert(e);
   switch (e->kind) {

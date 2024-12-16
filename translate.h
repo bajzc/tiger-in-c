@@ -78,7 +78,7 @@ static patchList PatchList(Temp_label *head, patchList tail);
 static void doPatch(patchList tList, Temp_label label);
 static patchList joinPatch(patchList first, patchList second);
 static T_exp unEx(Tr_exp e);
-static T_stm unNx(Tr_exp e);
+T_stm unNx(Tr_exp e);
 static struct Cx unCx(Tr_exp e);
 
 Tr_exp Tr_simpleVar(Tr_access, Tr_level);

@@ -1,7 +1,7 @@
 #include "canon.h"
 
 static bool isNop(T_stm x) {
-  return x->kind == T_EXP && x->u.EXP->kind == T_CONST;
+  return x == NULL || x->kind == T_EXP && x->u.EXP->kind == T_CONST;
 }
 static bool commute(T_stm x, T_stm y) {
   return isNop(x) || y->kind == T_NAME || y->kind == T_CONST;
@@ -71,6 +71,8 @@ T_stm reorder(const expRefList rlist) {
 }
 
 static T_stm do_stm(const T_stm stm) {
+  if (stm == NULL)
+    return NULL;
   switch (stm->kind) {
     case T_SEQ:
       return seq(do_stm(stm->u.SEQ.left), do_stm(stm->u.SEQ.right));
