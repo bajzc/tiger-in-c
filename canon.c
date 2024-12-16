@@ -50,20 +50,17 @@ T_stm reorder(const expRefList rlist) {
   expRefList cur = rlist;
   while (cur) {
     T_exp *e = cur->head;
-    if ((*e)->kind == T_ESEQ) {
-      // Pull inner ESEQs out and join sequences together
+    struct stmExp stm_exp = do_exp(*e);
+    *e = stm_exp.e;
 
-      const T_stm seq = do_stm((*e)->u.ESEQ.stm);
+    if (stm_exp.s != NULL) {
       if (result_tail == NULL) {
-        result_head = seq;
+        result_head = stm_exp.s;
         result_tail = &result_head;
       } else {
-        *result_tail = T_Seq(*result_tail, seq);
+        *result_tail = T_Seq(*result_tail, stm_exp.s);
         result_tail = &(*result_tail)->u.SEQ.right;
       }
-
-      // Pull eseq.exp out
-      *e = (*e)->u.ESEQ.exp;
     }
     cur = cur->tail;
   }

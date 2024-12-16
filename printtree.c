@@ -25,6 +25,8 @@ static char rel_oper[][12] = {"EQ", "NE",  "LT",  "GT",  "LE",
                               "GE", "ULT", "ULE", "UGT", "UGE"};
 
 static void pr_stm(FILE *out, T_stm stm, int d) {
+  if (stm == NULL)
+    return;
   switch (stm->kind) {
     case T_SEQ:
       indent(out, d);
@@ -76,6 +78,8 @@ static void pr_stm(FILE *out, T_stm stm, int d) {
 }
 
 static void pr_tree_exp(FILE *out, T_exp exp, int d) {
+  if (exp == NULL)
+    return;
   switch (exp->kind) {
     case T_BINOP:
       indent(out, d);
