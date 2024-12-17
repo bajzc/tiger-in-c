@@ -70,6 +70,7 @@ Tr_exp Tr_assignExp(Tr_exp lvalue, Tr_exp exp);
 Tr_exp Tr_seqExp(Tr_exp *seqs, int size);
 Tr_exp Tr_callExp(Temp_label name, Tr_exp *argv, int argc,
                   Tr_level caller_level, Tr_level callee_level);
+Tr_exp Tr_letExp(Tr_exp *decs, int size, Tr_exp body);
 
 static Tr_exp Tr_Ex(T_exp ex);
 static Tr_exp Tr_Nx(T_stm nx);

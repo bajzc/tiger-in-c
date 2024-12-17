@@ -46,7 +46,13 @@ F_frag F_string(Temp_label lab, string str) {
   return f;
 }
 
-Temp_temp F_FP(void) { return Temp_newtemp(); }
+static Temp_temp F_fp = NULL;
+Temp_temp F_FP(void) {
+  if (F_fp == NULL) {
+    F_fp = Temp_newtemp();
+  }
+  return F_fp;
+}
 
 T_exp F_Exp(F_access acc, T_exp framePtr) {
   if (acc->kind == inReg) {

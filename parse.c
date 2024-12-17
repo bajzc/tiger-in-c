@@ -10,6 +10,7 @@
 #include "parse.h"
 #include "semant.h"
 #include "util.h"
+#include "prabsyn.h"
 
 extern int yyparse(void);
 extern A_exp absyn_root;

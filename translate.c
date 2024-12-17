@@ -250,18 +250,29 @@ Tr_exp Tr_whileExp(Tr_exp cond, Tr_exp body, Temp_label done) {
 Tr_exp Tr_forExp(Tr_exp body, Tr_exp var, Tr_exp lo, Tr_exp hi,
                  Temp_label done) {
   Temp_label test = Temp_newlabel(), body_start = Temp_newlabel();
-  return Tr_Nx(T_Seq(T_Move(unEx(var), unEx(lo)),
-    T_Seq(T_Label(test),
-      T_Seq(T_Cjump(T_le, unEx(var), unEx(hi), body_start, done),
-        T_Seq(T_Label(body_start),
-          T_Seq(unNx(body),
-            T_Seq(T_Move(unEx(var), T_Binop(T_plus, unEx(var), T_Const(1))),
-              T_Seq(T_Jump(T_Name(test), Temp_LabelList(test, NULL)),
-                T_Label(done)))))))));
+  return Tr_Nx(T_Seq(
+      T_Move(unEx(var), unEx(lo)),
+      T_Seq(T_Label(test),
+            T_Seq(T_Cjump(T_le, unEx(var), unEx(hi), body_start, done),
+                  T_Seq(T_Label(body_start),
+                        T_Seq(unNx(body),
+                              T_Seq(T_Move(unEx(var), T_Binop(T_plus, unEx(var),
+                                                              T_Const(1))),
+                                    T_Seq(T_Jump(T_Name(test),
+                                                 Temp_LabelList(test, NULL)),
+                                          T_Label(done)))))))));
 }
 
 Tr_exp Tr_breakExp(Temp_label done) {
   return Tr_Nx(T_Jump(T_Name(done), Temp_LabelList(done, NULL)));
+}
+
+Tr_exp Tr_letExp(Tr_exp *decs, int size, Tr_exp body) {
+  T_exp exp = unEx(body);
+  for (int i = 0; i < size; i++) {
+    exp = T_Eseq(unNx(decs[i]), exp);
+  }
+  return Tr_Ex(exp);
 }
 
 static Tr_exp Tr_Ex(T_exp ex) {
@@ -418,6 +429,7 @@ Tr_level Tr_newLevel(Tr_level parent, Temp_label name, U_boolList formals) {
 }
 
 Tr_accessList Tr_formals(Tr_level level) {
+  // FIXME is the first in the list static link? see page 144
   F_accessList f = F_formals(level->frame);
   Tr_accessList l = NULL, l_head = NULL;
   if (f == NULL) {
