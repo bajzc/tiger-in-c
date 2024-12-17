@@ -3,6 +3,7 @@
 #include "absyn.h"
 #include "errormsg.h"
 #include "frame.h"
+#include "printtree.h"
 #include "temp.h"
 #include "tree.h"
 #include "util.h"
@@ -275,6 +276,8 @@ Tr_exp Tr_letExp(Tr_exp *decs, int size, Tr_exp body) {
     if (decs[i] != NULL)
       exp = T_Eseq(unNx(decs[i]), exp);
   }
+  debug("call printStmList on let dec\n");
+  printStmList(stderr, T_StmList(unNx(Tr_Ex(exp)), NULL));
   return Tr_Ex(exp);
 }
 
@@ -283,6 +286,8 @@ void Tr_procEntryExit(Tr_level level, Tr_exp body, Tr_accessList formals) {
   F_frag frag = F_ProcFrag(stm, level->frame);
   F_fragments = F_FragList(frag, F_fragments);
   F_procEntryExit1(level->frame, stm);
+  debug("call printStmList on function '%s'\n", Temp_labelstring(level->name));
+  printStmList(stderr, T_StmList(stm, NULL));
 }
 
 static Tr_exp Tr_Ex(T_exp ex) {
@@ -475,6 +480,4 @@ void Tr_printFormals(Tr_accessList formals) {
   debug("^^^^^^^^^^\n");
 }
 
-F_fragList Tr_getResult(void) {
-  return F_fragments;
-}
+F_fragList Tr_getResult(void) { return F_fragments; }

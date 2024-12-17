@@ -7,6 +7,8 @@
 #include "errormsg.h"
 #include "escape.h"
 #include "semant.h"
+
+#include "printtree.h"
 #include "symbol.h"
 #include "translate.h"
 #include "types.h"
@@ -656,8 +658,10 @@ Ty_ty transTy(S_table tenv, A_ty a) {
 }
 
 void SEM_transProg(A_exp exp) {
-  transExp(E_base_venv(), E_base_tenv(), exp, Tr_outermost(), NULL);
+  struct expty e = transExp(E_base_venv(), E_base_tenv(), exp, Tr_outermost(), NULL);
   debug("call Tr_printFormals on outermost evn(%s)\n",
         Temp_labelstring(Tr_outermost()->name));
   Tr_printFormals(Tr_formals(Tr_outermost()));
+  debug("call printStmList on outermost\n");
+  printStmList(stderr, T_StmList(T_Exp(e.exp->u.ex), NULL));
 }
