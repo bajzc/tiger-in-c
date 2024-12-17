@@ -7,6 +7,6 @@
 #include "util.h"
 
 void Esc_findEscape(A_exp exp);
-U_boolList genEscapeList(E_enventry funEntry);
+U_boolList genEscapeList(Ty_tyList formals);
 
 #endif //ESCAPE_H

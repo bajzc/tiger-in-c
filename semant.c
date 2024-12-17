@@ -137,7 +137,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
         Tr_exp *argv = checked_malloc(sizeof(Tr_exp) * argc);
         int i = 0;
         while (e && l) {
-          struct expty eTy = transExp(venv, tenv, e->head, level, breakk);
+          struct expty eTy = transExp(venv, tenv, e->head, level, break_label);
           if (eTy.ty->kind == Ty_nil && l->head->kind == Ty_record)
             ; // OK
           else if (eTy.ty->kind != l->head->kind)
@@ -381,7 +381,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
       S_beginScope(venv, 1);
       S_beginScope(tenv, 0);
       int dec_number = decNumber(a->u.let.decs);
-      Tr_exp *decs = checked_malloc(sizeof(Tr_exp)*dec_number);
+      Tr_exp *decs = checked_malloc(sizeof(Tr_exp) * dec_number);
       int i = 0;
       for (A_decList d = a->u.let.decs; d; d = d->tail) {
         decs[i++] = transDec(venv, tenv, d->head, level, break_label);
@@ -494,7 +494,10 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
           resultTy = S_look(tenv, f->result);
         formalTys = makeFormalTyList(tenv, f->params);
         // push the formal list into env instead of pushing individually
-        S_enter(venv, f->name, E_FunEntry(formalTys, resultTy));
+        Temp_label label = Temp_newlabel();
+        S_enter(venv, f->name,
+                E_FunEntry(Tr_newLevel(level, label, genEscapeList(formalTys)),
+                           label, formalTys, resultTy));
       }
       // Second, translate function body
       for (A_fundecList l = d->u.function; l; l = l->tail) {
@@ -504,7 +507,7 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
 
         S_beginScope(venv, 1);
         debug2("call Tr_newLevel\n");
-        level = Tr_newLevel(level, Temp_newlabel(), genEscapeList(funEntry));
+        level = funEntry->u.fun.level;
         {
           Ty_tyList t = funEntry->u.fun.formals;
           debug2("install function params\n\n");
@@ -540,6 +543,7 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
         Tr_printFormals(Tr_formals(level));
 #endif
 
+        Tr_procEntryExit(level, resultExp.exp, Tr_formals(level));
         level = level->parent;
       }
       return Tr_nilExp();

@@ -7,7 +7,6 @@
 
 #define ARG_IN_REG 8 // a0-a7
 const int F_wordSize = 4;
-F_fragList F_fragments = NULL;
 
 struct F_access_ {
   enum { inFrame, inReg } kind;
@@ -40,18 +39,20 @@ struct F_frame_ {
 /* ---------------------------------- */
 /* |               | <- next frame    */
 
-F_frag F_string(Temp_label lab, string str) {
-  F_frag f = F_StringFrag(lab, str);
-  F_fragments = F_FragList(f, F_fragments);
-  return f;
-}
-
 static Temp_temp F_fp = NULL;
 Temp_temp F_FP(void) {
   if (F_fp == NULL) {
     F_fp = Temp_newtemp();
   }
   return F_fp;
+}
+
+static Temp_temp F_rv = NULL;
+Temp_temp F_RV(void) {
+  if (F_rv == NULL) {
+    F_rv = Temp_newtemp();
+  }
+  return F_rv;
 }
 
 T_exp F_Exp(F_access acc, T_exp framePtr) {

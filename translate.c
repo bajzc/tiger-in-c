@@ -8,6 +8,7 @@
 #include "util.h"
 
 static Tr_level OUTER_MOST = NULL;
+static F_fragList F_fragments = NULL;
 
 Tr_exp Tr_simpleVar(Tr_access access, Tr_level level) {
   T_exp f = F_Exp(access->access, T_Temp(F_FP()));
@@ -49,7 +50,8 @@ Tr_exp Tr_intExp(int a) { return Tr_Ex(T_Const(a)); }
 
 Tr_exp Tr_stringExp(string s) {
   Temp_label lab = Temp_newlabel();
-  F_string(lab, s);
+  F_frag f = F_StringFrag(lab, s);
+  F_fragments = F_FragList(f, F_fragments);
   return Tr_Ex(T_Name(lab));
 }
 
@@ -270,9 +272,17 @@ Tr_exp Tr_breakExp(Temp_label done) {
 Tr_exp Tr_letExp(Tr_exp *decs, int size, Tr_exp body) {
   T_exp exp = unEx(body);
   for (int i = 0; i < size; i++) {
-    exp = T_Eseq(unNx(decs[i]), exp);
+    if (decs[i] != NULL)
+      exp = T_Eseq(unNx(decs[i]), exp);
   }
   return Tr_Ex(exp);
+}
+
+void Tr_procEntryExit(Tr_level level, Tr_exp body, Tr_accessList formals) {
+  T_stm stm = T_Move(T_Temp(F_RV()), unEx(body));
+  F_frag frag = F_ProcFrag(stm, level->frame);
+  F_fragments = F_FragList(frag, F_fragments);
+  F_procEntryExit1(level->frame, stm);
 }
 
 static Tr_exp Tr_Ex(T_exp ex) {
@@ -342,7 +352,7 @@ static T_exp unEx(Tr_exp e) {
 }
 
 static T_stm unNx(Tr_exp e) {
-  debug("call unNx");
+  debug("call unNx\n");
   assert(e);
   switch (e->kind) {
     case Tr_ex:
@@ -463,4 +473,8 @@ void Tr_printFormals(Tr_accessList formals) {
   }
   fflush(stdout);
   debug("^^^^^^^^^^\n");
+}
+
+F_fragList Tr_getResult(void) {
+  return F_fragments;
 }
