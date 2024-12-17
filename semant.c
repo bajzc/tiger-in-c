@@ -510,23 +510,23 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
 
         S_beginScope(venv, 1);
         debug2("call Tr_newLevel\n");
-        level = funEntry->u.fun.level;
+        Tr_level fun_level = funEntry->u.fun.level;
         {
           Ty_tyList t = funEntry->u.fun.formals;
-          debug2("install function params\n\n");
 #if DEBUG2
+          debug2("install function params\n\n");
           TyList_print(t);
 #endif
           for (A_fieldList L = f->params; L; L = L->tail, t = t->tail) {
             debug2("functionDec: %s->%s\n", S_name(L->head->name),
                    str_ty[t->head->kind]);
             S_enter(venv, L->head->name,
-                    E_VarEntry(t->head, Tr_allocLocal(level, L->head->escape)));
+                    E_VarEntry(t->head, Tr_allocLocal(fun_level, L->head->escape)));
           }
           debug2("install function params finished\n");
         }
         struct expty resultExp =
-            transExp(venv, tenv, l->head->body, level, break_label);
+            transExp(venv, tenv, l->head->body, fun_level, break_label);
         Ty_ty resultTy = actual_ty(resultExp.ty);
         Ty_ty funRetTy = actual_ty(funEntry->u.fun.result);
         if (resultTy->kind != funRetTy->kind) {
@@ -542,11 +542,11 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
 
 #if DEBUG
         debug("call Tr_printFormals on function '%s'(%s)\n", S_name(f->name),
-              F_frameLabel(level->frame));
-        Tr_printFormals(Tr_formals(level));
+              F_frameLabel(fun_level->frame));
+        Tr_printFormals(Tr_formals(fun_level));
 #endif
 
-        Tr_procEntryExit(level, resultExp.exp, Tr_formals(level));
+        Tr_procEntryExit(fun_level, resultExp.exp, Tr_formals(fun_level));
         level = level->parent;
       }
       return Tr_nilExp();
@@ -560,10 +560,11 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
               S_name(d->u.var.typ), str_ty[ty->kind]);
         debug("varDec: ty: %p e.ty: %p\n", ty, e.ty);
         if (ty->kind == Ty_record && e.ty->kind == Ty_nil) {
+          E_enventry var =
+              E_VarEntry(ty, Tr_allocLocal(level, d->u.var.escape));
           // NULL
-          S_enter(venv, d->u.var.var,
-                  E_VarEntry(ty, Tr_allocLocal(level, d->u.var.escape)));
-          break;
+          S_enter(venv, d->u.var.var, var);
+          return Tr_assignExp(Tr_simpleVar(var->u.var.access, level), e.exp);
         } else if (ty->kind != Ty_record && e.ty->kind == Ty_nil)
           EM_error(d->pos, "only record type can be assigned a nil value (%s)",
                    str_ty[ty->kind]);
@@ -602,11 +603,11 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
       for (l = d->u.type; l; l = l->tail) {
         h = l->head;
         if (h->ty->kind == A_recordTy) {
-          debug("typeDec: record %s->%p: ", S_name(h->name),
+          fprintf(stderr,"typeDec: record %s->%p: ", S_name(h->name),
                 actual_ty(S_look(tenv, h->name)));
           for (Ty_fieldList fl = actual_ty(S_look(tenv, h->name))->u.record; fl;
                fl = fl->tail) {
-            debug("%s: %s->%p; ", S_name(fl->head->name),
+            fprintf(stderr,"%s: %s->%p; ", S_name(fl->head->name),
                   str_ty[actual_ty(fl->head->ty)->kind],
                   actual_ty(fl->head->ty));
           }

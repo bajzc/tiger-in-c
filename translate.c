@@ -53,6 +53,7 @@ Tr_exp Tr_stringExp(string s) {
   Temp_label lab = Temp_newlabel();
   F_frag f = F_StringFrag(lab, s);
   F_fragments = F_FragList(f, F_fragments);
+  debug("str: '%s' as label '%s'\n",s, Temp_labelstring(lab));
   return Tr_Ex(T_Name(lab));
 }
 
@@ -357,7 +358,7 @@ static T_exp unEx(Tr_exp e) {
 }
 
 T_stm unNx(Tr_exp e) {
-  debug("call unNx\n");
+  debug2("call unNx\n");
   assert(e);
   switch (e->kind) {
     case Tr_ex:
@@ -380,7 +381,7 @@ T_stm unNx(Tr_exp e) {
 }
 
 static struct Cx unCx(Tr_exp e) {
-  debug("call unCx()\n");
+  debug2("call unCx()\n");
   switch (e->kind) {
     case Tr_ex: {
       if (e->u.ex->kind == T_CONST) {
@@ -450,6 +451,7 @@ Tr_accessList Tr_formals(Tr_level level) {
   if (f == NULL) {
     return NULL;
   }
+  f=f->tail; // skip static link
   l = checked_malloc(sizeof(*l));
   l_head = l;
   l->head = checked_malloc(sizeof(*(l->head)));

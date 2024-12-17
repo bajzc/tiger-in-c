@@ -48,6 +48,7 @@ S_symbol S_Symbol(string name) {
 string S_name(S_symbol sym) {
   if (sym != NULL)
     return sym->name;
+  return "NULL";
 }
 
 S_table S_empty(void) { return TAB_empty(); }
