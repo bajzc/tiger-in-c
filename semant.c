@@ -145,13 +145,13 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
                      "expected '%s' but argument is of "
                      "type '%s'",
                      str_ty[l->head->kind], str_ty[eTy.ty->kind]);
-          if (actual_ty(eTy.ty) != actual_ty(l->head)) {
+          else if(actual_ty(eTy.ty) != actual_ty(l->head)) {
             if (eTy.ty->kind == Ty_array)
               EM_error(e->head->pos,
                        "different array type as function "
                        "was defined %p:%p",
                        actual_ty(eTy.ty), actual_ty(l->head));
-            else if (eTy.ty->kind == Ty_record)
+            if (eTy.ty->kind == Ty_record)
               EM_error(e->head->pos,
                        "different record type as function "
                        "was defined %p:%p",
