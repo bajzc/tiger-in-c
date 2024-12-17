@@ -40,8 +40,7 @@ static void traverseExp(S_table env, int depth, A_exp a);
 static void traverseDec(S_table env, int depth, A_dec d);
 static void traverseVar(S_table env, int depth, A_var v);
 
-U_boolList genEscapeList(E_enventry funEntry) {
-  Ty_tyList formals = funEntry->u.fun.formals;
+U_boolList genEscapeList(Ty_tyList formals) {
   U_boolList l = NULL, l_head = NULL;
   if (formals) {
     l = U_BoolList(TRUE, NULL);

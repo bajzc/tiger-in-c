@@ -38,7 +38,6 @@ struct F_fragList_ {
 };
 
 extern const int F_wordSize;
-extern F_fragList F_fragments;
 
 F_frag F_StringFrag(Temp_label label, string str);
 F_frag F_ProcFrag(T_stm body, F_frame frame);
@@ -46,7 +45,6 @@ F_fragList F_FragList(F_frag head, F_fragList tail);
 
 F_frame F_newFrame(Temp_label name, U_boolList formals);
 
-Temp_label F_name(F_frame f);
 F_accessList F_formals(F_frame f);
 F_access F_allocLocal(F_frame f, bool escape);
 
@@ -58,8 +56,6 @@ T_exp F_Exp(F_access acc, T_exp framePtr);
 
 // call external helper function, eg. `initArray`
 T_exp F_externalCall(string s, T_expList args);
-
-F_frag F_string(Temp_label lab, string str);
 
 T_stm F_procEntryExit1(F_frame frame, T_stm stm);
 
