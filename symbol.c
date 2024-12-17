@@ -45,7 +45,10 @@ S_symbol S_Symbol(string name) {
   return sym;
 }
 
-string S_name(S_symbol sym) { return sym->name; }
+string S_name(S_symbol sym) {
+  if (sym != NULL)
+    return sym->name;
+}
 
 S_table S_empty(void) { return TAB_empty(); }
 
