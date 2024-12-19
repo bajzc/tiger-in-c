@@ -17,7 +17,6 @@ struct Tr_accessList_ {
   Tr_access head;
   Tr_accessList tail;
 };
-Tr_accessList Tr_AccessList(Tr_access head, Tr_accessList tail);
 
 struct Tr_level_ {
   F_frame frame;
@@ -54,6 +53,7 @@ struct Tr_access_ {
   F_access access;
 };
 
+Tr_accessList Tr_AccessList(Tr_access head, Tr_accessList tail);
 Tr_level Tr_outermost(void);
 Tr_level Tr_newLevel(Tr_level parent, Temp_label name, U_boolList formals);
 Tr_accessList Tr_formals(Tr_level level);
