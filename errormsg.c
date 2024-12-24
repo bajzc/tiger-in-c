@@ -24,7 +24,7 @@ extern FILE *yyin;
  * @param message error message to print
  * @param ... vargs
  */
-_Noreturn void EM_error(A_pos pos, char *message, ...){
+_Noreturn void EM_error(A_pos pos, char *message, ...) {
   va_list ap;
   anyErrors = TRUE;
 

@@ -2,8 +2,8 @@
 #ifndef SEMANT_H
 #define SEMANT_H
 #include "absyn.h"
-#include "types.h"
 #include "translate.h"
+#include "types.h"
 void SEM_transProg(A_exp exp);
 
 struct expty transVar(S_table venv, S_table tenv, A_var v, Tr_level level);

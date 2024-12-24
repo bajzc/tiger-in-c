@@ -143,6 +143,8 @@ F_frame F_newFrame(Temp_label name, U_boolList formals) {
   return frame;
 }
 
+Temp_label F_name(F_frame f) { return f->frame_label; }
+
 F_accessList F_formals(F_frame f) { return f->formals_list; }
 
 void F_printAccess(F_access access) {

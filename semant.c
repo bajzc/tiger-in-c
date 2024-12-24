@@ -148,7 +148,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
                      "expected '%s' but argument is of "
                      "type '%s'",
                      str_ty[l->head->kind], str_ty[eTy.ty->kind]);
-          else if(actual_ty(eTy.ty) != actual_ty(l->head)) {
+          else if (actual_ty(eTy.ty) != actual_ty(l->head)) {
             if (eTy.ty->kind == Ty_array)
               EM_error(e->head->pos,
                        "different array type as function "
@@ -520,8 +520,9 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
           for (A_fieldList L = f->params; L; L = L->tail, t = t->tail) {
             debug2("functionDec: %s->%s\n", S_name(L->head->name),
                    str_ty[t->head->kind]);
-            S_enter(venv, L->head->name,
-                    E_VarEntry(t->head, Tr_allocLocal(fun_level, L->head->escape)));
+            S_enter(
+                venv, L->head->name,
+                E_VarEntry(t->head, Tr_allocLocal(fun_level, L->head->escape)));
           }
           debug2("install function params finished\n");
         }
@@ -603,13 +604,13 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
       for (l = d->u.type; l; l = l->tail) {
         h = l->head;
         if (h->ty->kind == A_recordTy) {
-          fprintf(stderr,"typeDec: record %s->%p: ", S_name(h->name),
-                actual_ty(S_look(tenv, h->name)));
+          fprintf(stderr, "typeDec: record %s->%p: ", S_name(h->name),
+                  actual_ty(S_look(tenv, h->name)));
           for (Ty_fieldList fl = actual_ty(S_look(tenv, h->name))->u.record; fl;
                fl = fl->tail) {
-            fprintf(stderr,"%s: %s->%p; ", S_name(fl->head->name),
-                  str_ty[actual_ty(fl->head->ty)->kind],
-                  actual_ty(fl->head->ty));
+            fprintf(stderr, "%s: %s->%p; ", S_name(fl->head->name),
+                    str_ty[actual_ty(fl->head->ty)->kind],
+                    actual_ty(fl->head->ty));
           }
           fprintf(stderr, "\n");
         } else {
@@ -660,12 +661,15 @@ Ty_ty transTy(S_table tenv, A_ty a) {
 }
 
 void SEM_transProg(A_exp exp) {
-  struct expty res = transExp(E_base_venv(), E_base_tenv(), exp, Tr_outermost(), NULL);
+  struct expty res =
+      transExp(E_base_venv(), E_base_tenv(), exp, Tr_outermost(), NULL);
   debug("call Tr_printFormals on outermost evn(%s)\n",
         Temp_labelstring(Tr_outermost()->name));
   Tr_printFormals(Tr_formals(Tr_outermost()));
+#if DEBUG
   printf("\nOriginal:\n");
-  printStmList(stdout, T_StmList(unNx(res.exp), NULL));
+  printStmList(stderr, T_StmList(unNx(res.exp), NULL));
   printf("\nLinearized:\n");
   printStmList(stdout, C_linearize(unNx(res.exp)));
+#endif
 }
