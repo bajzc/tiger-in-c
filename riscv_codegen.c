@@ -3,7 +3,7 @@
 
 #include "codegen.h"
 
-#define L(h, t) Temp_TempList(h, t)
+#define L(h, t) Temp_TempList((Temp_temp) h, (Temp_tempList) t)
 #define S(format, ...) sprintf((buf), (format), __VA_ARGS__)
 
 static AS_instrList iList = NULL, last = NULL;
@@ -89,31 +89,19 @@ static void munchStm(T_stm s) {
       Temp_temp e2 = munchExp(s->u.CJUMP.right);
       Temp_temp r1 = Temp_newtemp();
       Temp_temp r2 = Temp_newtemp();
+      // FIXME: Do we need this safe copy?
       emit(AS_Move("sd `s0,`d0", L(r1, NULL), L(e1, NULL)));
       emit(AS_Move("sd `s0,`d0", L(r2, NULL), L(e2, NULL)));
 
       char *op_code;
       switch (s->u.CJUMP.op) {
-        case T_eq:
-          op_code = "beq";
-          break;
-        case T_ne:
-          op_code = "bne";
-          break;
-        case T_lt:
-          op_code = "blt";
-          break;
-        case T_gt:
-          op_code = "bgt";
-          break;
-        case T_le:
-          op_code = "ble";
-          break;
-        case T_ge:
-          op_code = "bge";
-          break;
-        default:
-          assert(0);
+        case T_eq: op_code = "beq"; break;
+        case T_ne: op_code = "bne"; break;
+        case T_lt: op_code = "blt"; break;
+        case T_gt: op_code = "bgt"; break;
+        case T_le: op_code = "ble"; break;
+        case T_ge: op_code = "bge"; break;
+        default: assert(0);
       }
       S("%s `j0", op_code);
       emit(AS_Oper(strdup(buf), NULL, NULL,
@@ -127,23 +115,115 @@ static void munchStm(T_stm s) {
       emit(AS_Label(strdup(buf), s->u.LABEL));
       break;
     }
-    default:
-      assert(0);
+    default: assert(0);
   }
 }
 
 static Temp_temp munchExp(T_exp e) {
+  static char buf[80];
+  Temp_temp r = Temp_newtemp();
   switch (e->kind) {
     case T_BINOP: {
+      // note that we have converted all "and" and "or" operators to if..else
+      T_exp e1 = e->u.BINOP.left;
+      T_exp e2 = e->u.BINOP.right;
+      T_binOp op = e->u.BINOP.op;
+      if (e1->kind == T_CONST && e2->kind == T_CONST) {
+        /* BINOP(*,CONST(i1),CONST(i2)) */
+        int a = e1->u.CONST, b = e2->u.CONST, result;
+        switch (op) {
+          case T_plus: result = a + b; break;
+          case T_minus: result = a - b; break;
+          case T_mul: result = a * b; break;
+          case T_div: result = a / b; break;
+          default: assert(0);
+        }
+        S("li `d0, %d", result);
+        emit(AS_Oper(strdup(buf), L(r, NULL), NULL, NULL));
+        return r;
+      } else if ((e1->kind == T_CONST || e2->kind == T_CONST) &&
+                 (op == T_plus || op == T_minus)) {
+        /* BINOP(PLUS,CONST(i),e2) */
+        /* BINOP(PLUS,e1,CONST(i)) */
+        /* BINOP(MINUS,CONST(i),e2) */
+        /* BINOP(MINUS,e1,CONST(i)) */
+        T_exp var = e1->kind == T_CONST ? e2 : e1;
+        int constt = e1->kind == T_CONST ? e1->u.CONST : e2->u.CONST;
+        switch (op) {
+          case T_plus: S("addi `d0, `s0, %d", constt); break;
+          case T_minus: S("addi `d0, `s0, -%d", constt); break;
+          default: assert(0);
+        }
+        emit(AS_Oper(strdup(buf), L(r, NULL), L(munchExp(var), NULL), NULL));
+        return r;
+      } else {
+        /* BINOP(*,e1,e2) */
+        switch (op) {
+          case T_plus: S("add `d0, `s0, `s1"); break;
+          case T_minus: S("sub `d0, `s0, `s1"); break;
+          case T_mul: S("mul `d0, `s0, `s1"); break;
+          case T_div: S("div `d0, `s0, `s1"); break;
+          default:
+        }
+        emit(AS_Oper(strdup(buf), L(r, NULL),
+                     L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
+        return r;
+      }
     }
     case T_MEM: {
+      if (e->u.MEM->kind == T_BINOP) {
+        T_exp e1 = e->u.MEM->u.BINOP.left;
+        T_exp e2 = e->u.MEM->u.BINOP.right;
+        T_relOp op = e->u.MEM->u.BINOP.op;
+        if (op == T_plus && e2->kind == T_CONST) {
+          /* MEM(BINOP(PLUS,e1,CONST(i))) */
+          S("lw `d0, %d(`s0)", e2->u.CONST);
+          emit(AS_Oper(strdup(buf), L(r, NULL), L(munchExp(e1), NULL), NULL));
+          return r;
+        } else if (op == T_plus && e1->kind == T_CONST) {
+          /* MEM(BINOP(PLUS,CONST(i),e2)) */
+          S("lw `d0, %d(`s0)", e1->u.CONST);
+          emit(AS_Oper(strdup(buf), L(r, NULL), L(munchExp(e2), NULL), NULL));
+          return r;
+        } else {
+          /* MEM(e) */
+          emit(AS_Oper("lw `d0, 0(`s0)", L(r, NULL),
+                       L(munchExp(e->u.MEM), NULL), NULL));
+          return r;
+        }
+      } else if (e->u.MEM->kind == T_CONST) {
+        /* MEM(CONST(i)) */
+        S("li `d0, %d", e->u.MEM->u.CONST);
+        emit(AS_Oper(strdup(buf), L(r, NULL), NULL, NULL));
+        return r;
+      } else {
+        /* MEM(e) */
+        emit(AS_Oper("lw `d0, 0(`s0)", L(r, NULL), L(munchExp(e->u.MEM), NULL),
+                     NULL));
+        return r;
+      }
     }
     case T_TEMP: {
+      /* TEMP(t) */
+      return e->u.TEMP;
     }
     case T_CONST: {
+      /* CONST(i) */
+      S("li `d0, %d", e->u.CONST);
+      emit(AS_Oper(strdup(buf), L(r, NULL), NULL, NULL));
+      return r;
     }
-    default:
-      assert(0);
+    case T_NAME: {
+      /* NAME(lab) */
+      S("la `d0, %s", Temp_labelstring(e->u.NAME));
+      emit(AS_Oper(strdup(buf), L(r, NULL), NULL, NULL));
+      return r;
+    }
+    case T_CALL: {
+      /* CALL(NAME(lab), args) */
+
+    }
+    default: assert(0);
   }
 }
 
