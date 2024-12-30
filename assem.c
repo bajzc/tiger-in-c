@@ -120,8 +120,7 @@ static void format(char *result, string assem, Temp_tempList dst,
           result[i] = '`';
           i++;
           break;
-        default:
-          assert(0);
+        default: assert(0);
       }
     else {
       result[i] = *p;

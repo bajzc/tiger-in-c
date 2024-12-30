@@ -53,7 +53,7 @@ Tr_exp Tr_stringExp(string s) {
   Temp_label lab = Temp_newlabel();
   F_frag f = F_StringFrag(lab, s);
   F_fragments = F_FragList(f, F_fragments);
-  debug("str: '%s' as label '%s'\n",s, Temp_labelstring(lab));
+  debug("str: '%s' as label '%s'\n", s, Temp_labelstring(lab));
   return Tr_Ex(T_Name(lab));
 }
 
@@ -85,29 +85,15 @@ Tr_exp Tr_opExp(Tr_exp l, A_oper op, Tr_exp r) {
   T_exp L = unEx(l), R = unEx(r);
   T_stm s = NULL;
   switch (op) {
-    case A_plusOp:
-      return Tr_Ex((T_Binop(T_plus, L, R)));
-    case A_minusOp:
-      return Tr_Ex((T_Binop(T_minus, L, R)));
-    case A_timesOp:
-      return Tr_Ex((T_Binop(T_mul, L, R)));
-    case A_divideOp:
-      return Tr_Ex((T_Binop(T_div, L, R)));
-    case A_eqOp:
-      s = T_Cjump(T_eq, L, R, NULL, NULL);
-      goto patch;
-    case A_neqOp:
-      s = T_Cjump(T_ne, L, R, NULL, NULL);
-      goto patch;
-    case A_ltOp:
-      s = T_Cjump(T_lt, L, R, NULL, NULL);
-      goto patch;
-    case A_leOp:
-      s = T_Cjump(T_le, L, R, NULL, NULL);
-      goto patch;
-    case A_gtOp:
-      s = T_Cjump(T_gt, L, R, NULL, NULL);
-      goto patch;
+    case A_plusOp: return Tr_Ex((T_Binop(T_plus, L, R)));
+    case A_minusOp: return Tr_Ex((T_Binop(T_minus, L, R)));
+    case A_timesOp: return Tr_Ex((T_Binop(T_mul, L, R)));
+    case A_divideOp: return Tr_Ex((T_Binop(T_div, L, R)));
+    case A_eqOp: s = T_Cjump(T_eq, L, R, NULL, NULL); goto patch;
+    case A_neqOp: s = T_Cjump(T_ne, L, R, NULL, NULL); goto patch;
+    case A_ltOp: s = T_Cjump(T_lt, L, R, NULL, NULL); goto patch;
+    case A_leOp: s = T_Cjump(T_le, L, R, NULL, NULL); goto patch;
+    case A_gtOp: s = T_Cjump(T_gt, L, R, NULL, NULL); goto patch;
     case A_geOp:
       s = T_Cjump(T_ge, L, R, NULL, NULL);
     patch:
@@ -338,8 +324,7 @@ patchList joinPatch(patchList first, patchList second) {
 static T_exp unEx(Tr_exp e) {
   assert(e);
   switch (e->kind) {
-    case Tr_ex:
-      return e->u.ex;
+    case Tr_ex: return e->u.ex;
     case Tr_cx: {
       Temp_temp r = Temp_newtemp();
       Temp_label t = Temp_newlabel(), f = Temp_newlabel();
@@ -351,8 +336,7 @@ static T_exp unEx(Tr_exp e) {
                  T_Eseq(T_Label(f), T_Eseq(T_Move(T_Temp(r), T_Const(0)),
                                            T_Eseq(T_Label(t), T_Temp(r))))));
     }
-    case Tr_nx:
-      return T_Eseq(e->u.nx, T_Const(0));
+    case Tr_nx: return T_Eseq(e->u.nx, T_Const(0));
   }
   assert(0);
 }
@@ -361,8 +345,7 @@ T_stm unNx(Tr_exp e) {
   debug2("call unNx\n");
   assert(e);
   switch (e->kind) {
-    case Tr_ex:
-      return T_Exp(e->u.ex);
+    case Tr_ex: return T_Exp(e->u.ex);
     case Tr_cx: {
       Temp_temp r = Temp_newtemp();
       Temp_label t = Temp_newlabel(), f = Temp_newlabel();
@@ -374,8 +357,7 @@ T_stm unNx(Tr_exp e) {
                 T_Seq(T_Label(f), T_Seq(T_Move(T_Temp(r), T_Const(0)),
                                         T_Seq(T_Label(t), T_Exp(T_Temp(r)))))));
     }
-    case Tr_nx:
-      return e->u.nx;
+    case Tr_nx: return e->u.nx;
   }
   assert(0);
 }
@@ -401,10 +383,8 @@ static struct Cx unCx(Tr_exp e) {
       patchList f = PatchList(&s->u.CJUMP.false, NULL);
       return Tr_Cx(t, f, s)->u.cx;
     }
-    case Tr_cx:
-      return e->u.cx;
-    case Tr_nx:
-      assert(0);
+    case Tr_cx: return e->u.cx;
+    case Tr_nx: assert(0);
   }
   assert(0);
 }
@@ -451,7 +431,7 @@ Tr_accessList Tr_formals(Tr_level level) {
   if (f == NULL) {
     return NULL;
   }
-  f=f->tail; // skip static link
+  f = f->tail; // skip static link
   l = checked_malloc(sizeof(*l));
   l_head = l;
   l->head = checked_malloc(sizeof(*(l->head)));

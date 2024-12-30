@@ -98,26 +98,21 @@ static struct stmExp do_exp(T_exp exp) {
       return StmExp(reorder(ExpRefList(&exp->u.BINOP.left,
                                        ExpRefList(&exp->u.BINOP.right, NULL))),
                     exp);
-    case T_MEM:
-      return StmExp(reorder(ExpRefList(&exp->u.MEM, NULL)), exp);
+    case T_MEM: return StmExp(reorder(ExpRefList(&exp->u.MEM, NULL)), exp);
     case T_ESEQ: {
       struct stmExp x = do_exp(exp->u.ESEQ.exp);
       return StmExp(seq(do_stm(exp->u.ESEQ.stm), x.s), x.e);
     }
-    case T_CALL:
-      return StmExp(reorder(get_call_rlist(exp)), exp);
-    default:
-      return StmExp(reorder(NULL), exp);
+    case T_CALL: return StmExp(reorder(get_call_rlist(exp)), exp);
+    default: return StmExp(reorder(NULL), exp);
   }
 }
 
 /* processes stm so that it contains no ESEQ nodes */
 static T_stm do_stm(T_stm stm) {
   switch (stm->kind) {
-    case T_SEQ:
-      return seq(do_stm(stm->u.SEQ.left), do_stm(stm->u.SEQ.right));
-    case T_JUMP:
-      return seq(reorder(ExpRefList(&stm->u.JUMP.exp, NULL)), stm);
+    case T_SEQ: return seq(do_stm(stm->u.SEQ.left), do_stm(stm->u.SEQ.right));
+    case T_JUMP: return seq(reorder(ExpRefList(&stm->u.JUMP.exp, NULL)), stm);
     case T_CJUMP:
       return seq(reorder(ExpRefList(&stm->u.CJUMP.left,
                                     ExpRefList(&stm->u.CJUMP.right, NULL))),
@@ -142,8 +137,7 @@ static T_stm do_stm(T_stm stm) {
         return seq(reorder(get_call_rlist(stm->u.EXP)), stm);
       else
         return seq(reorder(ExpRefList(&stm->u.EXP, NULL)), stm);
-    default:
-      return stm;
+    default: return stm;
   }
 }
 

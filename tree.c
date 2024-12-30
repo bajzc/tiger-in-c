@@ -151,26 +151,16 @@ T_exp T_Call(T_exp fun, T_expList args) {
 
 T_relOp T_notRel(T_relOp r) {
   switch (r) {
-    case T_eq:
-      return T_ne;
-    case T_ne:
-      return T_eq;
-    case T_lt:
-      return T_ge;
-    case T_ge:
-      return T_lt;
-    case T_gt:
-      return T_le;
-    case T_le:
-      return T_gt;
-    case T_ult:
-      return T_uge;
-    case T_uge:
-      return T_ult;
-    case T_ule:
-      return T_ugt;
-    case T_ugt:
-      return T_ule;
+    case T_eq: return T_ne;
+    case T_ne: return T_eq;
+    case T_lt: return T_ge;
+    case T_ge: return T_lt;
+    case T_gt: return T_le;
+    case T_le: return T_gt;
+    case T_ult: return T_uge;
+    case T_uge: return T_ult;
+    case T_ule: return T_ugt;
+    case T_ugt: return T_ule;
   }
   assert(0);
   return 0;
@@ -178,26 +168,16 @@ T_relOp T_notRel(T_relOp r) {
 
 T_relOp T_commute(T_relOp r) {
   switch (r) {
-    case T_eq:
-      return T_eq;
-    case T_ne:
-      return T_ne;
-    case T_lt:
-      return T_gt;
-    case T_ge:
-      return T_le;
-    case T_gt:
-      return T_lt;
-    case T_le:
-      return T_ge;
-    case T_ult:
-      return T_ugt;
-    case T_uge:
-      return T_ule;
-    case T_ule:
-      return T_uge;
-    case T_ugt:
-      return T_ult;
+    case T_eq: return T_eq;
+    case T_ne: return T_ne;
+    case T_lt: return T_gt;
+    case T_ge: return T_le;
+    case T_gt: return T_lt;
+    case T_le: return T_ge;
+    case T_ult: return T_ugt;
+    case T_uge: return T_ule;
+    case T_ule: return T_uge;
+    case T_ugt: return T_ult;
   }
   assert(0);
   return 0;
