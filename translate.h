@@ -72,15 +72,7 @@ Tr_exp Tr_callExp(Temp_label name, Tr_exp *argv, int argc,
                   Tr_level caller_level, Tr_level callee_level);
 Tr_exp Tr_letExp(Tr_exp *decs, int size, Tr_exp body);
 
-static Tr_exp Tr_Ex(T_exp ex);
-static Tr_exp Tr_Nx(T_stm nx);
-static Tr_exp Tr_Cx(patchList trues, patchList falses, T_stm stm);
-static patchList PatchList(Temp_label *head, patchList tail);
-static void doPatch(patchList tList, Temp_label label);
-static patchList joinPatch(patchList first, patchList second);
-static T_exp unEx(Tr_exp e);
 T_stm unNx(Tr_exp e);
-static struct Cx unCx(Tr_exp e);
 
 Tr_exp Tr_simpleVar(Tr_access, Tr_level);
 Tr_exp Tr_fieldVar(Tr_exp record, int offset);

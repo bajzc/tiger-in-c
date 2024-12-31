@@ -1,10 +1,11 @@
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "codegen.h"
 
 #define L(h, t) Temp_TempList((Temp_temp) h, (Temp_tempList) t)
-#define S(format, ...) sprintf((buf), (format), __VA_ARGS__)
+#define S(format, ...) sprintf(buf, format, ##__VA_ARGS__)
 
 static AS_instrList iList = NULL, last = NULL;
 
@@ -13,7 +14,7 @@ static Temp_temp munchExp(T_exp e);
 
 static void emit(AS_instr inst) {
   if (last != NULL)
-    last = last->tail = AS_instrList(inst);
+    last = last->tail = AS_InstrList(inst, NULL);
   else
     last = iList = AS_InstrList(inst, NULL);
 }
@@ -163,7 +164,7 @@ static Temp_temp munchExp(T_exp e) {
           case T_minus: S("sub `d0, `s0, `s1"); break;
           case T_mul: S("mul `d0, `s0, `s1"); break;
           case T_div: S("div `d0, `s0, `s1"); break;
-          default:
+          default: assert(0);
         }
         emit(AS_Oper(strdup(buf), L(r, NULL),
                      L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
@@ -174,7 +175,7 @@ static Temp_temp munchExp(T_exp e) {
       if (e->u.MEM->kind == T_BINOP) {
         T_exp e1 = e->u.MEM->u.BINOP.left;
         T_exp e2 = e->u.MEM->u.BINOP.right;
-        T_relOp op = e->u.MEM->u.BINOP.op;
+        T_binOp op = e->u.MEM->u.BINOP.op;
         if (op == T_plus && e2->kind == T_CONST) {
           /* MEM(BINOP(PLUS,e1,CONST(i))) */
           S("lw `d0, %d(`s0)", e2->u.CONST);
@@ -221,7 +222,6 @@ static Temp_temp munchExp(T_exp e) {
     }
     case T_CALL: {
       /* CALL(NAME(lab), args) */
-
     }
     default: assert(0);
   }
