@@ -241,9 +241,10 @@ static Temp_temp munchExp(T_exp e) {
     }
     case T_CALL: {
       /* CALL(NAME(lab), args) */
-      r = munchExp(e->u.CALL.fun);
+      assert(e->u.CALL.fun->kind == T_NAME);
       Temp_tempList l = munchArgs(0, e->u.CALL.args);
-      emit(AS_Oper("call `s0", F_calldefs(), l, NULL));
+      S("call %s", Temp_labelstring(e->u.CALL.fun->u.NAME));
+      emit(AS_Oper(strdup(buf), F_calldefs(), l, NULL));
       return r;
     }
     default: assert(0);
