@@ -246,8 +246,7 @@ static void initRegMap() {
                   Temp_TempList(RA,
                     Temp_TempList(SP,
                       Temp_TempList(FP,
-                        Temp_TempList(A0,
-                          Temp_TempList(A1, NULL))))));
+                          Temp_TempList(A0, NULL)))));
 
   // Caller saved
   INIT_REG(A0, a0);
@@ -267,19 +266,20 @@ static void initRegMap() {
   INIT_REG(T6, t6);
 
   callerSaves = Temp_TempList(T0,
-                      Temp_TempList(T1,
-                        Temp_TempList(T2,
-                          Temp_TempList(T3,
-                            Temp_TempList(T4,
-                              Temp_TempList(T5,
-                                Temp_TempList(T6, NULL)))))));
+                Temp_TempList(T1,
+                  Temp_TempList(T2,
+                    Temp_TempList(T3,
+                      Temp_TempList(T4,
+                        Temp_TempList(T5,
+                          Temp_TempList(T6, NULL)))))));
 
-  argRegs = Temp_TempList(A2,
+  argRegs =Temp_TempList(A1,
+            Temp_TempList(A2,
               Temp_TempList(A3,
                 Temp_TempList(A4,
                   Temp_TempList(A5,
                     Temp_TempList(A6,
-                      Temp_TempList(A7, NULL))))));
+                      Temp_TempList(A7, NULL)))))));
 
   // Callee
   INIT_REG(S1, s1);
