@@ -361,7 +361,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
         // FIXME ensure not assign to var in this scope
         Tr_access var_acc = Tr_allocLocal(level, a->u.forr.escape);
         S_enter(venv, a->u.forr.var, E_VarEntry(lo.ty, var_acc));
-        body = transExp(venv, tenv, a->u.forr.body, level, break_label);
+        body = transExp(venv, tenv, a->u.forr.body, level, new_break);
         var = Tr_simpleVar(var_acc, level);
         if (body.ty->kind != Ty_void)
           EM_error(a->u.forr.body->pos,
@@ -371,7 +371,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
       S_endScope(tenv, 0);
       S_endScope(venv, 1);
       endBreakScope();
-      return expTy(Tr_forExp(body.exp, var, lo.exp, hi.exp, break_label),
+      return expTy(Tr_forExp(body.exp, var, lo.exp, hi.exp, new_break),
                    Ty_Void());
     }
     case A_breakExp:
