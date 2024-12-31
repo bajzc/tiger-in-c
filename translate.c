@@ -165,13 +165,17 @@ Tr_exp Tr_seqExp(Tr_exp *seqs, int size) {
     EM_error((A_pos) {0}, "bug? this should cause a syntax error");
   } else if (size == 1) {
     return seqs[0];
+  } else if (size == 2) {
+    return Tr_Ex(T_Eseq(unNx(seqs[0]), unEx(seqs[1])));
   }
+  // no generate NULL at tail
   T_exp seq = T_Eseq(NULL, unEx(seqs[size - 1]));
   T_stm *rightmost = &seq->u.ESEQ.stm;
-  for (int i = 0; i < size - 1; i++) {
+  for (int i = 0; i < size - 2; i++) {
     *rightmost = T_Seq(unNx(seqs[i]), NULL);
     rightmost = &(*rightmost)->u.SEQ.right;
   }
+  *rightmost = unNx(seqs[size - 2]);
   return Tr_Ex(seq);
 }
 
