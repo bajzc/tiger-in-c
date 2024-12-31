@@ -212,7 +212,6 @@ DECLARE_REG(ARG2)
 DECLARE_REG(ARG3)
 DECLARE_REG(ARG4)
 DECLARE_REG(ARG5)
-DECLARE_REG(S0)
 DECLARE_REG(S1)
 DECLARE_REG(S2)
 DECLARE_REG(S3)
@@ -224,13 +223,30 @@ DECLARE_REG(S8)
 DECLARE_REG(S9)
 DECLARE_REG(S10)
 DECLARE_REG(S11)
-static Temp_tempList calleeSaves = Temp_tempList();
+DECLARE_REG(T0)
+DECLARE_REG(T1)
+DECLARE_REG(T2)
+DECLARE_REG(T3)
+DECLARE_REG(T4)
+DECLARE_REG(T5)
+DECLARE_REG(T6)
+static Temp_tempList calleeSaves;
+static Temp_tempList callerSaves;
+static Temp_tempList argRegs;
+static Temp_tempList specialRegs;
 
 static void initRegMap() {
   INIT_REG(ZERO, zero);
   INIT_REG(RA, ra);
   INIT_REG(SP, sp);
   INIT_REG(FP, fp);
+
+  specialRegs = Temp_TempList(ZERO,
+                  Temp_TempList(RA,
+                    Temp_TempList(SP,
+                      Temp_TempList(FP,
+                        Temp_TempList(RET0,
+                          Temp_TempList(RET1, NULL))))));
 
   // Caller saved
   INIT_REG(RET0, a0);
@@ -241,9 +257,30 @@ static void initRegMap() {
   INIT_REG(ARG3, a5);
   INIT_REG(ARG4, a6);
   INIT_REG(ARG5, a7);
+  INIT_REG(T0, t0);
+  INIT_REG(T1, t1);
+  INIT_REG(T2, t2);
+  INIT_REG(T3, t3);
+  INIT_REG(T4, t4);
+  INIT_REG(T5, t5);
+  INIT_REG(T6, t6);
+
+  callerSaves = Temp_TempList(T0,
+                      Temp_TempList(T1,
+                        Temp_TempList(T2,
+                          Temp_TempList(T3,
+                            Temp_TempList(T4,
+                              Temp_TempList(T5,
+                                Temp_TempList(T6, NULL)))))));
+
+  argRegs = Temp_TempList(ARG0,
+              Temp_TempList(ARG1,
+                Temp_TempList(ARG2,
+                  Temp_TempList(ARG3,
+                    Temp_TempList(ARG4,
+                      Temp_TempList(ARG5, NULL))))));
 
   // Callee
-  INIT_REG(S0, s0);
   INIT_REG(S1, s1);
   INIT_REG(S2, s2);
   INIT_REG(S3, s3);
@@ -255,6 +292,18 @@ static void initRegMap() {
   INIT_REG(S9, s9);
   INIT_REG(S10, s10);
   INIT_REG(S11, s11);
+
+  calleeSaves = Temp_TempList(S1,
+                  Temp_TempList(S2,
+                    Temp_TempList(S3,
+                      Temp_TempList(S4,
+                        Temp_TempList(S5,
+                          Temp_TempList(S6,
+                            Temp_TempList(S7,
+                              Temp_TempList(S8,
+                                Temp_TempList(S9,
+                                  Temp_TempList(S10,
+                                    Temp_TempList(S11, NULL)))))))))));
 }
 
 static Temp_tempList returnSink = NULL;
