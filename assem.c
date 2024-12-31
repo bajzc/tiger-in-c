@@ -96,10 +96,13 @@ static void format(char *result, string assem, Temp_tempList dst,
   for (p = assem; p && *p != '\0'; p++) {
     if (*p == ' ' && flag_first_space) {
       flag_first_space = FALSE;
-      result[i++] = '\t';
-      continue;
-    }
-    if (*p == '`')
+      while (i < 9)
+        result[i++] = ' ';
+    } else if (*p == '#') {
+      while (i < 30)
+        result[i++] = ' ';
+      result[i++] = '#';
+    } else if (*p == '`')
       switch (*(++p)) {
         case 's': {
           int n = atoi(++p);

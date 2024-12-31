@@ -276,8 +276,6 @@ Tr_exp Tr_letExp(Tr_exp *decs, int size, Tr_exp body) {
     if (decs[i] != NULL)
       exp = T_Eseq(unNx(decs[i]), exp);
   }
-  debug("call printStmList on let dec\n");
-  printStmList(stderr, T_StmList(unNx(Tr_Ex(exp)), NULL));
   return Tr_Ex(exp);
 }
 
