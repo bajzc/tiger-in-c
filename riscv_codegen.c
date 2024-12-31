@@ -11,12 +11,27 @@ static AS_instrList iList = NULL, last = NULL;
 
 static void munchStm(T_stm s);
 static Temp_temp munchExp(T_exp e);
+static Temp_tempList munchArgs(int n, T_expList args);
 
 static void emit(AS_instr inst) {
   if (last != NULL)
     last = last->tail = AS_InstrList(inst, NULL);
   else
     last = iList = AS_InstrList(inst, NULL);
+}
+
+static Temp_tempList munchArgs(int n, T_expList args) {
+  if (args == NULL)
+    return NULL;
+  Temp_tempList right = munchArgs(n + 1, args->tail);
+
+  Temp_temp r = munchExp(args->head);
+
+  emit(AS_Oper("addi `d0, `s0, -4", L(F_SP(), NULL), L(F_SP(), NULL), NULL));
+  // not sure if we need to use AS_Move here. If this instruction is eliminated,
+  // a word in stack is just wasted
+  emit(AS_Oper("sw `s0, 0(`d0)", L(F_SP(), NULL), L(r, NULL), NULL));
+  return L(r, right);
 }
 
 static void munchStm(T_stm s) {
@@ -222,6 +237,10 @@ static Temp_temp munchExp(T_exp e) {
     }
     case T_CALL: {
       /* CALL(NAME(lab), args) */
+      r = munchExp(e->u.CALL.fun);
+      Temp_tempList l = munchArgs(0, e->u.CALL.args);
+      emit(AS_Oper("call `s0", F_calldefs(), l, NULL));
+      return r;
     }
     default: assert(0);
   }
