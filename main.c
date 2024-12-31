@@ -26,7 +26,7 @@ extern bool anyErrors;
 static void doProc(FILE *out, F_frame frame, T_stm body)
 {
  AS_proc proc;
- struct RA_result allocation;
+ // struct RA_result allocation;
  T_stmList stmList;
  AS_instrList iList;
 

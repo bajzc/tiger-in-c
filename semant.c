@@ -655,12 +655,11 @@ Ty_ty transTy(S_table tenv, A_ty a) {
       Ty_ty ty = Ty_Array(actual_ty(S_look(tenv, a->u.array)));
       return ty;
     }
-    default:
-      assert(0);
+    default: assert(0);
   }
 }
 
-void SEM_transProg(A_exp exp) {
+F_fragList SEM_transProg(A_exp exp) {
   struct expty res =
       transExp(E_base_venv(), E_base_tenv(), exp, Tr_outermost(), NULL);
   debug("call Tr_printFormals on outermost evn(%s)\n",
@@ -672,4 +671,5 @@ void SEM_transProg(A_exp exp) {
   printf("\nLinearized:\n");
   printStmList(stdout, C_linearize(unNx(res.exp)));
 #endif
+  return Tr_getResult();
 }

@@ -2,6 +2,7 @@
 
 // https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc
 
+#include "assem.h"
 #include "frame.h"
 #include "util.h"
 
@@ -187,3 +188,80 @@ F_fragList F_FragList(F_frag head, F_fragList tail) {
 }
 
 T_stm F_procEntryExit1(F_frame frame, T_stm stm) { return stm; }
+
+#define DECLARE_REG(vname) static Temp_temp vname;
+#define INIT_REG(vname, mname) vname = Temp_newtemp();\
+  Temp_enter(F_tempMap, vname, #mname);
+// #define INIT_REG_L(vname, mname, i, ...) __VA_OPT__( INIT_REG_HELPER (vname, mname, __VA_ARGS__); )\
+//   vname##i = Temp_newtemp();\
+//   Temp_enter(F_tempMap, vname##i, #mname#i);
+// #define A(...) INIT_REG_L(__VA_ARGS__)
+// #define INIT_REG_HELPER(...) A(__VA_ARGS__)
+
+// TODO macro for adding list of regs
+
+DECLARE_REG(ZERO)
+DECLARE_REG(RA)
+DECLARE_REG(SP)
+DECLARE_REG(FP)
+DECLARE_REG(RET0)
+DECLARE_REG(RET1)
+DECLARE_REG(ARG0)
+DECLARE_REG(ARG1)
+DECLARE_REG(ARG2)
+DECLARE_REG(ARG3)
+DECLARE_REG(ARG4)
+DECLARE_REG(ARG5)
+DECLARE_REG(S0)
+DECLARE_REG(S1)
+DECLARE_REG(S2)
+DECLARE_REG(S3)
+DECLARE_REG(S4)
+DECLARE_REG(S5)
+DECLARE_REG(S6)
+DECLARE_REG(S7)
+DECLARE_REG(S8)
+DECLARE_REG(S9)
+DECLARE_REG(S10)
+DECLARE_REG(S11)
+static Temp_tempList calleeSaves = Temp_tempList();
+
+static void initRegMap() {
+  INIT_REG(ZERO, zero);
+  INIT_REG(RA, ra);
+  INIT_REG(SP, sp);
+  INIT_REG(FP, fp);
+
+  // Caller saved
+  INIT_REG(RET0, a0);
+  INIT_REG(RET1, a1);
+  INIT_REG(ARG0, a2);
+  INIT_REG(ARG1, a3);
+  INIT_REG(ARG2, a4);
+  INIT_REG(ARG3, a5);
+  INIT_REG(ARG4, a6);
+  INIT_REG(ARG5, a7);
+
+  // Callee
+  INIT_REG(S0, s0);
+  INIT_REG(S1, s1);
+  INIT_REG(S2, s2);
+  INIT_REG(S3, s3);
+  INIT_REG(S4, s4);
+  INIT_REG(S5, s5);
+  INIT_REG(S6, s6);
+  INIT_REG(S7, s7);
+  INIT_REG(S8, s8);
+  INIT_REG(S9, s9);
+  INIT_REG(S10, s10);
+  INIT_REG(S11, s11);
+}
+
+static Temp_tempList returnSink = NULL;
+AS_instrList F_procEntryExit2(AS_instrList body) {
+  if (!returnSink) returnSink =
+  Temp_TempList(ZERO, Temp_TempList(RA,
+  Temp_TempList(SP, calleeSaves)));
+  return AS_splice(body, AS_InstrList(
+  AS_Oper("", NULL, returnSink, NULL), NULL));
+}

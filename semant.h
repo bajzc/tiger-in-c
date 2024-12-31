@@ -4,7 +4,7 @@
 #include "absyn.h"
 #include "translate.h"
 #include "types.h"
-void SEM_transProg(A_exp exp);
+F_fragList SEM_transProg(A_exp exp);
 
 struct expty transVar(S_table venv, S_table tenv, A_var v, Tr_level level);
 struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
