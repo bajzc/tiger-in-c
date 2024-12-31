@@ -204,14 +204,14 @@ DECLARE_REG(ZERO)
 DECLARE_REG(RA)
 DECLARE_REG(SP)
 DECLARE_REG(FP)
-DECLARE_REG(RET0)
-DECLARE_REG(RET1)
-DECLARE_REG(ARG0)
-DECLARE_REG(ARG1)
-DECLARE_REG(ARG2)
-DECLARE_REG(ARG3)
-DECLARE_REG(ARG4)
-DECLARE_REG(ARG5)
+DECLARE_REG(A0)
+DECLARE_REG(A1)
+DECLARE_REG(A2)
+DECLARE_REG(A3)
+DECLARE_REG(A4)
+DECLARE_REG(A5)
+DECLARE_REG(A6)
+DECLARE_REG(A7)
 DECLARE_REG(S1)
 DECLARE_REG(S2)
 DECLARE_REG(S3)
@@ -245,18 +245,18 @@ static void initRegMap() {
                   Temp_TempList(RA,
                     Temp_TempList(SP,
                       Temp_TempList(FP,
-                        Temp_TempList(RET0,
-                          Temp_TempList(RET1, NULL))))));
+                        Temp_TempList(A0,
+                          Temp_TempList(A1, NULL))))));
 
   // Caller saved
-  INIT_REG(RET0, a0);
-  INIT_REG(RET1, a1);
-  INIT_REG(ARG0, a2);
-  INIT_REG(ARG1, a3);
-  INIT_REG(ARG2, a4);
-  INIT_REG(ARG3, a5);
-  INIT_REG(ARG4, a6);
-  INIT_REG(ARG5, a7);
+  INIT_REG(A0, a0);
+  INIT_REG(A1, a1);
+  INIT_REG(A2, a2);
+  INIT_REG(A3, a3);
+  INIT_REG(A4, a4);
+  INIT_REG(A5, a5);
+  INIT_REG(A6, a6);
+  INIT_REG(A7, a7);
   INIT_REG(T0, t0);
   INIT_REG(T1, t1);
   INIT_REG(T2, t2);
@@ -273,12 +273,12 @@ static void initRegMap() {
                               Temp_TempList(T5,
                                 Temp_TempList(T6, NULL)))))));
 
-  argRegs = Temp_TempList(ARG0,
-              Temp_TempList(ARG1,
-                Temp_TempList(ARG2,
-                  Temp_TempList(ARG3,
-                    Temp_TempList(ARG4,
-                      Temp_TempList(ARG5, NULL))))));
+  argRegs = Temp_TempList(A2,
+              Temp_TempList(A3,
+                Temp_TempList(A4,
+                  Temp_TempList(A5,
+                    Temp_TempList(A6,
+                      Temp_TempList(A7, NULL))))));
 
   // Callee
   INIT_REG(S1, s1);
