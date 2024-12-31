@@ -190,7 +190,8 @@ F_fragList F_FragList(F_frag head, F_fragList tail) {
 T_stm F_procEntryExit1(F_frame frame, T_stm stm) { return stm; }
 
 #define DECLARE_REG(vname) static Temp_temp vname;
-#define INIT_REG(vname, mname) vname = Temp_newtemp();\
+#define INIT_REG(vname, mname)                                                 \
+  vname = Temp_newtemp();                                                      \
   Temp_enter(F_tempMap, vname, #mname);
 // #define INIT_REG_L(vname, mname, i, ...) __VA_OPT__( INIT_REG_HELPER (vname, mname, __VA_ARGS__); )\
 //   vname##i = Temp_newtemp();\
@@ -308,9 +309,9 @@ static void initRegMap() {
 
 static Temp_tempList returnSink = NULL;
 AS_instrList F_procEntryExit2(AS_instrList body) {
-  if (!returnSink) returnSink =
-  Temp_TempList(ZERO, Temp_TempList(RA,
-  Temp_TempList(SP, calleeSaves)));
-  return AS_splice(body, AS_InstrList(
-  AS_Oper("", NULL, returnSink, NULL), NULL));
+  if (!returnSink)
+    returnSink =
+        Temp_TempList(ZERO, Temp_TempList(RA, Temp_TempList(SP, calleeSaves)));
+  return AS_splice(body,
+                   AS_InstrList(AS_Oper("", NULL, returnSink, NULL), NULL));
 }

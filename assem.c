@@ -92,7 +92,13 @@ static void format(char *result, string assem, Temp_tempList dst,
                    Temp_tempList src, AS_targets jumps, Temp_map m) {
   char *p;
   int i = 0; /* offset to result string */
-  for (p = assem; p && *p != '\0'; p++)
+  bool flag_first_space = TRUE;
+  for (p = assem; p && *p != '\0'; p++) {
+    if (*p == ' ' && flag_first_space) {
+      flag_first_space = FALSE;
+      result[i++] = '\t';
+      continue;
+    }
     if (*p == '`')
       switch (*(++p)) {
         case 's': {
@@ -126,6 +132,8 @@ static void format(char *result, string assem, Temp_tempList dst,
       result[i] = *p;
       i++;
     }
+  }
+  result[i++] = '\n';
   result[i] = '\0';
 }
 
