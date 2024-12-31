@@ -6,8 +6,8 @@
 #include "frame.h"
 #include "util.h"
 
-#define ARG_IN_REG 8 // a0-a7
-const int F_wordSize = 4;
+#define ARG_IN_REG 7 // a0-a7
+const int F_wordSize = 4; // target machine is RV32
 
 struct F_access_ {
   enum { inFrame, inReg } kind;
@@ -40,22 +40,6 @@ struct F_frame_ {
 /* |  STATIC LINKS | <- STACK POINTER */
 /* ---------------------------------- */
 /* |               | <- next frame    */
-
-static Temp_temp F_fp = NULL;
-Temp_temp F_FP(void) {
-  if (F_fp == NULL) {
-    F_fp = Temp_newtemp();
-  }
-  return F_fp;
-}
-
-static Temp_temp F_rv = NULL;
-Temp_temp F_RV(void) {
-  if (F_rv == NULL) {
-    F_rv = Temp_newtemp();
-  }
-  return F_rv;
-}
 
 T_exp F_Exp(F_access acc, T_exp framePtr) {
   if (acc->kind == inReg) {
@@ -237,6 +221,10 @@ static Temp_tempList argRegs;
 static Temp_tempList specialRegs;
 
 static void initRegMap() {
+  if (ZERO != NULL)
+    return;
+  if (F_tempMap == NULL)
+    F_tempMap = Temp_empty();
   INIT_REG(ZERO, zero);
   INIT_REG(RA, ra);
   INIT_REG(SP, sp);
@@ -314,4 +302,32 @@ AS_instrList F_procEntryExit2(AS_instrList body) {
         Temp_TempList(ZERO, Temp_TempList(RA, Temp_TempList(SP, calleeSaves)));
   return AS_splice(body,
                    AS_InstrList(AS_Oper("", NULL, returnSink, NULL), NULL));
+}
+
+AS_proc F_procEntryExit3(F_frame frame, AS_instrList body) {
+  char buf[80];
+  sprintf(buf, "PROCEDURE %s\n", S_name(frame->frame_label));
+  return AS_Proc(String(buf),body,"END\n");
+}
+
+Temp_temp F_FP(void) {
+  if (FP == NULL)
+    initRegMap();
+  return FP;
+}
+
+Temp_temp F_RV(void) {
+  if (A0 == NULL)
+    initRegMap();
+  return A0;
+}
+
+Temp_temp F_SP(void) {
+  if (SP == NULL)
+    initRegMap();
+  return SP;
+}
+
+Temp_tempList F_calldefs(void) {
+  return Temp_TempList(A0, Temp_TempList(RA, Temp_TempList(ZERO, calleeSaves)));
 }

@@ -33,9 +33,11 @@ static void doProc(FILE *out, F_frame frame, T_stm body) {
   stmList = C_traceSchedule(C_basicBlocks(stmList));
   /* printStmList(stdout, stmList);*/
   iList = F_codegen(frame, stmList); /* 9 */
+  iList = F_procEntryExit2(iList);
+  proc = F_procEntryExit3(frame,iList);
 
   fprintf(out, "BEGIN %s\n", Temp_labelstring(F_name(frame)));
-  AS_printInstrList(out, iList, Temp_layerMap(F_tempMap, Temp_name()));
+  AS_printInstrList(out, proc->body, Temp_layerMap(F_tempMap, Temp_name()));
   fprintf(out, "END %s\n\n", Temp_labelstring(F_name(frame)));
 }
 

@@ -5,7 +5,7 @@
 #include "codegen.h"
 
 #define L(h, t) Temp_TempList((Temp_temp) h, (Temp_tempList) t)
-#define S(format, ...) sprintf(buf, format, ##__VA_ARGS__)
+#define S(format, ...) snprintf(buf, 80, format, ##__VA_ARGS__)
 
 static AS_instrList iList = NULL, last = NULL;
 
@@ -131,6 +131,10 @@ static void munchStm(T_stm s) {
       emit(AS_Label(strdup(buf), s->u.LABEL));
       break;
     }
+    case T_EXP: {
+      munchExp(s->u.EXP);
+      break;
+    }
     default: assert(0);
   }
 }
@@ -214,8 +218,8 @@ static Temp_temp munchExp(T_exp e) {
         return r;
       } else {
         /* MEM(e) */
-        emit(AS_Oper("lw `d0, 0(`s0)", L(r, NULL),
-                     L(munchExp(e->u.MEM), NULL), NULL));
+        emit(AS_Oper("lw `d0, 0(`s0)", L(r, NULL), L(munchExp(e->u.MEM), NULL),
+                     NULL));
         return r;
       }
     }

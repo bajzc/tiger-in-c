@@ -93,6 +93,7 @@ static struct stmExp StmExp(T_stm stm, T_exp exp) {
 }
 
 static struct stmExp do_exp(T_exp exp) {
+  assert(exp);
   switch (exp->kind) {
     case T_BINOP:
       return StmExp(reorder(ExpRefList(&exp->u.BINOP.left,
@@ -110,6 +111,7 @@ static struct stmExp do_exp(T_exp exp) {
 
 /* processes stm so that it contains no ESEQ nodes */
 static T_stm do_stm(T_stm stm) {
+  assert(stm);
   switch (stm->kind) {
     case T_SEQ: return seq(do_stm(stm->u.SEQ.left), do_stm(stm->u.SEQ.right));
     case T_JUMP: return seq(reorder(ExpRefList(&stm->u.JUMP.exp, NULL)), stm);

@@ -125,12 +125,9 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
     case A_varExp: {
       return transVar(venv, tenv, a->u.var, level);
     }
-    case A_nilExp:
-      return expTy(Tr_nilExp(), Ty_Nil());
-    case A_intExp:
-      return expTy(Tr_intExp(a->u.intt), Ty_Int());
-    case A_stringExp:
-      return expTy(Tr_stringExp(a->u.stringg), Ty_String());
+    case A_nilExp: return expTy(Tr_nilExp(), Ty_Nil());
+    case A_intExp: return expTy(Tr_intExp(a->u.intt), Ty_Int());
+    case A_stringExp: return expTy(Tr_stringExp(a->u.stringg), Ty_String());
     case A_callExp: {
       E_enventry funTy = S_look(venv, a->u.call.func);
       if (funTy && funTy->kind == E_funEntry) {
@@ -221,8 +218,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
                      "(%s <> %s)",
                      str_ty[l], str_ty[r]);
           return expTy(Tr_opExp(left.exp, oper, right.exp), Ty_Int());
-        default:
-          assert(0);
+        default: assert(0);
       } // end switch(oper)
     } // end case A_opExp
     case A_recordExp: {
@@ -413,8 +409,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
                  array->u.array);
       return expTy(Tr_arrayExp(init.exp, size.exp->u.ex->u.CONST), array);
     }
-    default:
-      assert(0);
+    default: assert(0);
   } // end switch(a->kind)
 }
 
@@ -471,8 +466,7 @@ struct expty transVar(S_table venv, S_table tenv, A_var v, Tr_level level) {
       return expTy(Tr_subscriptVar(array.exp, index.exp),
                    actual_ty(array.ty->u.array));
     }
-    default:
-      assert(0);
+    default: assert(0);
   }
 }
 
@@ -622,8 +616,7 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
 #endif
       return Tr_nilExp();
     }
-    default:
-      assert(0);
+    default: assert(0);
   }
 }
 
@@ -662,14 +655,15 @@ Ty_ty transTy(S_table tenv, A_ty a) {
 F_fragList SEM_transProg(A_exp exp) {
   struct expty res =
       transExp(E_base_venv(), E_base_tenv(), exp, Tr_outermost(), NULL);
+#if DEBUG2
   debug("call Tr_printFormals on outermost evn(%s)\n",
         Temp_labelstring(Tr_outermost()->name));
   Tr_printFormals(Tr_formals(Tr_outermost()));
-#if DEBUG
   printf("\nOriginal:\n");
   printStmList(stderr, T_StmList(unNx(res.exp), NULL));
   printf("\nLinearized:\n");
   printStmList(stdout, C_linearize(unNx(res.exp)));
 #endif
+  Tr_procEntryExit(Tr_outermost(), res.exp, NULL); // let in
   return Tr_getResult();
 }
