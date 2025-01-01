@@ -542,7 +542,6 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
 #endif
 
         Tr_procEntryExit(fun_level, resultExp.exp, Tr_formals(fun_level));
-        level = level->parent;
       }
       return Tr_nilExp();
     } // end case A_functionDec

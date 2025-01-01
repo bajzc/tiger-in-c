@@ -8,6 +8,7 @@
 
 #define ARG_IN_REG 7 // a0-a7
 const int F_wordSize = 4; // target machine is RV32
+Temp_map F_tempMap;
 
 struct F_access_ {
   enum { inFrame, inReg } kind;
