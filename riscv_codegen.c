@@ -27,10 +27,12 @@ static Temp_tempList munchArgs(int n, T_expList args) {
 
   Temp_temp r = munchExp(args->head);
 
-  emit(AS_Oper("addi `d0, `s0, -4 # grow up stack", L(F_SP(), NULL), L(F_SP(), NULL), NULL));
+  emit(AS_Oper("addi `d0, `s0, -4 # grow up stack", L(F_SP(), NULL),
+               L(F_SP(), NULL), NULL));
   // not sure if we need to use AS_Move here. If this instruction is eliminated,
   // a word in stack is just wasted
-  emit(AS_Oper("sw `s0, 0(`d0) # push onto stack", L(F_SP(), NULL), L(r, NULL), NULL));
+  emit(AS_Oper("sw `s0, 0(`d0) # push onto stack", L(F_SP(), NULL), L(r, NULL),
+               NULL));
   return L(r, right);
 }
 
@@ -44,7 +46,8 @@ static void munchStm(T_stm s) {
             dst->u.MEM->u.BINOP.right->kind == T_CONST) {
           /* MOVE(MEM(BINOP(PLUS,e1,CONST(i))),e2) */
           T_exp e1 = dst->u.MEM->u.BINOP.left, e2 = src;
-          S("sw `s1, %d(`s0) # MOVE(MEM(BINOP(PLUS,e1,CONST(i))),e2)", dst->u.MEM->u.BINOP.right->u.CONST);
+          S("sw `s1, %d(`s0) # MOVE(MEM(BINOP(PLUS,e1,CONST(i))),e2)",
+            dst->u.MEM->u.BINOP.right->u.CONST);
           emit(AS_Oper(strdup(buf), NULL,
                        L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
         } else if (dst->u.MEM->kind == T_BINOP &&
@@ -52,7 +55,8 @@ static void munchStm(T_stm s) {
                    dst->u.MEM->u.BINOP.left->kind == T_CONST) {
           /* MOVE(MEM(BINOP(PLUS, CONST(i),e1)),e2) */
           T_exp e1 = dst->u.MEM->u.BINOP.right, e2 = src;
-          S("sw `s1, %d(`s0) # MOVE(MEM(BINOP(PLUS, CONST(i),e1)),e2)", dst->u.MEM->u.BINOP.left->u.CONST);
+          S("sw `s1, %d(`s0) # MOVE(MEM(BINOP(PLUS, CONST(i),e1)),e2)",
+            dst->u.MEM->u.BINOP.left->u.CONST);
           emit(AS_Oper(strdup(buf), NULL,
                        L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
         } else if (src->kind == T_MEM) {
@@ -60,10 +64,10 @@ static void munchStm(T_stm s) {
           // FIXME maybe we should ignore this case?
           T_exp e1 = dst->u.MEM, e2 = src->u.MEM;
           Temp_temp t = Temp_newtemp();
-          emit(AS_Oper("lw `d0, 0(`s0) # load from addr e2", L(t, NULL), L(munchExp(e2), NULL),
-                       NULL));
-          emit(AS_Oper("sw `d0, 0(`s1) # MOVE(MEM(e1),MEM(e2))", L(t, NULL), L(munchExp(e1), NULL),
-                       NULL));
+          emit(AS_Oper("lw `d0, 0(`s0) # load from addr e2", L(t, NULL),
+                       L(munchExp(e2), NULL), NULL));
+          emit(AS_Oper("sw `d0, 0(`s1) # MOVE(MEM(e1),MEM(e2))", L(t, NULL),
+                       L(munchExp(e1), NULL), NULL));
         } else {
           /* MOVE(MEM(e1),e2) */
           T_exp e1 = dst->u.MEM, e2 = src;
@@ -74,7 +78,8 @@ static void munchStm(T_stm s) {
         /* MOVE(TEMP(i),e2) */
         T_exp e2 = src;
         Temp_temp i = dst->u.TEMP;
-        emit(AS_Move("addi `d0, `s0, 0 # MOVE(TEMP(i),e2)", L(i, NULL), L(munchExp(e2), NULL)));
+        emit(AS_Move("addi `d0, `s0, 0 # MOVE(TEMP(i),e2)", L(i, NULL),
+                     L(munchExp(e2), NULL)));
       } else {
         assert(0);
       }
@@ -83,7 +88,8 @@ static void munchStm(T_stm s) {
     case T_JUMP: {
       if (s->u.JUMP.exp->kind == T_NAME) {
         /* JUMP(LABEL(t)) */
-        emit(AS_Oper("j `j0 # JUMP(LABEL(t))", NULL, NULL, AS_Targets(s->u.JUMP.jumps)));
+        emit(AS_Oper("j `j0 # JUMP(LABEL(t))", NULL, NULL,
+                     AS_Targets(s->u.JUMP.jumps)));
       } else {
         /* JUMP(e) */
         emit(AS_Oper("j `s0 # JUMP(e)", NULL, L(munchExp(s->u.JUMP.exp), NULL),
@@ -96,7 +102,7 @@ static void munchStm(T_stm s) {
       // the instructions follows are false branch
       if (s->u.CJUMP.left->kind == T_CONST &&
           s->u.CJUMP.right->kind == T_CONST) {
-        debug("CJUMP: comparing two constants\n");
+        debug("CJUMP: is comparing two constants\n");
         // TODO constexpr
       }
 
@@ -106,8 +112,8 @@ static void munchStm(T_stm s) {
       Temp_temp r1 = Temp_newtemp();
       Temp_temp r2 = Temp_newtemp();
       // FIXME: Do we need this safe copy?
-      emit(AS_Move("sd `s0,`d0 # safe copy of e1", L(r1, NULL), L(e1, NULL)));
-      emit(AS_Move("sd `s0,`d0 # safe copy of e2", L(r2, NULL), L(e2, NULL)));
+      emit(AS_Move("sd `s0, `d0 # safe copy of e1", L(r1, NULL), L(e1, NULL)));
+      emit(AS_Move("sd `s0, `d0 # safe copy of e2", L(r2, NULL), L(e2, NULL)));
 
       char *op_code;
       switch (s->u.CJUMP.op) {
@@ -119,8 +125,8 @@ static void munchStm(T_stm s) {
         case T_ge: op_code = "bge"; break;
         default: assert(0);
       }
-      S("%s `j0 # %s e1 e2, jump to true", op_code, op_code);
-      emit(AS_Oper(strdup(buf), NULL, NULL,
+      S("%s `s0, `s1, `j0 # %s e1 e2, jump to true", op_code, op_code);
+      emit(AS_Oper(strdup(buf), NULL, L(r1, L(r2, NULL)),
                    AS_Targets(Temp_LabelList(s->u.CJUMP.true, NULL))));
       emit(AS_Oper("j `j0 # jump to false", NULL, NULL,
                    AS_Targets(Temp_LabelList(s->u.CJUMP.false, NULL))));
@@ -218,8 +224,8 @@ static Temp_temp munchExp(T_exp e) {
         return r;
       } else {
         /* MEM(e) */
-        emit(AS_Oper("lw `d0, 0(`s0) # MEM(e)", L(r, NULL), L(munchExp(e->u.MEM), NULL),
-                     NULL));
+        emit(AS_Oper("lw `d0, 0(`s0) # MEM(e)", L(r, NULL),
+                     L(munchExp(e->u.MEM), NULL), NULL));
         return r;
       }
     }

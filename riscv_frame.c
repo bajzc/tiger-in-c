@@ -178,13 +178,6 @@ T_stm F_procEntryExit1(F_frame frame, T_stm stm) { return stm; }
 #define INIT_REG(vname, mname)                                                 \
   vname = Temp_newtemp();                                                      \
   Temp_enter(F_tempMap, vname, #mname);
-// #define INIT_REG_L(vname, mname, i, ...) __VA_OPT__( INIT_REG_HELPER (vname, mname, __VA_ARGS__); )\
-//   vname##i = Temp_newtemp();\
-//   Temp_enter(F_tempMap, vname##i, #mname#i);
-// #define A(...) INIT_REG_L(__VA_ARGS__)
-// #define INIT_REG_HELPER(...) A(__VA_ARGS__)
-
-// TODO macro for adding list of regs
 
 DECLARE_REG(ZERO)
 DECLARE_REG(RA)
