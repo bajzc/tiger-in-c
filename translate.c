@@ -127,6 +127,7 @@ Tr_exp Tr_eqExpString(Tr_exp l, A_oper op, Tr_exp r) {
  * @param size number of fields in record
  */
 Tr_exp Tr_recordExp(Tr_exp *l, int size) {
+  assert(size > 0);
   T_exp r = T_Temp(Temp_newtemp());
   // initRecord(size_t size_in_byte);
   T_exp res_head = T_Eseq(
@@ -135,17 +136,17 @@ Tr_exp Tr_recordExp(Tr_exp *l, int size) {
                                   T_ExpList(T_Const(size * F_wordSize), NULL))),
             NULL),
       r);
-
-  T_stm *rightmost = &(res_head->u.ESEQ.stm->u.SEQ.right);
+  T_stm *rightmost = &(res_head->u.ESEQ.stm);
   for (int i = 0; i < size; i++) {
     if (l[i] != NULL) {
+      rightmost = &((*rightmost)->u.SEQ.right);
       *rightmost =
           T_Seq(T_Move(T_Mem(T_Binop(T_plus, r, T_Const(i * F_wordSize))),
                        l[i]->u.ex),
                 NULL);
-      rightmost = &((*rightmost)->u.SEQ.right);
     }
   }
+  *rightmost = ((*rightmost)->u.SEQ.left);
   return Tr_Ex(res_head);
 }
 
