@@ -54,6 +54,7 @@ struct Tr_access_ {
 };
 
 Tr_accessList Tr_AccessList(Tr_access head, Tr_accessList tail);
+Tr_access Tr_Access(Tr_level level,  F_access access);
 Tr_level Tr_outermost(void);
 Tr_level Tr_newLevel(Tr_level parent, Temp_label name, U_boolList formals);
 Tr_accessList Tr_formals(Tr_level level);

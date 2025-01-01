@@ -438,26 +438,19 @@ Tr_level Tr_newLevel(Tr_level parent, Temp_label name, U_boolList formals) {
 }
 
 Tr_accessList Tr_formals(Tr_level level) {
-  // FIXME is the first in the list static link? see page 144
   F_accessList f = F_formals(level->frame);
+  assert(f);
   Tr_accessList l = NULL, l_head = NULL;
+  // builtin functions will not occur here
+  f = f->tail; // skip static link
   if (f == NULL) {
     return NULL;
   }
-  f = f->tail; // skip static link
-  l = checked_malloc(sizeof(*l));
+  l = Tr_AccessList(Tr_Access(level, f->head), NULL);
   l_head = l;
-  l->head = checked_malloc(sizeof(*(l->head)));
-  l->head->level = level;
-  l->head->access = f->head;
-  l->tail = NULL;
   f = f->tail;
   for (; f; f = f->tail, l = l->tail) {
-    Tr_accessList p = checked_malloc(sizeof(*p));
-    p->head = checked_malloc(sizeof(*(p->head)));
-    p->head->access = f->head;
-    p->head->level = level;
-    p->tail = NULL;
+    Tr_accessList p = Tr_AccessList(Tr_Access(level, f->head), NULL);
     l->tail = p;
   }
   return l_head;
@@ -476,3 +469,17 @@ void Tr_printFormals(Tr_accessList formals) {
 }
 
 F_fragList Tr_getResult(void) { return F_fragments; }
+
+Tr_accessList Tr_AccessList(Tr_access head, Tr_accessList tail) {
+  Tr_accessList t = checked_malloc(sizeof(*t));
+  t->head = head;
+  t->tail = tail;
+  return t;
+}
+
+Tr_access Tr_Access(Tr_level level, F_access access) {
+  Tr_access a = checked_malloc(sizeof(*a));
+  a->level = level;
+  a->access = access;
+  return a;
+}
