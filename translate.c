@@ -153,11 +153,9 @@ Tr_exp Tr_recordExp(Tr_exp *l, int size) {
 Tr_exp Tr_arrayExp(Tr_exp init, int size) {
   T_exp a = T_Temp(Temp_newtemp());
   return Tr_Ex(T_Eseq(
-      T_Seq(
-          T_Move(a, F_externalCall(
-                        "initArray",
-                        T_ExpList(unEx(init), T_ExpList(T_Const(size), NULL)))),
-          NULL),
+      T_Move(a, F_externalCall(
+                    "initArray",
+                    T_ExpList(unEx(init), T_ExpList(T_Const(size), NULL)))),
       a));
 }
 
