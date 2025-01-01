@@ -216,22 +216,38 @@ Tr_exp Tr_ifExp(Tr_exp test, Tr_exp then, Tr_exp elsee) {
   //   }
   // }
   struct Cx cx = unCx(test);
-  Temp_temp r = Temp_newtemp(); // result of test
+  Temp_temp r = Temp_newtemp(); // result
   Temp_label t = Temp_newlabel(), f = Temp_newlabel();
+  Temp_label merge = Temp_newlabel();
   doPatch(cx.trues, t);
   doPatch(cx.falses, f);
   if (elsee != NULL) {
     T_exp then_t = unEx(then);
     T_exp elsee_t = unEx(elsee);
     return Tr_Ex(T_Eseq(
-        T_Seq(cx.stm, T_Seq(T_Seq(T_Label(t), T_Move(T_Temp(r), then_t)),
-                            T_Seq(T_Label(f), T_Move(T_Temp(r), elsee_t)))),
+        T_Seq(cx.stm,
+              T_Seq(T_Seq(T_Seq(T_Label(t),
+                                T_Seq(T_Move(T_Temp(r), then_t),
+                                      T_Jump(T_Name(merge),
+                                             Temp_LabelList(merge, NULL)))),
+                          T_Seq(T_Label(f),
+                                T_Seq(T_Move(T_Temp(r), elsee_t),
+                                      T_Jump(T_Name(merge),
+                                             Temp_LabelList(merge, NULL))))),
+                    T_Label(merge))),
         T_Temp(r)));
   } else {
     T_exp then_t = unEx(then);
-    return Tr_Nx(
-        T_Seq(cx.stm, T_Seq(T_Seq(T_Label(t), T_Move(T_Temp(r), then_t)),
-                            T_Seq(T_Label(f), T_Move(T_Temp(r), T_Const(0))))));
+    return Tr_Nx(T_Seq(
+        cx.stm, T_Seq(T_Seq(T_Seq(T_Label(t),
+                                  T_Seq(T_Move(T_Temp(r), then_t),
+                                        T_Jump(T_Name(merge),
+                                               Temp_LabelList(merge, NULL)))),
+                            T_Seq(T_Label(f),
+                                  T_Seq(T_Move(T_Temp(r), T_Const(0)),
+                                        T_Jump(T_Name(merge),
+                                               Temp_LabelList(merge, NULL))))),
+                      T_Label(merge))));
   }
 }
 
