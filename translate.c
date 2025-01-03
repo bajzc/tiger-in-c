@@ -239,15 +239,14 @@ Tr_exp Tr_ifExp(Tr_exp test, Tr_exp then, Tr_exp elsee) {
   } else {
     T_exp then_t = unEx(then);
     return Tr_Nx(T_Seq(
-        cx.stm, T_Seq(T_Seq(T_Seq(T_Label(t),
-                                  T_Seq(T_Move(T_Temp(r), then_t),
-                                        T_Jump(T_Name(merge),
-                                               Temp_LabelList(merge, NULL)))),
-                            T_Seq(T_Label(f),
-                                  T_Seq(T_Move(T_Temp(r), T_Const(0)),
-                                        T_Jump(T_Name(merge),
-                                               Temp_LabelList(merge, NULL))))),
-                      T_Label(merge))));
+        cx.stm,
+        T_Seq(
+            T_Seq(T_Seq(T_Label(t), T_Seq(T_Move(T_Temp(r), then_t),
+                                          T_Jump(T_Name(merge),
+                                                 Temp_LabelList(merge, NULL)))),
+                  T_Seq(T_Label(f),
+                        T_Jump(T_Name(merge), Temp_LabelList(merge, NULL)))),
+            T_Label(merge))));
   }
 }
 
@@ -295,8 +294,11 @@ Tr_exp Tr_letExp(Tr_exp *decs, int size, Tr_exp body) {
   return Tr_Ex(exp);
 }
 
-void Tr_procEntryExit(Tr_level level, Tr_exp body, Tr_accessList formals) {
-  T_stm stm = T_Move(T_Temp(F_RV()), unEx(body));
+void Tr_procEntryExit(Tr_level level, Tr_exp body, Tr_accessList formals,
+                      bool return_flag) {
+  T_stm stm = unNx(body);
+  if (return_flag)
+     stm = T_Move(T_Temp(F_RV()), unEx(body));
   F_frag frag = F_ProcFrag(stm, level->frame);
   F_fragments = F_FragList(frag, F_fragments);
   F_procEntryExit1(level->frame, stm);

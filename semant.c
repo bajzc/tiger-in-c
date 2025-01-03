@@ -541,7 +541,7 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
         Tr_printFormals(Tr_formals(fun_level));
 #endif
 
-        Tr_procEntryExit(fun_level, resultExp.exp, Tr_formals(fun_level));
+        Tr_procEntryExit(fun_level, resultExp.exp, Tr_formals(fun_level), resultTy->kind != Ty_void);
       }
       return Tr_nilExp();
     } // end case A_functionDec
@@ -663,6 +663,6 @@ F_fragList SEM_transProg(A_exp exp) {
   printf("\nLinearized:\n");
   printStmList(stdout, C_linearize(unNx(res.exp)));
 #endif
-  Tr_procEntryExit(Tr_outermost(), res.exp, NULL); // let in
+  Tr_procEntryExit(Tr_outermost(), res.exp, NULL, FALSE); // let in
   return Tr_getResult();
 }
