@@ -78,7 +78,7 @@ static void munchStm(T_stm s) {
         /* MOVE(TEMP(i),e2) */
         T_exp e2 = src;
         Temp_temp i = dst->u.TEMP;
-        emit(AS_Move("addi `d0, `s0, 0 # MOVE(TEMP(i),e2)", L(i, NULL),
+        emit(AS_Move("mv `d0, `s0 # MOVE(TEMP(i),e2)", L(i, NULL),
                      L(munchExp(e2), NULL)));
       } else {
         assert(0);
@@ -213,7 +213,7 @@ static Temp_temp munchExp(T_exp e) {
           return r;
         } else {
           /* MEM(e) */
-          emit(AS_Oper("lw `d0, 0(`s0) # MEM(e)", L(r, NULL),
+          emit(AS_Oper("mv `d0, `s0 # MEM(e)", L(r, NULL),
                        L(munchExp(e->u.MEM), NULL), NULL));
           return r;
         }
@@ -224,7 +224,7 @@ static Temp_temp munchExp(T_exp e) {
         return r;
       } else {
         /* MEM(e) */
-        emit(AS_Oper("lw `d0, 0(`s0) # MEM(e)", L(r, NULL),
+        emit(AS_Oper("mv `d0, `s0 # MEM(e)", L(r, NULL),
                      L(munchExp(e->u.MEM), NULL), NULL));
         return r;
       }
