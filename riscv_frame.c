@@ -300,7 +300,7 @@ AS_instrList F_procEntryExit2(AS_instrList body) {
 
 AS_proc F_procEntryExit3(F_frame frame, AS_instrList body) {
   char buf[80];
-  sprintf(buf, "PROCEDURE %s\n", S_name(frame->frame_label));
+  snprintf(buf, 80, "PROCEDURE %s\n", S_name(frame->frame_label));
   return AS_Proc(String(buf),body,"END\n");
 }
 
@@ -323,5 +323,5 @@ Temp_temp F_SP(void) {
 }
 
 Temp_tempList F_calldefs(void) {
-  return Temp_TempList(A0, Temp_TempList(RA, Temp_TempList(ZERO, calleeSaves)));
+  return Temp_TempList(A0, Temp_TempList(RA, Temp_TempList(ZERO, callerSaves)));
 }

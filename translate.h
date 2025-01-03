@@ -85,6 +85,6 @@ Tr_exp Tr_opExp(Tr_exp l, A_oper op, Tr_exp r);
 
 Tr_exp Tr_ifExp(Tr_exp test, Tr_exp then, Tr_exp elsee);
 
-void Tr_procEntryExit(Tr_level level, Tr_exp body, Tr_accessList formals);
+void Tr_procEntryExit(Tr_level level, Tr_exp body, Tr_accessList formals, bool return_flag);
 F_fragList Tr_getResult(void);
 #endif
