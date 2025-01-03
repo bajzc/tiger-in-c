@@ -21,6 +21,8 @@
 #include "temp.h" /* needed by translate.h */
 #include "tree.h" /* needed by frame.h */
 #include "util.h"
+#include "set.h"
+
 
 extern bool anyErrors;
 
@@ -37,6 +39,7 @@ static void printFlowgraph(FILE *out, G_graph graph, Temp_map m) {
       AS_print(out, adj_instr, m);
       adj = adj->tail;
     }
+    fprintf(out, "\n");
 
     nodes = nodes->tail;
   }
@@ -65,6 +68,30 @@ static void doProc(FILE *out, F_frame frame, T_stm body) {
 }
 
 int main(int argc, string *argv) {
+  // Set s = SET_empty(cmp);
+  // SET_insert(s, (void*)3);
+  // SET_insert(s, (void*)2);
+  // SET_insert(s, (void*)1);
+  // SET_insert(s, (void*)3);
+  // SET_delete(s, (void*)2);
+  // SET_delete(s, (void*)10);
+  // SET_insert(s, (void*)5);
+  // // s = {1, 3, 5}
+  //
+  // Set t = SET_copy(s);
+  // SET_insert(t, (void*)7);
+  // SET_insert(t, (void*)9);
+  // SET_delete(t, (void*)3);
+  // // t = {1, 5, 7, 9}
+  //
+  // print_set(s);
+  // print_set(t);
+  //
+  // print_set(SET_union(s,t)); // {}
+  //
+  // print_set(SET_intersect(s, t)); // {1, 5}
+  // print_set(SET_difference(s, t)); // {3}
+
   A_exp absyn_root;
   S_table base_env, base_tenv;
   F_fragList frags;

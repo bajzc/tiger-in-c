@@ -295,7 +295,7 @@ AS_instrList F_procEntryExit2(AS_instrList body) {
     returnSink =
         Temp_TempList(ZERO, Temp_TempList(RA, Temp_TempList(SP, calleeSaves)));
   return AS_splice(body,
-                   AS_InstrList(AS_Oper("", NULL, returnSink, NULL), NULL));
+                   AS_InstrList(AS_Oper("TODO: F_procEntryExit2", NULL, returnSink, NULL), NULL));
 }
 
 AS_proc F_procEntryExit3(F_frame frame, AS_instrList body) {

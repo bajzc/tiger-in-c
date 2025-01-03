@@ -126,10 +126,10 @@ static void munchStm(T_stm s) {
         default: assert(0);
       }
       S("%s `s0, `s1, `j0 # %s e1 e2, jump to true", op_code, op_code);
-      emit(AS_Oper(strdup(buf), NULL, L(r1, L(r2, NULL)),
-                   AS_Targets(Temp_LabelList(s->u.CJUMP.true, NULL))));
-      emit(AS_Oper("j `j0 # jump to false", NULL, NULL,
-                   AS_Targets(Temp_LabelList(s->u.CJUMP.false, NULL))));
+      emit(AS_Oper(
+          strdup(buf), NULL, L(r1, L(r2, NULL)),
+          AS_Targets(Temp_LabelList(s->u.CJUMP.true,
+                                    Temp_LabelList(s->u.CJUMP.false, NULL)))));
       break;
     }
     case T_LABEL: {
