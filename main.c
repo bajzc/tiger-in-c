@@ -10,7 +10,9 @@
 #include "codegen.h"
 #include "errormsg.h"
 #include "escape.h"
+#include "flowgraph.h"
 #include "frame.h" /* needed by translate.h and printfrags prototype */
+#include "graph.h"
 #include "parse.h"
 #include "prabsyn.h"
 #include "printtree.h"
@@ -21,6 +23,24 @@
 #include "util.h"
 
 extern bool anyErrors;
+
+static void printFlowgraph(FILE *out, G_graph graph, Temp_map m) {
+  G_nodeList nodes = G_nodes(graph);
+  while (nodes) {
+    AS_instr instr = G_nodeInfo(nodes->head);
+    AS_print(out, instr, m);
+
+    G_nodeList adj = G_succ(nodes->head);
+    while (adj) {
+      AS_instr adj_instr = G_nodeInfo(adj->head);
+      fprintf(out, " -> ");
+      AS_print(out, adj_instr, m);
+      adj = adj->tail;
+    }
+
+    nodes = nodes->tail;
+  }
+}
 
 /* print the assembly language instructions to filename.s */
 static void doProc(FILE *out, F_frame frame, T_stm body) {
@@ -37,8 +57,11 @@ static void doProc(FILE *out, F_frame frame, T_stm body) {
   proc = F_procEntryExit3(frame,iList);
 
   fprintf(out, "BEGIN %s\n", Temp_labelstring(F_name(frame)));
-  AS_printInstrList(out, proc->body, Temp_layerMap(F_tempMap, Temp_name()));
+  Temp_map m = Temp_layerMap(F_tempMap, Temp_name());
+  AS_printInstrList(out, proc->body, m);
   fprintf(out, "END %s\n\n", Temp_labelstring(F_name(frame)));
+  G_graph graph = FG_AssemFlowGraph(iList);
+  printFlowgraph(stdout, graph, m);
 }
 
 int main(int argc, string *argv) {
@@ -68,11 +91,13 @@ int main(int argc, string *argv) {
     sprintf(outfile, "%s.s", argv[1]);
     out = fopen(outfile, "w");
     /* Chapter 8, 9, 10, 11 & 12 */
-    for (; frags; frags = frags->tail)
+    for (; frags; frags = frags->tail) {
       if (frags->head->kind == F_procFrag)
         doProc(out, frags->head->u.proc.frame, frags->head->u.proc.body);
       else if (frags->head->kind == F_stringFrag)
         fprintf(out, "%s\n", frags->head->u.stringg.str);
+
+    }
 
     fclose(out);
     return 0;
