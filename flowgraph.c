@@ -36,9 +36,6 @@ G_node FG_AssemFlowGraph_Internal(AS_instrList il, G_graph graph,
     G_node fallthrough =
         FG_AssemFlowGraph_Internal(il->tail, graph, label_map, NULL);
 
-    if (fallthrough == NULL)
-      return node;
-
     // all labels should be in label_map at this point
     if (il->head->kind == I_OPER && il->head->u.OPER.jumps != NULL) {
       Temp_labelList cur = il->head->u.OPER.jumps->labels;
@@ -48,7 +45,7 @@ G_node FG_AssemFlowGraph_Internal(AS_instrList il, G_graph graph,
           G_addEdge(node, next);
         cur = cur->tail;
       }
-    } else {
+    } else if (fallthrough != NULL) {
       G_addEdge(node, fallthrough);
     }
     return node;
