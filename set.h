@@ -1,8 +1,6 @@
 #ifndef SET_H
 #define SET_H
 
-#include <stdio.h>
-
 typedef struct Set_* Set;
 
 typedef int (*Comparer)(void*, void*);
@@ -30,5 +28,9 @@ int SET_contains(Set a, void* element);
 int SET_eq(Set a, Set b);
 
 void SET_foreach(Set a, void (*f)(void*));
+
+int SET_size(Set a);
+
+int SET_empty(Set a);
 
 #endif //SET_H

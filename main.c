@@ -67,6 +67,20 @@ static void doProc(FILE *out, F_frame frame, T_stm body) {
   printFlowgraph(stdout, graph, m);
 }
 
+int cmp(void* a, void* b) {
+  return ((int)a) - ((int)b);
+}
+
+void printElement(void* e) {
+  printf("%d,", (int)e);
+}
+
+void print_set(Set s) {
+  printf("{");
+  SET_foreach(s, printElement);
+  printf("}");
+}
+
 int main(int argc, string *argv) {
   // Set s = SET_empty(cmp);
   // SET_insert(s, (void*)3);

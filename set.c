@@ -1,8 +1,9 @@
-#include "set.h"
-
 #include <string.h>
 
+#include "set.h"
 #include "util.h"
+
+#define INITIAL_CAPACITY 16
 
 struct Set_ {
   int size;
@@ -10,9 +11,6 @@ struct Set_ {
   Comparer cmp;
   void **elements;
 };
-
-#define INITIAL_CAPACITY 16
-
 
 void SET_foreach(Set a, void (*f)(void*)) {
   for (int i = 0; i < a->size; i++) {
@@ -159,4 +157,12 @@ Set SET_copy(Set a) {
   for (int i = 0; i < a->size; i++)
     r->elements[i] = a->elements[i];
   return r;
+}
+
+int SET_size(Set a) {
+  return a->size;
+}
+
+int SET_empty(Set a) {
+  return a->size == 0;
 }
