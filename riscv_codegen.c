@@ -1,6 +1,4 @@
-#include <math.h>
 #include <stdio.h>
-#include <string.h>
 
 #include "codegen.h"
 
@@ -48,7 +46,7 @@ static void munchStm(T_stm s) {
           T_exp e1 = dst->u.MEM->u.BINOP.left, e2 = src;
           S("sw `s1, %d(`s0) # MOVE(MEM(BINOP(PLUS,e1,CONST(i))),e2)",
             dst->u.MEM->u.BINOP.right->u.CONST);
-          emit(AS_Oper(strdup(buf), NULL,
+          emit(AS_Oper(STRDUP(buf), NULL,
                        L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
         } else if (dst->u.MEM->kind == T_BINOP &&
                    dst->u.MEM->u.BINOP.op == T_plus &&
@@ -57,7 +55,7 @@ static void munchStm(T_stm s) {
           T_exp e1 = dst->u.MEM->u.BINOP.right, e2 = src;
           S("sw `s1, %d(`s0) # MOVE(MEM(BINOP(PLUS, CONST(i),e1)),e2)",
             dst->u.MEM->u.BINOP.left->u.CONST);
-          emit(AS_Oper(strdup(buf), NULL,
+          emit(AS_Oper(STRDUP(buf), NULL,
                        L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
         } else if (src->kind == T_MEM) {
           /* MOVE(MEM(e1),MEM(e2)) */
@@ -127,14 +125,14 @@ static void munchStm(T_stm s) {
       }
       S("%s `s0, `s1, `j0 # %s e1 e2, jump to true", op_code, op_code);
       emit(AS_Oper(
-          strdup(buf), NULL, L(r1, L(r2, NULL)),
+          STRDUP(buf), NULL, L(r1, L(r2, NULL)),
           AS_Targets(Temp_LabelList(s->u.CJUMP.true,
                                     Temp_LabelList(s->u.CJUMP.false, NULL)))));
       break;
     }
     case T_LABEL: {
       S("%s:", Temp_labelstring(s->u.LABEL));
-      emit(AS_Label(strdup(buf), s->u.LABEL));
+      emit(AS_Label(STRDUP(buf), s->u.LABEL));
       break;
     }
     case T_EXP: {
@@ -165,7 +163,7 @@ static Temp_temp munchExp(T_exp e) {
           default: assert(0);
         }
         S("li `d0, %d # result of constexpr", result);
-        emit(AS_Oper(strdup(buf), L(r, NULL), NULL, NULL));
+        emit(AS_Oper(STRDUP(buf), L(r, NULL), NULL, NULL));
         return r;
       } else if ((e1->kind == T_CONST || e2->kind == T_CONST) &&
                  (op == T_plus || op == T_minus)) {
@@ -180,7 +178,7 @@ static Temp_temp munchExp(T_exp e) {
           case T_minus: S("addi `d0, `s0, -%d", constt); break;
           default: assert(0);
         }
-        emit(AS_Oper(strdup(buf), L(r, NULL), L(munchExp(var), NULL), NULL));
+        emit(AS_Oper(STRDUP(buf), L(r, NULL), L(munchExp(var), NULL), NULL));
         return r;
       } else {
         /* BINOP(*,e1,e2) */
@@ -191,7 +189,7 @@ static Temp_temp munchExp(T_exp e) {
           case T_div: S("div `d0, `s0, `s1"); break;
           default: assert(0);
         }
-        emit(AS_Oper(strdup(buf), L(r, NULL),
+        emit(AS_Oper(STRDUP(buf), L(r, NULL),
                      L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
         return r;
       }
@@ -204,12 +202,12 @@ static Temp_temp munchExp(T_exp e) {
         if (op == T_plus && e2->kind == T_CONST) {
           /* MEM(BINOP(PLUS,e1,CONST(i))) */
           S("lw `d0, %d(`s0) # MEM(BINOP(PLUS,e1,CONST(i)))", e2->u.CONST);
-          emit(AS_Oper(strdup(buf), L(r, NULL), L(munchExp(e1), NULL), NULL));
+          emit(AS_Oper(STRDUP(buf), L(r, NULL), L(munchExp(e1), NULL), NULL));
           return r;
         } else if (op == T_plus && e1->kind == T_CONST) {
           /* MEM(BINOP(PLUS,CONST(i),e2)) */
           S("lw `d0, %d(`s0) # MEM(BINOP(PLUS,CONST(i),e2))", e1->u.CONST);
-          emit(AS_Oper(strdup(buf), L(r, NULL), L(munchExp(e2), NULL), NULL));
+          emit(AS_Oper(STRDUP(buf), L(r, NULL), L(munchExp(e2), NULL), NULL));
           return r;
         } else {
           /* MEM(e) */
@@ -220,7 +218,7 @@ static Temp_temp munchExp(T_exp e) {
       } else if (e->u.MEM->kind == T_CONST) {
         /* MEM(CONST(i)) */
         S("li `d0, %d # MEM(CONST(i))", e->u.MEM->u.CONST);
-        emit(AS_Oper(strdup(buf), L(r, NULL), NULL, NULL));
+        emit(AS_Oper(STRDUP(buf), L(r, NULL), NULL, NULL));
         return r;
       } else {
         /* MEM(e) */
@@ -236,13 +234,13 @@ static Temp_temp munchExp(T_exp e) {
     case T_CONST: {
       /* CONST(i) */
       S("li `d0, %d # CONST(i)", e->u.CONST);
-      emit(AS_Oper(strdup(buf), L(r, NULL), NULL, NULL));
+      emit(AS_Oper(STRDUP(buf), L(r, NULL), NULL, NULL));
       return r;
     }
     case T_NAME: {
       /* NAME(lab) */
       S("la `d0, %s # NAME(lab)", Temp_labelstring(e->u.NAME));
-      emit(AS_Oper(strdup(buf), L(r, NULL), NULL, NULL));
+      emit(AS_Oper(STRDUP(buf), L(r, NULL), NULL, NULL));
       return r;
     }
     case T_CALL: {
@@ -250,7 +248,7 @@ static Temp_temp munchExp(T_exp e) {
       assert(e->u.CALL.fun->kind == T_NAME);
       Temp_tempList l = munchArgs(0, e->u.CALL.args);
       S("call %s", Temp_labelstring(e->u.CALL.fun->u.NAME));
-      emit(AS_Oper(strdup(buf), F_calldefs(), l, NULL));
+      emit(AS_Oper(STRDUP(buf), F_calldefs(), l, NULL));
       return r;
     }
     default: assert(0);

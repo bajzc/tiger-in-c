@@ -31,6 +31,6 @@ void SET_foreach(Set a, void (*f)(void*));
 
 int SET_size(Set a);
 
-int SET_empty(Set a);
+int SET_isEmpty(Set a);
 
 #endif //SET_H

@@ -4,16 +4,11 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h> /* for atoi */
-#include <string.h> /* for strcpy */
 
 #include "absyn.h"
 #include "assem.h"
-#include "errormsg.h"
-#include "frame.h"
 #include "symbol.h"
 #include "temp.h"
-#include "tree.h"
 #include "util.h"
 
 AS_targets AS_Targets(Temp_labelList labels) {
@@ -105,24 +100,24 @@ static void format(char *result, string assem, Temp_tempList dst,
     } else if (*p == '`')
       switch (*(++p)) {
         case 's': {
-          int n = atoi(++p);
+          int n = ATOI(++p);
           string s = Temp_look(m, nthTemp(src, n));
-          strcpy(result + i, s);
-          i += strlen(s);
+          STRCPY(result + i, s);
+          i += STRLEN(s);
         } break;
         case 'd': {
-          int n = atoi(++p);
+          int n = ATOI(++p);
           string s = Temp_look(m, nthTemp(dst, n));
-          strcpy(result + i, s);
-          i += strlen(s);
+          STRCPY(result + i, s);
+          i += STRLEN(s);
         } break;
         case 'j':
           assert(jumps);
           {
-            int n = atoi(++p);
+            int n = ATOI(++p);
             string s = Temp_labelstring(nthLabel(jumps->labels, n));
-            strcpy(result + i, s);
-            i += strlen(s);
+            STRCPY(result + i, s);
+            i += STRLEN(s);
           }
           break;
         case '`':

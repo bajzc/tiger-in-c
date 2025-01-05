@@ -6,7 +6,6 @@
  */
 #include <stdio.h>
 
-
 #include "symbol.h"
 #include "types.h"
 #include "util.h"

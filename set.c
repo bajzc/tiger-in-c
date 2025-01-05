@@ -1,5 +1,3 @@
-#include <string.h>
-
 #include "set.h"
 #include "util.h"
 
@@ -12,7 +10,7 @@ struct Set_ {
   void **elements;
 };
 
-void SET_foreach(Set a, void (*f)(void*)) {
+void SET_foreach(Set a, void (*f)(void *)) {
   for (int i = 0; i < a->size; i++) {
     f(a->elements[i]);
   }
@@ -26,7 +24,7 @@ void SET_ensure_capacity(Set s, int capacity) {
   if (new_capacity == s->capacity)
     return;
   void **new = checked_malloc(s->capacity * sizeof(void *));
-  memcpy(new, s->elements, new_capacity * sizeof(void *));
+  MEMCPY(new, s->elements, new_capacity * sizeof(void *));
   s->elements = new;
   s->capacity = new_capacity;
 }
@@ -63,7 +61,7 @@ Set SET_intersect(Set a, Set b) {
     if (SET_contains(b, a->elements[i])) {
       s->elements[j++] = a->elements[i];
     } else {
-      s->size --;
+      s->size--;
     }
   }
   return s;
@@ -79,10 +77,10 @@ Set SET_difference(Set a, Set b) {
     if (c == 0) {
       ae++;
       be++;
-    }else if (c<0) {
+    } else if (c < 0) {
       s->elements[s->size++] = *ae;
       ae++;
-    }else {
+    } else {
       be++;
     }
   }
@@ -124,7 +122,7 @@ int SET_delete(Set a, void *element) {
   for (int j = i; j < a->size - 1; j++) {
     a->elements[j] = a->elements[j + 1];
   }
-  a->size --;
+  a->size--;
   return 1;
 }
 
@@ -137,16 +135,15 @@ int SET_eq(Set a, Set b) {
   }
   return 1;
 }
-int SET_contains(Set a, void *element) {
-  return SET_index_of(a, element) >= 0;
-}
+int SET_contains(Set a, void *element) { return SET_index_of(a, element) >= 0; }
 
-Set SET_with(Set a, void* element) {
+Set SET_with(Set a, void *element) {
   Set r = SET_copy(a);
   SET_insert(r, element);
-  return r;}
+  return r;
+}
 
-Set SET_without(Set a, void* element) {
+Set SET_without(Set a, void *element) {
   Set r = SET_copy(a);
   SET_delete(r, element);
   return r;
@@ -159,10 +156,6 @@ Set SET_copy(Set a) {
   return r;
 }
 
-int SET_size(Set a) {
-  return a->size;
-}
+int SET_size(Set a) { return a->size; }
 
-int SET_empty(Set a) {
-  return a->size == 0;
-}
+int SET_isEmpty(Set a) { return a->size == 0; }
