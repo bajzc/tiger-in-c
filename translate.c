@@ -113,12 +113,11 @@ Tr_exp Tr_opExp(Tr_exp l, A_oper op, Tr_exp r) {
 }
 
 Tr_exp Tr_eqExpString(Tr_exp l, A_oper op, Tr_exp r) {
-  // FIXME should return a if like above
-  // FIXME call with mem addr
-  // int stringEqual(char* l, char* r, int op);
+  // int stringEqual(char* l, char* r);
+  assert(op == A_eqOp || op == A_neqOp);
   return Tr_Ex(F_externalCall(
       "stringEqual",
-      T_ExpList(unEx(l), T_ExpList(unEx(r), T_ExpList(T_Const(op), NULL)))));
+      T_ExpList(unEx(l), T_ExpList(unEx(r), NULL))));
 }
 
 /**

@@ -57,15 +57,6 @@ static void munchStm(T_stm s) {
             dst->u.MEM->u.BINOP.left->u.CONST);
           emit(AS_Oper(STRDUP(buf), NULL,
                        L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
-        } else if (src->kind == T_MEM) {
-          /* MOVE(MEM(e1),MEM(e2)) */
-          // FIXME maybe we should ignore this case?
-          T_exp e1 = dst->u.MEM, e2 = src->u.MEM;
-          Temp_temp t = Temp_newtemp();
-          emit(AS_Oper("lw `d0, 0(`s0) # load from addr e2", L(t, NULL),
-                       L(munchExp(e2), NULL), NULL));
-          emit(AS_Oper("sw `d0, 0(`s1) # MOVE(MEM(e1),MEM(e2))", L(t, NULL),
-                       L(munchExp(e1), NULL), NULL));
         } else {
           /* MOVE(MEM(e1),e2) */
           T_exp e1 = dst->u.MEM, e2 = src;
@@ -123,9 +114,8 @@ static void munchStm(T_stm s) {
         case T_ge: op_code = "bge"; break;
         default: assert(0);
       }
-      S("%s `s0, `s1, `j0 # compare e1 e2, true '%s', false '%s'",
-        op_code, Temp_labelstring(s->u.CJUMP.true),
-        Temp_labelstring(s->u.CJUMP.false));
+      S("%s `s0, `s1, `j0 # compare e1 e2, true '%s', false '%s'", op_code,
+        Temp_labelstring(s->u.CJUMP.true), Temp_labelstring(s->u.CJUMP.false));
       emit(AS_Oper(
           STRDUP(buf), NULL, L(r1, L(r2, NULL)),
           AS_Targets(Temp_LabelList(s->u.CJUMP.true,
@@ -262,8 +252,6 @@ static Temp_temp munchExp(T_exp e) {
 AS_instrList F_codegen(F_frame f, T_stmList stmList) {
   AS_instrList list = NULL;
   T_stmList sl;
-
-  // TODO init?
 
   for (sl = stmList; sl; sl = sl->tail) {
     munchStm(sl->head);

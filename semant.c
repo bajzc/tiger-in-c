@@ -202,7 +202,6 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
           if ((l == Ty_record && r == Ty_nil) ||
               (l == Ty_nil && r == Ty_record))
             // comparison with NULL
-            // TODO T_Cjump can handle null comparison
             return expTy(Tr_opExp(left.exp, oper, right.exp), Ty_Int());
           if (l != r)
             // no exception other than above
@@ -353,7 +352,6 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
       Tr_exp var;
       beginBreakScope();
       {
-        // FIXME ensure not assign to var in this scope
         Tr_access var_acc = Tr_allocLocal(level, a->u.forr.escape);
         S_enter(venv, a->u.forr.var, E_VarEntry(lo.ty, var_acc));
         body = transExp(venv, tenv, a->u.forr.body, level, new_break);

@@ -27,6 +27,6 @@ lex.yy.c: tiger.lex
 	flex tiger.lex
 
 clean: 
-	rm -fr $(BUILD_DIR) lex.yy.c tiger.tab.c tiger.tab.h a.out
+	rm -fr $(BUILD_DIR) lex.yy.c tiger.tab.c tiger.tab.h a.out *.dot *.s
 
 .PHONY: clean create_dir

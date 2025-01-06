@@ -119,7 +119,7 @@ F_frame F_newFrame(Temp_label name, U_boolList formals) {
 
   while (formals) {
     escape = formals->head;
-    F_allocFormals(frame, escape); // TODO how to make sure they are in a0-a7?
+    F_allocFormals(frame, escape);
     debug("%s: install new param (escape=%d)\n", Temp_labelstring(name),
           escape);
     formals = formals->tail;
