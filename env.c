@@ -7,6 +7,8 @@
 #include "types.h"
 #include "util.h"
 
+S_table E_venv, E_tenv;
+
 E_enventry E_VarEntry(Ty_ty ty, Tr_access access) {
   E_enventry entry = checked_malloc(sizeof(*entry));
   entry->kind = E_varEntry;

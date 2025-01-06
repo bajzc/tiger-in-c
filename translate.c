@@ -455,7 +455,10 @@ Tr_level Tr_newLevel(Tr_level parent, Temp_label name, U_boolList formals) {
 
 Tr_accessList Tr_formals(Tr_level level) {
   F_accessList f = F_formals(level->frame);
-  assert(f);
+  if (!f && level == OUTER_MOST)
+    return NULL;
+  else
+    assert(f);
   Tr_accessList l = NULL, l_head = NULL;
   // builtin functions will not occur here
   f = f->tail; // skip static link

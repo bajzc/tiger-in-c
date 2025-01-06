@@ -13,16 +13,16 @@
 #include "flowgraph.h"
 #include "frame.h" /* needed by translate.h and printfrags prototype */
 #include "graph.h"
+#include "liveness.h"
 #include "parse.h"
 #include "prabsyn.h"
 #include "printtree.h"
 #include "semant.h" /* function prototype for transProg */
+#include "set.h"
 #include "symbol.h"
 #include "temp.h" /* needed by translate.h */
 #include "tree.h" /* needed by frame.h */
 #include "util.h"
-#include "set.h"
-
 
 extern bool anyErrors;
 
@@ -45,8 +45,24 @@ static void printFlowgraph(FILE *out, G_graph graph, Temp_map m) {
   }
 }
 
+static void printInterGraph(FILE *out, G_graph graph) {
+  fprintf(out, "strict graph {\n");
+  G_nodeList nodes = G_nodes(graph);
+  while (nodes) {
+    Temp_temp instr = Live_gtemp(nodes->head);
+    G_nodeList adj = G_succ(nodes->head);
+    while (adj) {
+      Temp_temp adj_instr = Live_gtemp(adj->head);
+      fprintf(out, "t%d -- t%d;\n", instr->num, adj_instr->num);
+      adj = adj->tail;
+    }
+    nodes = nodes->tail;
+  }
+  fprintf(out, "}\n");
+}
+
 /* print the assembly language instructions to filename.s */
-static void doProc(FILE *out, F_frame frame, T_stm body) {
+static void doProc(FILE *out, char *outfile, F_frame frame, T_stm body) {
   AS_proc proc;
   // struct RA_result allocation;
   T_stmList stmList;
@@ -57,7 +73,7 @@ static void doProc(FILE *out, F_frame frame, T_stm body) {
   /* printStmList(stdout, stmList);*/
   iList = F_codegen(frame, stmList); /* 9 */
   iList = F_procEntryExit2(iList);
-  proc = F_procEntryExit3(frame,iList);
+  proc = F_procEntryExit3(frame, iList);
 
   fprintf(out, "BEGIN %s\n", Temp_labelstring(F_name(frame)));
   Temp_map m = Temp_layerMap(F_tempMap, Temp_name());
@@ -65,11 +81,92 @@ static void doProc(FILE *out, F_frame frame, T_stm body) {
   fprintf(out, "END %s\n\n", Temp_labelstring(F_name(frame)));
   G_graph graph = FG_AssemFlowGraph(iList);
   printFlowgraph(stdout, graph, m);
+  G_graph inter_graph = Live_Liveness(graph).graph;
+
+  char graph_file[100];
+  snprintf(graph_file, 100, "%s-%s.dot", outfile,
+           Temp_labelstring(F_name(frame)));
+  FILE *graph_out = fopen(graph_file, "w");
+  printInterGraph(graph_out, inter_graph);
+  fclose(graph_out);
+}
+
+char *escape(const char *input) {
+  if (!input)
+    return NULL;
+
+  // Calculate the length of the escaped string
+  size_t len = 0;
+  const char *ptr = input;
+  while (*ptr) {
+    switch (*ptr) {
+      case '\n':
+      case '\t':
+      case '\\':
+      case '\"':
+      case '\'':
+      case '\r':
+      case '\0': len += 2; break; // Escape sequence length
+      default: len++; break;
+    }
+    ptr++;
+  }
+
+  // Allocate memory for the escaped string
+  char *output = (char *) malloc(len + 1); // +1 for null terminator
+  if (!output)
+    return NULL;
+
+  char *dest = output;
+  ptr = input;
+  while (*ptr) {
+    switch (*ptr) {
+      case '\n':
+        *dest++ = '\\';
+        *dest++ = 'n';
+        break;
+      case '\t':
+        *dest++ = '\\';
+        *dest++ = 't';
+        break;
+      case '\\':
+        *dest++ = '\\';
+        *dest++ = '\\';
+        break;
+      case '\"':
+        *dest++ = '\\';
+        *dest++ = '\"';
+        break;
+      case '\'':
+        *dest++ = '\\';
+        *dest++ = '\'';
+        break;
+      case '\r':
+        *dest++ = '\\';
+        *dest++ = 'r';
+        break;
+      case '\0':
+        *dest++ = '\\';
+        *dest++ = '0';
+        break;
+      default: *dest++ = *ptr; break;
+    }
+    ptr++;
+  }
+  *dest = '\0'; // Null-terminate the string
+
+  return output;
+}
+
+static void doString(FILE *out, Temp_label lab, char *str) {
+  fprintf(out, ".data\n");
+  fprintf(out, "  %s:\n", Temp_labelstring(lab));
+  fprintf(out, "    .word %lu\n", STRLEN(str));
+  fprintf(out, "    .asciz \"%s\"\n", escape(str));
 }
 
 int main(int argc, string *argv) {
   A_exp absyn_root;
-  S_table base_env, base_tenv;
   F_fragList frags;
   char outfile[100];
   FILE *out = stdout;
@@ -96,10 +193,10 @@ int main(int argc, string *argv) {
     /* Chapter 8, 9, 10, 11 & 12 */
     for (; frags; frags = frags->tail) {
       if (frags->head->kind == F_procFrag)
-        doProc(out, frags->head->u.proc.frame, frags->head->u.proc.body);
+        doProc(out, argv[1], frags->head->u.proc.frame,
+               frags->head->u.proc.body);
       else if (frags->head->kind == F_stringFrag)
-        fprintf(out, "%s\n", frags->head->u.stringg.str);
-
+        doString(out, frags->head->u.stringg.label, frags->head->u.stringg.str);
     }
 
     fclose(out);

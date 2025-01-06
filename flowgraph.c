@@ -1,18 +1,30 @@
 #include "flowgraph.h"
-Temp_tempList FG_def(G_node n) {
-  AS_instr instr =  G_nodeInfo(n);
-  switch (instr->kind) {
-    case I_OPER: return instr->u.OPER.dst;
-    case I_LABEL: return NULL;
-    case I_MOVE: return instr->u.MOVE.dst;
+#include "set.h"
+
+static Set FG_TempList2Set(Temp_tempList l) {
+  Set s = SET_empty(SET_default_cmp);
+  for (; l; l = l->tail) {
+    SET_insert(s, l->head);
   }
+  return s;
 }
-Temp_tempList FG_use(G_node n) {
+
+Set FG_def(G_node n) {
   AS_instr instr = G_nodeInfo(n);
   switch (instr->kind) {
-    case I_OPER: return instr->u.OPER.src;
-    case I_LABEL: return NULL;
-    case I_MOVE: return instr->u.MOVE.src;
+    case I_OPER: return FG_TempList2Set(instr->u.OPER.dst);
+    case I_LABEL: return FG_TempList2Set(NULL);
+    case I_MOVE: return FG_TempList2Set(instr->u.MOVE.dst);
+    default: assert(0);
+  }
+}
+Set FG_use(G_node n) {
+  AS_instr instr = G_nodeInfo(n);
+  switch (instr->kind) {
+    case I_OPER: return FG_TempList2Set(instr->u.OPER.src);
+    case I_LABEL: return FG_TempList2Set(NULL);
+    case I_MOVE: return FG_TempList2Set(instr->u.MOVE.src);
+    default: assert(0);
   }
 }
 
@@ -49,11 +61,10 @@ G_node FG_AssemFlowGraph_Internal(AS_instrList il, G_graph graph,
       G_addEdge(node, fallthrough);
     }
     return node;
-  }
-  // il->head->kind == I_LABEL
-  return FG_AssemFlowGraph_Internal(
-      il->tail, graph, label_map,
-      Temp_LabelList(il->head->u.LABEL.label, headLabels));
+  } else if (il->head->kind == I_LABEL)
+    return FG_AssemFlowGraph_Internal(
+        il->tail, graph, label_map,
+        Temp_LabelList(il->head->u.LABEL.label, headLabels));
 }
 
 

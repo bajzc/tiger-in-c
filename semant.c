@@ -3,13 +3,12 @@
 #include <stdlib.h>
 
 #include "absyn.h"
+#include "canon.h"
 #include "env.h"
 #include "errormsg.h"
 #include "escape.h"
-#include "semant.h"
-
-#include "canon.h"
 #include "printtree.h"
+#include "semant.h"
 #include "symbol.h"
 #include "translate.h"
 #include "types.h"
@@ -541,7 +540,8 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
         Tr_printFormals(Tr_formals(fun_level));
 #endif
 
-        Tr_procEntryExit(fun_level, resultExp.exp, Tr_formals(fun_level), resultTy->kind != Ty_void);
+        Tr_procEntryExit(fun_level, resultExp.exp, Tr_formals(fun_level),
+                         resultTy->kind != Ty_void);
       }
       return Tr_nilExp();
     } // end case A_functionDec
@@ -652,8 +652,9 @@ Ty_ty transTy(S_table tenv, A_ty a) {
 }
 
 F_fragList SEM_transProg(A_exp exp) {
-  struct expty res =
-      transExp(E_base_venv(), E_base_tenv(), exp, Tr_outermost(), NULL);
+  E_venv = E_base_venv();
+  E_tenv = E_base_tenv();
+  struct expty res = transExp(E_venv, E_tenv, exp, Tr_outermost(), NULL);
 #if DEBUG2
   debug("call Tr_printFormals on outermost evn(%s)\n",
         Temp_labelstring(Tr_outermost()->name));

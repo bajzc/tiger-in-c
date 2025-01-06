@@ -2,6 +2,7 @@
 
 #include "escape.h"
 #include "absyn.h"
+#include "errormsg.h"
 #include "table.h"
 
 struct S_symbol_ {
@@ -61,6 +62,9 @@ static void traverseVar(S_table env, int depth, A_var v) {
   switch (v->kind) {
     case A_simpleVar: { // ID
       E_escapeEntry entry = TAB_look(env, v->u.simple);
+      if (!entry) {
+        EM_error(v->pos, "undefined variable %s", S_name(v->u.simple));
+      }
       if (entry->depth < depth) {
         *(entry->escape) = TRUE;
         debug("In depth %d, set '%s' (defined in depth %d) to be escape\n",
@@ -77,8 +81,7 @@ static void traverseVar(S_table env, int depth, A_var v) {
       traverseExp(env, depth, v->u.subscript.exp);
       break;
     }
-    default:
-      assert(0);
+    default: assert(0);
   }
 }
 
@@ -111,8 +114,7 @@ static void traverseDec(S_table env, int depth, A_dec d) {
     case A_typeDec: {
       break;
     }
-    default:
-      assert(0);
+    default: assert(0);
   }
 }
 
@@ -126,8 +128,7 @@ static void traverseExp(S_table env, int depth, A_exp a) {
     }
     case A_nilExp:
     case A_intExp:
-    case A_stringExp:
-      break;
+    case A_stringExp: break;
     case A_callExp: {
       A_expList e = a->u.call.args;
       while (e) {
@@ -191,8 +192,7 @@ static void traverseExp(S_table env, int depth, A_exp a) {
       depth -= 1;
       break;
     }
-    case A_breakExp:
-      break;
+    case A_breakExp: break;
     case A_letExp: {
       depth += 1;
       E_beginScope(env);
@@ -208,7 +208,6 @@ static void traverseExp(S_table env, int depth, A_exp a) {
       traverseExp(env, depth, a->u.array.init);
       break;
     }
-    default:
-      assert(0);
+    default: assert(0);
   } // end switch(a->kind)
 }

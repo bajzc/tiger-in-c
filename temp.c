@@ -6,7 +6,6 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
 
 #include "symbol.h"
 #include "table.h"
@@ -39,7 +38,6 @@ Temp_temp Temp_newtemp(void) {
   }
   return p;
 }
-
 
 struct Temp_map_ {
   TAB_table tab;

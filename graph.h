@@ -5,6 +5,8 @@
 #ifndef GRAPH_H
 #define GRAPH_H
 
+#include "util.h"
+
 typedef struct G_graph_ *G_graph;  /* The "graph" type */
 typedef struct G_node_ *G_node;    /* The "node" type */
 
@@ -12,7 +14,7 @@ typedef struct G_nodeList_ *G_nodeList;
 struct G_nodeList_ { G_node head; G_nodeList tail;};
 
 /* Make a new graph */
-G_graph G_Graph(void); 
+G_graph G_Graph(void);
 /* Make a new node in graph "g", with associated "info" */
 G_node G_Node(G_graph g, void *info);
 
@@ -28,6 +30,10 @@ bool G_inNodeList(G_node a, G_nodeList l);
 /* Make a new edge joining nodes "from" and "to", which must belong
     to the same graph */
 void G_addEdge(G_node from, G_node to);
+
+/* Make a bi-directional edge joining nodes "from" and "to", which must belong
+    to the same graph */
+void G_addBiEdge(G_node from, G_node to);
 
 /* Delete the edge joining "from" and "to" */
 void G_rmEdge(G_node from, G_node to);

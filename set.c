@@ -23,8 +23,8 @@ void SET_ensure_capacity(Set s, int capacity) {
   }
   if (new_capacity == s->capacity)
     return;
-  void **new = checked_malloc(s->capacity * sizeof(void *));
-  MEMCPY(new, s->elements, new_capacity * sizeof(void *));
+  void **new = checked_malloc(new_capacity * sizeof(void *));
+  MEMCPY(new, s->elements, s->capacity * sizeof(void *));
   s->elements = new;
   s->capacity = new_capacity;
 }
@@ -86,6 +86,10 @@ Set SET_difference(Set a, Set b) {
   }
   return s;
 }
+
+
+
+
 int SET_insert(Set a, void *element) {
   if (SET_contains(a, element))
     return 0;
@@ -159,3 +163,15 @@ Set SET_copy(Set a) {
 int SET_size(Set a) { return a->size; }
 
 int SET_isEmpty(Set a) { return a->size == 0; }
+
+void** SET_begin(Set a) {
+  return a->elements;
+}
+
+void** SET_end(Set a) {
+  return a->elements + a->size;
+}
+
+int SET_default_cmp(void* a, void* b) {
+  return a - b;
+}

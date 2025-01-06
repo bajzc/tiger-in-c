@@ -33,6 +33,7 @@ Temp_label Temp_newlabel(void);
 Temp_label Temp_namedlabel(string name);
 string Temp_labelstring(Temp_label s);
 
+int Label_cmp(void *a, void *b);
 
 Temp_map Temp_empty(void);
 Temp_map Temp_layerMap(Temp_map over, Temp_map under);

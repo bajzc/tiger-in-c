@@ -123,7 +123,9 @@ static void munchStm(T_stm s) {
         case T_ge: op_code = "bge"; break;
         default: assert(0);
       }
-      S("%s `s0, `s1, `j0 # %s e1 e2, jump to true", op_code, op_code);
+      S("%s `s0, `s1, `j0 # compare e1 e2, true '%s', false '%s'",
+        op_code, Temp_labelstring(s->u.CJUMP.true),
+        Temp_labelstring(s->u.CJUMP.false));
       emit(AS_Oper(
           STRDUP(buf), NULL, L(r1, L(r2, NULL)),
           AS_Targets(Temp_LabelList(s->u.CJUMP.true,
@@ -247,8 +249,10 @@ static Temp_temp munchExp(T_exp e) {
       /* CALL(NAME(lab), args) */
       assert(e->u.CALL.fun->kind == T_NAME);
       Temp_tempList l = munchArgs(0, e->u.CALL.args);
+      //
       S("call %s", Temp_labelstring(e->u.CALL.fun->u.NAME));
       emit(AS_Oper(STRDUP(buf), F_calldefs(), l, NULL));
+      //
       return r;
     }
     default: assert(0);

@@ -33,4 +33,10 @@ int SET_size(Set a);
 
 int SET_isEmpty(Set a);
 
+void** SET_begin(Set a);
+
+void** SET_end(Set a);
+
+int SET_default_cmp(void *a, void *b);
+
 #endif //SET_H

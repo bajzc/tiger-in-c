@@ -31,4 +31,7 @@ E_enventry E_FunEntry(Tr_level level, Temp_label label, Ty_tyList formals,
 
 S_table E_base_tenv(void); // Ty_ty environment
 S_table E_base_venv(void); // E_enventry environment
+
+extern S_table E_venv, E_tenv;
+
 #endif
