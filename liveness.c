@@ -53,6 +53,7 @@ struct Live_graph Live_Liveness(G_graph flow) {
 
   G_graph intgraph = G_Graph();
   TAB_table tab = TAB_empty();
+  Live_moveList ll = NULL;
 
   for (void **p = SET_begin(temps); p < SET_end(temps); p++) {
     Temp_temp d = *p;
@@ -72,7 +73,11 @@ struct Live_graph Live_Liveness(G_graph flow) {
           G_node d_node = TAB_look(tab, d);
           G_node live_node = TAB_look(tab, *live);
 
-          if (d_node == live_node || G_goesTo(d_node, live_node) || instr->kind == I_MOVE && instr->u.MOVE.src->head == *live)
+          if (instr->kind == I_MOVE)
+            ll = Live_MoveList(live_node, d_node, ll);
+
+          if (d_node == live_node || G_goesTo(d_node, live_node) ||
+              instr->kind == I_MOVE && instr->u.MOVE.src->head == *live)
             continue;
 
           G_addBiEdge(d_node, live_node);
@@ -80,5 +85,5 @@ struct Live_graph Live_Liveness(G_graph flow) {
       }
     }
   }
-  return (struct Live_graph) {intgraph, NULL};
+  return (struct Live_graph) {intgraph, ll};
 }
