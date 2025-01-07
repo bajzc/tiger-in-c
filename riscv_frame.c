@@ -112,9 +112,6 @@ F_frame F_newFrame(Temp_label name, U_boolList formals) {
     assert(frame->formals_list->head->kind == inFrame);
     debug("%s: installed static links\n", Temp_labelstring(name));
     formals = formals->tail;
-  } else { // the global stack
-    debug("%s: init global frame\n", Temp_labelstring(name));
-    return frame;
   }
 
   while (formals) {
@@ -125,7 +122,7 @@ F_frame F_newFrame(Temp_label name, U_boolList formals) {
     formals = formals->tail;
   }
 
-  debug("%s\n", Temp_labelstring(name));
+  debug("finish %s\n", Temp_labelstring(name));
   return frame;
 }
 

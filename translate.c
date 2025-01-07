@@ -424,7 +424,9 @@ Tr_level Tr_outermost(void) {
     t->parent = NULL;
     t->name = Temp_namedlabel("prelude");
     t->formals = NULL;
-    t->frame = F_newFrame(Temp_namedlabel("global"), NULL);
+    // TODO: init the frame pointer before entering "global"
+    // We need the static link in global!
+    t->frame = F_newFrame(Temp_namedlabel("global"), U_BoolList(TRUE, NULL));
     OUTER_MOST = t;
     return t;
   }
@@ -454,16 +456,9 @@ Tr_level Tr_newLevel(Tr_level parent, Temp_label name, U_boolList formals) {
 
 Tr_accessList Tr_formals(Tr_level level) {
   F_accessList f = F_formals(level->frame);
-  if (!f && level == OUTER_MOST)
-    return NULL;
-  else
-    assert(f);
+  assert(f);
   Tr_accessList l = NULL, l_head = NULL;
   // builtin functions will not occur here
-  f = f->tail; // skip static link
-  if (f == NULL) {
-    return NULL;
-  }
   l = Tr_AccessList(Tr_Access(level, f->head), NULL);
   l_head = l;
   f = f->tail;
