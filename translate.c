@@ -68,12 +68,12 @@ Tr_exp Tr_stringExp(string s) {
 
 Tr_exp Tr_callExp(Temp_label name, Tr_exp *argv, int argc,
                   Tr_level caller_level, Tr_level callee_level) {
-  T_expList l = NULL, l_head = NULL;
+  T_expList *l = checked_malloc(sizeof(*l)), l_head = NULL;
   for (int i = 0; i < argc; i++) {
-    l = T_ExpList(unEx(argv[i]), l);
+    *l = T_ExpList(unEx(argv[i]), NULL);
     if (i == 0)
-      l_head = l;
-    l = l->tail;
+      l_head = *l;
+    l = &((*l)->tail);
   }
   Tr_level c = caller_level;
   T_exp static_link = T_Temp(F_FP());
