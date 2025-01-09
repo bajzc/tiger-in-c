@@ -27,7 +27,33 @@ typedef struct Main_struct_ {
   // G_table adjList; // Map<G_Node<Temp_temp>, <G_Node<Temp_temp>>>
   // G_table degree; // Map<G_Node<Temp_temp>, int>
   Set adjSet; // Set<(G_node, G_node)>
+  Set precolored; // Set<G_node>
 } *Main_struct;
+
+typedef struct edge_ {
+  G_node source;
+  G_node target;
+} *edge;
+
+edge Edge(G_node source, G_node target) {
+  edge e = checked_malloc(sizeof(*e));
+  e->source = source;
+  e->target = target;
+  return e;
+}
+
+// We need special comparer for tuple, because we need to construct a tuple to check existence
+int edge_cmp(void* a, void* b) {
+  edge ea = a;
+  edge eb = b;
+  if (ea->source == eb->source)
+    return ea->target - eb->target;
+  return ea->source - eb->source;
+}
+
+void setup(Main_struct S) {
+  S->adjSet = SET_empty(edge_cmp);
+}
 
 
 /*
@@ -88,6 +114,8 @@ void build(Main_struct S) {
           Temp_temp n = *nptr;
           G_node node = G_findNodeWithInfo(S->live_graph->graph, n);
           Set moveList = G_look(S->moveList, node);
+          if (moveList == NULL)
+            G_enter(S->moveList, node, moveList = SET_empty(SET_default_cmp));
           SET_insert(moveList, cur_instr); // moveList[n] ← moveList[n] ∪ {I}
         }
         SET_insert(S->worklistMoves,
@@ -134,4 +162,15 @@ procedure AddEdge(u, v)
       adjList[v] ← adjList[v] ∪ {u}
       degree[v] ← degree[v] + 1
 */
-void AddEdge()
+void AddEdge(Main_struct S, G_node u, G_node v) {
+  if (SET_contains(S->adjSet, Edge(u, v)))
+    return;
+
+  SET_insert(S->adjSet, Edge(u, v));
+  SET_insert(S->adjSet, Edge(v, u));
+
+  if (!SET_contains(S->precolored, u)) {
+    // adjList[u] ← adjList[u] ∪ {v}
+    // degree[u] ← degree[u] + 1
+  }
+}
