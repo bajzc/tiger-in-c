@@ -220,8 +220,9 @@ static Temp_tempList specialRegs;
 static void initRegMap() {
   if (ZERO != NULL)
     return;
-  if (F_tempMap == NULL)
-    F_tempMap = Temp_empty();
+  F_tempMap = Temp_empty();
+  F_reg2colorscheme = Temp_empty();
+  F_reg2color = Temp_empty();
   INIT_REG(ZERO, zero, x11, gold);
   INIT_REG(RA, ra, x11, gold3);
   INIT_REG(SP, sp, x11, gold4);

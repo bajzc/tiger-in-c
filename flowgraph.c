@@ -67,7 +67,6 @@ G_node FG_AssemFlowGraph_Internal(AS_instrList il, G_graph graph,
         Temp_LabelList(il->head->u.LABEL.label, headLabels));
 }
 
-
 G_graph FG_AssemFlowGraph(AS_instrList il) {
   if (il == NULL)
     return NULL;
@@ -75,4 +74,16 @@ G_graph FG_AssemFlowGraph(AS_instrList il) {
   G_graph graph = G_Graph();
   FG_AssemFlowGraph_Internal(il, graph, label_map, NULL);
   return graph;
+}
+
+typedef struct {
+  G_node startInstr;
+  G_node endInstr;
+} *FG_block;
+
+FG_block FG_Block(G_node start, G_node end) {
+  FG_block block = checked_malloc(sizeof(FG_block));
+  block->startInstr = start;
+  block->endInstr = end;
+  return block;
 }

@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "codegen.h"
+#include "set.h"
 
 #define L(h, t) Temp_TempList((Temp_temp) h, (Temp_tempList) t)
 #define S(format, ...) snprintf(buf, 80, format, ##__VA_ARGS__)
@@ -249,12 +250,18 @@ static Temp_temp munchExp(T_exp e) {
   }
 }
 
-AS_instrList F_codegen(F_frame f, T_stmList stmList) {
-  AS_instrList list = NULL;
+// Set<(stmt, AS_instr)>
+AS_instrList F_codegen(Set stmt2last_instr, F_frame f, T_stmList stmList) {
   T_stmList sl;
+  AS_instrList list = NULL;
+
 
   for (sl = stmList; sl; sl = sl->tail) {
     munchStm(sl->head);
+    struct stmt_instr *new = checked_malloc(sizeof(*new));
+    new->stm = sl->head;
+    new->last = last->head;
+    SET_insert(stmt2last_instr, new);
   }
   list = iList;
   iList = last = NULL;

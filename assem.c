@@ -135,6 +135,38 @@ static void format(char *result, string assem, Temp_tempList dst,
   result[i] = '\0';
 }
 
+static void format_graph(char *result, string assem, Temp_tempList dst,
+                   Temp_tempList src, AS_targets jumps, Temp_map m) {
+  format(result, assem, dst, src, jumps, m);
+  int i = 0;
+  while (result[i] != '\0') {
+    if (result[i] == '#' || result[i] == '\n') {
+      result[i] = '\0';
+      break;
+    }
+    i++;
+  }
+}
+
+void AS_print_graph(FILE *out, AS_instr i, Temp_map m) {
+  char r[200]; /* result */
+  switch (i->kind) {
+    case I_OPER:
+      format_graph(r, i->u.OPER.assem, i->u.OPER.dst, i->u.OPER.src,
+                   i->u.OPER.jumps, m);
+      fprintf(out, "%s", r);
+      break;
+    case I_LABEL:
+      format_graph(r, i->u.LABEL.assem, NULL, NULL, NULL, m);
+      fprintf(out, "%s", r);
+      /* i->u.LABEL->label); */
+      break;
+    case I_MOVE:
+      format_graph(r, i->u.MOVE.assem, i->u.MOVE.dst, i->u.MOVE.src, NULL, m);
+      fprintf(out, "%s", r);
+      break;
+  }
+}
 
 void AS_print(FILE *out, AS_instr i, Temp_map m) {
   char r[200]; /* result */

@@ -169,6 +169,15 @@ G_nodeList G_adj(G_node n) { return cat(G_succ(n), G_pred(n)); }
 
 void *G_nodeInfo(G_node n) { return n->info; }
 
+G_node G_findNodeWithInfo(G_graph graph, void* data) {
+  G_nodeList nodes = G_nodes(graph);
+  while (nodes) {
+    if (G_nodeInfo(nodes->head) == data) {
+      return nodes->head;
+    }
+    nodes = nodes->tail;
+  }
+}
 
 /* G_node table functions */
 

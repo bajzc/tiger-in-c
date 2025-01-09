@@ -26,23 +26,27 @@
 
 extern bool anyErrors;
 
-static void printFlowgraph(FILE *out, G_graph graph, Temp_map m) {
+static void printFlowgraph(FILE *out, G_graph graph, Temp_map m, char *name) {
   G_nodeList nodes = G_nodes(graph);
+  fprintf(out, "digraph %s{\n", name);
   while (nodes) {
     AS_instr instr = G_nodeInfo(nodes->head);
-    AS_print(out, instr, m);
-
     G_nodeList adj = G_succ(nodes->head);
     while (adj) {
+      fprintf(out, "\"");
+      AS_print_graph(out, instr, m);
+      fprintf(out, "\"");
       AS_instr adj_instr = G_nodeInfo(adj->head);
       fprintf(out, " -> ");
-      AS_print(out, adj_instr, m);
+      fprintf(out, "\"");
+      AS_print_graph(out, adj_instr, m);
+      fprintf(out, "\"");
       adj = adj->tail;
+      fprintf(out, "\n");
     }
-    fprintf(out, "\n");
-
     nodes = nodes->tail;
   }
+  fprintf(out, "}\n");
 }
 
 static void printInterGraph(FILE *out, G_graph graph) {
@@ -70,8 +74,9 @@ static void doProc(FILE *out, char *outfile, F_frame frame, T_stm body) {
 
   stmList = C_linearize(body);
   stmList = C_traceSchedule(C_basicBlocks(stmList));
+  Set stmt_instr_set = SET_empty(SET_default_cmp);
   /* printStmList(stdout, stmList);*/
-  iList = F_codegen(frame, stmList); /* 9 */
+  iList = F_codegen(stmt_instr_set, frame, stmList); /* 9 */
   iList = F_procEntryExit2(iList);
   proc = F_procEntryExit3(frame, iList);
 
@@ -80,7 +85,7 @@ static void doProc(FILE *out, char *outfile, F_frame frame, T_stm body) {
   AS_printInstrList(out, proc->body, m);
   fprintf(out, "END %s\n\n", Temp_labelstring(F_name(frame)));
   G_graph graph = FG_AssemFlowGraph(iList);
-  printFlowgraph(stdout, graph, m);
+  printFlowgraph(stdout, graph, m, Temp_labelstring(F_name(frame)));
   G_graph inter_graph = Live_Liveness(graph).graph;
 
   char graph_file[100];
@@ -95,7 +100,6 @@ char *escape(const char *input) {
   if (!input)
     return NULL;
 
-  // Calculate the length of the escaped string
   size_t len = 0;
   const char *ptr = input;
   while (*ptr) {
@@ -106,14 +110,13 @@ char *escape(const char *input) {
       case '\"':
       case '\'':
       case '\r':
-      case '\0': len += 2; break; // Escape sequence length
+      case '\0': len += 2; break;
       default: len++; break;
     }
     ptr++;
   }
 
-  // Allocate memory for the escaped string
-  char *output = (char *) malloc(len + 1); // +1 for null terminator
+  char *output = (char *) malloc(len + 1);
   if (!output)
     return NULL;
 
@@ -153,7 +156,7 @@ char *escape(const char *input) {
     }
     ptr++;
   }
-  *dest = '\0'; // Null-terminate the string
+  *dest = '\0';
 
   return output;
 }

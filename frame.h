@@ -40,6 +40,9 @@ struct F_fragList_ {
 
 extern const int F_wordSize;
 extern Temp_map F_tempMap;
+extern const int F_numGPR;
+extern Temp_map F_reg2colorscheme;
+extern Temp_map F_reg2color;
 
 F_frag F_StringFrag(Temp_label label, string str);
 F_frag F_ProcFrag(T_stm body, F_frame frame);

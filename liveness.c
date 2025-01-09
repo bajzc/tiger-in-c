@@ -17,6 +17,7 @@ static Set lookupLiveMap(G_table t, G_node flowNode) {
 Live_moveList Live_MoveList(G_node src, G_node dst, Live_moveList tail) {}
 Temp_temp Live_gtemp(G_node n) { return (Temp_temp) G_nodeInfo(n); }
 
+// calculate in{} and out{}
 bool calcLiveness(G_nodeList l) {
   if (l == NULL)
     return TRUE;
@@ -77,7 +78,7 @@ struct Live_graph Live_Liveness(G_graph flow) {
             ll = Live_MoveList(live_node, d_node, ll);
 
           if (d_node == live_node || G_goesTo(d_node, live_node) ||
-              instr->kind == I_MOVE && instr->u.MOVE.src->head == *live)
+              (instr->kind == I_MOVE && instr->u.MOVE.src->head == *live))
             continue;
 
           G_addBiEdge(d_node, live_node);

@@ -37,6 +37,7 @@ AS_instr AS_Label(string a, Temp_label label);
 AS_instr AS_Move(string a, Temp_tempList d, Temp_tempList s);
 
 void AS_print(FILE *out, AS_instr i, Temp_map m);
+void AS_print_graph(FILE *out, AS_instr i, Temp_map m);
 
 typedef struct AS_instrList_ *AS_instrList;
 struct AS_instrList_ {

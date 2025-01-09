@@ -115,9 +115,8 @@ Tr_exp Tr_opExp(Tr_exp l, A_oper op, Tr_exp r) {
 Tr_exp Tr_eqExpString(Tr_exp l, A_oper op, Tr_exp r) {
   // int stringEqual(char* l, char* r);
   assert(op == A_eqOp || op == A_neqOp);
-  return Tr_Ex(F_externalCall(
-      "stringEqual",
-      T_ExpList(unEx(l), T_ExpList(unEx(r), NULL))));
+  return Tr_Ex(F_externalCall("stringEqual",
+                              T_ExpList(unEx(l), T_ExpList(unEx(r), NULL))));
 }
 
 /**
@@ -297,7 +296,7 @@ void Tr_procEntryExit(Tr_level level, Tr_exp body, Tr_accessList formals,
                       bool return_flag) {
   T_stm stm = unNx(body);
   if (return_flag)
-     stm = T_Move(T_Temp(F_RV()), unEx(body));
+    stm = T_Move(T_Temp(F_RV()), unEx(body));
   F_frag frag = F_ProcFrag(stm, level->frame);
   F_fragments = F_FragList(frag, F_fragments);
   F_procEntryExit1(level->frame, stm);
