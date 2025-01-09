@@ -169,7 +169,7 @@ G_nodeList G_adj(G_node n) { return cat(G_succ(n), G_pred(n)); }
 
 void *G_nodeInfo(G_node n) { return n->info; }
 
-G_node G_findNodeWithInfo(G_graph graph, void* data) {
+G_node G_findNodeWithInfo(G_graph graph, void *data) {
   G_nodeList nodes = G_nodes(graph);
   while (nodes) {
     if (G_nodeInfo(nodes->head) == data) {
@@ -186,3 +186,21 @@ G_table G_empty(void) { return TAB_empty(); }
 void G_enter(G_table t, G_node node, void *value) { TAB_enter(t, node, value); }
 
 void *G_look(G_table t, G_node node) { return TAB_look(t, node); }
+
+
+G_nodeList G_push(G_nodeList list, G_node node) {
+  return G_NodeList(node, list);
+}
+
+G_nodeList G_pop(G_nodeList list) {
+  return list->tail;
+}
+
+Set G_toSet(G_nodeList list) {
+  Set set = SET_empty(SET_default_cmp);
+  while (list) {
+    SET_insert(set, list->head);
+    list = list->tail;
+  }
+  return set;
+}

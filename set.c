@@ -87,9 +87,6 @@ Set SET_difference(Set a, Set b) {
   return s;
 }
 
-
-
-
 int SET_insert(Set a, void *element) {
   if (SET_contains(a, element))
     return 0;
@@ -164,14 +161,15 @@ int SET_size(Set a) { return a->size; }
 
 int SET_isEmpty(Set a) { return a->size == 0; }
 
-void** SET_begin(Set a) {
-  return a->elements;
-}
+void **SET_begin(Set a) { return a->elements; }
 
-void** SET_end(Set a) {
-  return a->elements + a->size;
-}
+void **SET_end(Set a) { return a->elements + a->size; }
 
-int SET_default_cmp(void* a, void* b) {
-  return a - b;
+int SET_default_cmp(void *a, void *b) { return a - b; }
+
+void* SET_pop(Set a) {
+  if (a->size == 0)
+    return NULL;
+  else
+  return a->elements[--a->size];
 }

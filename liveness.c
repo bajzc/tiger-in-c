@@ -86,5 +86,5 @@ struct Live_graph Live_Liveness(G_graph flow) {
       }
     }
   }
-  return (struct Live_graph) {intgraph, ll};
+  return (struct Live_graph) {intgraph, ll, tab};
 }

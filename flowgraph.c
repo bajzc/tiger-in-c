@@ -9,6 +9,10 @@ static Set FG_TempList2Set(Temp_tempList l) {
   return s;
 }
 
+/**
+ * @param n G_node<AS_instr>
+ * @return Set<Temp_temp>
+ */
 Set FG_def(G_node n) {
   AS_instr instr = G_nodeInfo(n);
   switch (instr->kind) {
@@ -18,6 +22,11 @@ Set FG_def(G_node n) {
     default: assert(0);
   }
 }
+
+/**
+ * @param n G_node<AS_instr>
+ * @return Set<Temp_temp>
+ */
 Set FG_use(G_node n) {
   AS_instr instr = G_nodeInfo(n);
   switch (instr->kind) {
@@ -28,6 +37,9 @@ Set FG_use(G_node n) {
   }
 }
 
+/**
+ * @param n G_node<AS_instr>
+ */
 bool FG_isMove(G_node n) { return ((AS_instr) G_nodeInfo(n))->kind == I_MOVE; }
 
 
@@ -74,16 +86,4 @@ G_graph FG_AssemFlowGraph(AS_instrList il) {
   G_graph graph = G_Graph();
   FG_AssemFlowGraph_Internal(il, graph, label_map, NULL);
   return graph;
-}
-
-typedef struct {
-  G_node startInstr;
-  G_node endInstr;
-} *FG_block;
-
-FG_block FG_Block(G_node start, G_node end) {
-  FG_block block = checked_malloc(sizeof(FG_block));
-  block->startInstr = start;
-  block->endInstr = end;
-  return block;
 }

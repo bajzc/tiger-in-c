@@ -5,6 +5,7 @@
 #ifndef GRAPH_H
 #define GRAPH_H
 
+#include "set.h"
 #include "util.h"
 
 typedef struct G_graph_ *G_graph;  /* The "graph" type */
@@ -73,5 +74,9 @@ void G_enter(G_table t, G_node node, void *value);
 void *G_look(G_table t, G_node node);
 
 G_node G_findNodeWithInfo(G_graph graph, void* data);
+
+G_nodeList G_push(G_nodeList list, G_node node);
+G_nodeList G_pop(G_nodeList list);
+Set G_toSet(G_nodeList list);
 
 #endif

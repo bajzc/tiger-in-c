@@ -1,6 +1,8 @@
 #ifndef SET_H
 #define SET_H
 
+#define SET_FOREACH(set, elementVar) for (void **elementVar = SET_begin(set); elementVar < SET_end(set); elementVar++)
+
 typedef struct Set_* Set;
 
 typedef int (*Comparer)(void*, void*);
@@ -38,5 +40,7 @@ void** SET_begin(Set a);
 void** SET_end(Set a);
 
 int SET_default_cmp(void *a, void *b);
+
+void* SET_pop(Set a);
 
 #endif //SET_H

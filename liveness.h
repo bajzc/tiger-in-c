@@ -2,6 +2,7 @@
 #define LIVENESS_H
 
 #include "graph.h"
+#include "table.h"
 #include "temp.h"
 
 typedef struct Live_moveList_ *Live_moveList;
@@ -13,6 +14,7 @@ struct Live_moveList_ {
 struct Live_graph {
   G_graph graph;
   Live_moveList moves;
+  TAB_table tempToNode;
 };
 
 Live_moveList Live_MoveList(G_node src, G_node dst, Live_moveList tail);

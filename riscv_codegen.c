@@ -250,11 +250,14 @@ static Temp_temp munchExp(T_exp e) {
   }
 }
 
-// Set<(stmt, AS_instr)>
+/**
+ * @brief
+ * @param stmt2last_instr  Set<stmt_instr<stmt, AS_instr>>
+ * @return
+ */
 AS_instrList F_codegen(Set stmt2last_instr, F_frame f, T_stmList stmList) {
   T_stmList sl;
   AS_instrList list = NULL;
-
 
   for (sl = stmList; sl; sl = sl->tail) {
     munchStm(sl->head);
