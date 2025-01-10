@@ -104,6 +104,26 @@ void showit(Temp_temp t, string r) {
   fprintf(outfile, "t%d -> %s\n", t->num, r);
 }
 
+Set Temp_dumpVal2Set(Temp_map m) {
+  Set s = SET_empty(SET_default_cmp);
+  void insert2set(Temp_temp t, string r) { SET_insert(s, r); }
+  TAB_dump(m->tab, (void (*)(void *, void *))insert2set);
+  if (m->under) {
+    s = SET_union(s, Temp_dumpVal2Set(m->under));
+  }
+  return s;
+}
+
+Set Temp_dumpKey2Set(Temp_map m) {
+  Set s = SET_empty(SET_default_cmp);
+  void insert2set(Temp_temp t, string r) { SET_insert(s, t); }
+  TAB_dump(m->tab, (void (*)(void *, void *))insert2set);
+  if (m->under) {
+    s = SET_union(s, Temp_dumpKey2Set(m->under));
+  }
+  return s;
+}
+
 void Temp_dumpMap(FILE *out, Temp_map m) {
   outfile = out;
   TAB_dump(m->tab, (void (*)(void *, void *)) showit);

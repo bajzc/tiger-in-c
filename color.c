@@ -26,9 +26,11 @@ typedef struct Main_struct_ {
   Set worklistMoves; // Set<AS_instr>
   Set activeMoves; // Set<AS_instr>
   Set initial; // Set<G_node<Temp_temp>>
-  G_nodeList selectStack; // Stack<G_node<Temp_temp>>
+  Set coloredNodes; // Set<G_node<Temp_temp>>
+  G_nodeList selectStack; // List<G_node<Temp_temp>>
   G_graph flowgraph; // G_graph<AS_instr>
   Temp_map precolored; // Temp_map<Temp_temp, String>
+  Temp_map color; // Temp_map<Temp_temp, String>
   struct Live_graph
       *live_graph; // Live_graph<G_graph<Temp_temp>,Live_moveList<>>
   TAB_table temp2Node; // TAB_table<Temp_temp, G_node<Temp_temp>>
@@ -510,7 +512,11 @@ procedure SelectSpill()
   simplifyWorklist ← simplifyWorklist ∪ {m}
   FreezeMoves(m)
 */
-void SelectSpill(Main_struct S) {}
+void SelectSpill(Main_struct S) {
+  G_node m = SET_pop(S->spillWorklist); // FIXME
+  SET_insert(S->simplifyWorklist, m);
+  FreezeMoves(m, S);
+}
 
 /*
 procedure AssignColors()
@@ -529,6 +535,33 @@ procedure AssignColors()
   forall n ∈ coalescedNodes
     color[n] ← color[GetAlias(n)]
 */
+void AssignColors(Main_struct S) {
+  while (S->selectStack) {
+    G_node n = G_pop(&(S->selectStack));
+    Set okColors = Temp_dumpVal2Set(S->precolored); // Set<String>
+    SET_FOREACH(G_toSet(G_adj(n)), wptr) {
+      G_node w = *wptr;
+      if (SET_contains(
+              SET_union(S->coloredNodes, Temp_dumpKey2Set(S->precolored)),
+              GetAlias(w, S))) {
+        SET_delete(okColors, Temp_look(S->color, G_nodeInfo(GetAlias(w, S))));
+      }
+    }
+    if (SET_isEmpty(okColors))
+      SET_insert(S->spilledNodes, n);
+    else {
+      SET_insert(S->coloredNodes, n);
+      string c = SET_pop(okColors);
+      Temp_enter(S->color, G_nodeInfo(n), c);
+    }
+  }
+  SET_FOREACH(S->coalescedNodes, nptr) {
+    G_node n = *nptr;
+    Temp_enter(S->color, G_nodeInfo(n),
+               Temp_look(S->color, G_nodeInfo(GetAlias(n, S))));
+  }
+}
+
 
 /*
 procedure RewriteProgram()
@@ -541,4 +574,25 @@ procedure RewriteProgram()
   initial ← coloredNodes ∪ coalescedNodes ∪ newTemps
   coloredNodes ← {}
   coalescedNodes ← {}
- */
+*/
+
+/*
+procedure Main()
+  LivenessAnalysis()
+  Build()
+  MakeWorklist()
+  repeat
+    if simplifyWorklist ̸= {} then Simplify()
+    else if worklistMoves ̸= {} then Coalesce()
+    else if freezeWorklist ̸= {} then Freeze()
+    else if spillWorklist ̸= {} then SelectSpill()
+  until simplifyWorklist = {} ∧ worklistMoves = {}
+        ∧ freezeWorklist = {} ∧ spillWorklist = {}
+  AssignColors()
+  if spilledNodes ̸= {} then
+    RewriteProgram(spilledNodes)
+    Main()
+*/
+void Color_Main() {
+
+}

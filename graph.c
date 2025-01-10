@@ -193,8 +193,10 @@ G_nodeList G_push(G_nodeList list, G_node node) {
   return G_NodeList(node, list);
 }
 
-G_nodeList G_pop(G_nodeList list) {
-  return list->tail;
+G_node G_pop(G_nodeList *list) {
+  G_node ret = (*list)->head;
+  list = &(*list)->tail;
+  return ret;
 }
 
 Set G_toSet(G_nodeList list) {
