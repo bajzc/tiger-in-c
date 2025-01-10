@@ -1,7 +1,7 @@
 #include "set.h"
 #include "util.h"
 
-#define INITIAL_CAPACITY 16
+#define INITIAL_CAPACITY 4
 
 struct Set_ {
   int size;
@@ -19,7 +19,7 @@ void SET_foreach(Set a, void (*f)(void *)) {
 void SET_ensure_capacity(Set s, int capacity) {
   int new_capacity = s->capacity;
   while (new_capacity < capacity) {
-    new_capacity *= 2;
+    new_capacity = new_capacity * 2 + 1;
   }
   if (new_capacity == s->capacity)
     return;
@@ -48,7 +48,7 @@ Set SET_union(Set a, Set b) {
   if (a->cmp != b->cmp)
     debug("Set %p %p are using different cmp function\n", a->cmp, b->cmp);
   Set s = SET_copy(a);
-  SET_ensure_capacity(s, a->size + b->size);
+  SET_ensure_capacity(s, a->size + b->size + 1);
   for (int i = 0; i < b->size; i++)
     SET_insert(s, b->elements[i]);
   return s;
@@ -167,9 +167,9 @@ void **SET_end(Set a) { return a->elements + a->size; }
 
 int SET_default_cmp(void *a, void *b) { return a - b; }
 
-void* SET_pop(Set a) {
+void *SET_pop(Set a) {
   if (a->size == 0)
     return NULL;
   else
-  return a->elements[--a->size];
+    return a->elements[--a->size];
 }
