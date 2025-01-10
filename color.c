@@ -331,16 +331,16 @@ void Coalesce(Main_struct S) {
     SET_insert(S->constrainedMoves, m);
     AddWorkList(u, S);
     AddWorkList(v, S);
-  } else if (Temp_look(S->precolored, G_nodeInfo(u)) && ({
-               int _temp = 1;
-               SET_FOREACH(Adjacent(v, S), tptr) {
-                 if (!OK(*tptr, u, S))
-                   _temp = 0;
-               }
-               _temp;
-             }) ||
-             !Temp_look(S->precolored, G_nodeInfo(u)) &&
-                 Conservative(SET_union(Adjacent(u, S), Adjacent(v, S)), S)) {
+  } else if ((Temp_look(S->precolored, G_nodeInfo(u)) && ({
+                int _temp = 1;
+                SET_FOREACH(Adjacent(v, S), tptr) {
+                  if (!OK(*tptr, u, S))
+                    _temp = 0;
+                }
+                _temp;
+              })) ||
+             (!Temp_look(S->precolored, G_nodeInfo(u)) &&
+              Conservative(SET_union(Adjacent(u, S), Adjacent(v, S)), S))) {
     SET_insert(S->coalescedMoves, m);
     Combine(u, v, S);
     AddWorkList(u, S);

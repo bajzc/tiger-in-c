@@ -14,7 +14,13 @@ static Set lookupLiveMap(G_table t, G_node flowNode) {
   return G_look(t, flowNode);
 }
 
-Live_moveList Live_MoveList(G_node src, G_node dst, Live_moveList tail) {}
+Live_moveList Live_MoveList(G_node src, G_node dst, Live_moveList tail) {
+  Live_moveList t = checked_malloc(sizeof(*t));
+  t->src = src;
+  t->dst = dst;
+  t->tail = tail;
+  return t;
+}
 Temp_temp Live_gtemp(G_node n) { return (Temp_temp) G_nodeInfo(n); }
 
 // calculate in{} and out{}

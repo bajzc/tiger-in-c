@@ -177,6 +177,7 @@ G_node G_findNodeWithInfo(G_graph graph, void *data) {
     }
     nodes = nodes->tail;
   }
+  return NULL;
 }
 
 /* G_node table functions */

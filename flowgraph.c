@@ -77,6 +77,7 @@ G_node FG_AssemFlowGraph_Internal(AS_instrList il, G_graph graph,
     return FG_AssemFlowGraph_Internal(
         il->tail, graph, label_map,
         Temp_LabelList(il->head->u.LABEL.label, headLabels));
+  assert(0);
 }
 
 G_graph FG_AssemFlowGraph(AS_instrList il) {
