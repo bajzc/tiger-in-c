@@ -296,6 +296,13 @@ procedure AddWorkList(u)
     freezeWorklist ← freezeWorklist \ {u}
     simplifyWorklist ← simplifyWorklist ∪ {u}
 */
+void AddWorkList(G_node u, Main_struct S) {
+  if (Temp_look(S->precolored, TAB_look(S->temp2Node, u)) || MoveRelated(u, S) || G_degree(u) >= S->K)
+    return;
+
+  SET_delete(S->freezeWorklist, u);
+  SET_insert(S->simplifyWorklist, u);
+}
 
 /*
 function OK(t,r )
@@ -359,7 +366,27 @@ procedure Combine(u,v)
 void Combine(G_node u, G_node v, Main_struct S) {
   if (!SET_delete(S->freezeWorklist, v))
     SET_delete(S->spillWorklist, v);
-  // TODO
+
+  SET_insert(S->coalescedNodes, v);
+  G_enter(S->alias, v, u);
+  Set moveListU = G_look(S->moveList, u);
+  Set moveListV = G_look(S->moveList, v);
+  G_enter(S->moveList, u, SET_union(moveListU, moveListV));
+  Set singletonV = SET_empty(SET_default_cmp);
+  SET_insert(singletonV, v);
+  EnableMoves(singletonV, S);
+
+  Set adjV = Adjacent(v, S);
+  SET_FOREACH(adjV, tptr) {
+    G_node t = *tptr;
+    AddEdge(TAB_look(S->temp2Node, t), TAB_look(S->temp2Node, u), S);
+    DecrementDegree(t, S);
+  }
+
+  if (G_degree(u) >= S->K && SET_contains(S->freezeWorklist, u)) {
+    SET_delete(S->freezeWorklist, u);
+    SET_insert(S->spillWorklist, u);
+  }
 }
 
 /*
