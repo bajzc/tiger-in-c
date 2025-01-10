@@ -17,7 +17,7 @@ typedef struct Main_struct_ {
   G_nodeList block_end_list; // List<G_node<AS_instr>>
   Set simplifyWorklist; // Set<G_Node<Temp_temp>>
   Set freezeWorklist; // Set<G_node<Temp_temp>>
-  Set spillWorklist; // Set<>
+  Set spillWorklist; // Set<G_node<Temp_temp>>
   Set spilledNodes; // Set<>
   Set coalescedNodes; // Set<>
   Set coalescedMoves; // Set<AS_instr>
@@ -38,6 +38,7 @@ typedef struct Main_struct_ {
   Set adjSet; // Set<Adj(Temp_temp, Temp_temp)>
   int K;
 } *Main_struct;
+
 typedef struct Adj_ {
   Temp_temp u;
   Temp_temp v;
@@ -53,6 +54,19 @@ Set Adjacent(G_node n, Main_struct S);
 void Simplify(Main_struct S);
 void DecrementDegree(G_node m, Main_struct S);
 void FreezeMoves(G_node u, Main_struct S);
+G_node GetAlias(G_node n, Main_struct S);
+void AddWorkList(G_node u, Main_struct S);
+int OK(G_node t, G_node r, Main_struct S);
+int Conservative(Set nodes, Main_struct S);
+void Combine(G_node u, G_node v, Main_struct S);
+
+int AdjComparer(void *a, void *b) {
+  Adj x = a;
+  Adj y = b;
+  if (x->u == y->u && x->v == y->v)
+    return 0;
+  return a - b;
+}
 
 /*
  * generate block_end_list for every instr in stmt_instr_set, find the node in
@@ -258,9 +272,10 @@ procedure AddEdge(u, v)
       adjList[v] ← adjList[v] ∪ {u}
       degree[v] ← degree[v] + 1
 */
-// we don't talk about performance yet :)
 void AddEdge(Temp_temp u, Temp_temp v, Main_struct S) {
-  G_addBiEdge(TAB_look(S->temp2Node, u), TAB_look(S->temp2Node, v));
+  G_node U = TAB_look(S->temp2Node, u), V = TAB_look(S->temp2Node, v);
+  if (!G_goesTo(U, V) && U != V)
+    G_addBiEdge(U, V);
 }
 
 /*
@@ -289,6 +304,50 @@ procedure Coalesce()
   else
     activeMoves ← activeMoves ∪ {m}
 */
+void Coalesce(Main_struct S) {
+  AS_instr m = NULL;
+  SET_FOREACH(S->worklistMoves, mptr) {
+    m = *mptr;
+    if (m->kind == I_MOVE)
+      break;
+  }
+  if (!m)
+    return;
+  G_node x = GetAlias(TAB_look(S->temp2Node, m->u.MOVE.src->head), S);
+  G_node y = GetAlias(TAB_look(S->temp2Node, m->u.MOVE.dst->head), S);
+  G_node u, v;
+  if (Temp_look(S->precolored, G_nodeInfo(y))) {
+    u = y;
+    v = x;
+  } else {
+    u = x;
+    v = y;
+  }
+  SET_delete(S->worklistMoves, m);
+  if (u == v) {
+    SET_insert(S->coalescedMoves, m);
+    AddWorkList(u, S);
+  } else if (Temp_look(S->precolored, G_nodeInfo(v)) || G_goesTo(u, v)) {
+    SET_insert(S->constrainedMoves, m);
+    AddWorkList(u, S);
+    AddWorkList(v, S);
+  } else if (Temp_look(S->precolored, G_nodeInfo(u)) && ({
+               int _temp = 1;
+               SET_FOREACH(Adjacent(v, S), tptr) {
+                 if (!OK(*tptr, u, S))
+                   _temp = 0;
+               }
+               _temp;
+             }) ||
+             !Temp_look(S->precolored, G_nodeInfo(u)) &&
+                 Conservative(SET_union(Adjacent(u, S), Adjacent(v, S)), S)) {
+    SET_insert(S->coalescedMoves, m);
+    Combine(u, v, S);
+    AddWorkList(u, S);
+  } else {
+    SET_insert(S->activeMoves, m);
+  }
+}
 
 /*
 procedure AddWorkList(u)
@@ -297,7 +356,8 @@ procedure AddWorkList(u)
     simplifyWorklist ← simplifyWorklist ∪ {u}
 */
 void AddWorkList(G_node u, Main_struct S) {
-  if (Temp_look(S->precolored, TAB_look(S->temp2Node, u)) || MoveRelated(u, S) || G_degree(u) >= S->K)
+  if (Temp_look(S->precolored, TAB_look(S->temp2Node, u)) ||
+      MoveRelated(u, S) || G_degree(u) >= S->K)
     return;
 
   SET_delete(S->freezeWorklist, u);
@@ -305,10 +365,9 @@ void AddWorkList(G_node u, Main_struct S) {
 }
 
 /*
-function OK(t,r )
-  degree[t] < K ∨ t ∈ precolored ∨ (t, r ) ∈ adjSet
+function OK(t,r)
+  degree[t] < K ∨ t ∈ precolored ∨ (t, r) ∈ adjSet
 */
-
 int OK(G_node t, G_node r, Main_struct S) {
   Temp_temp tTemp = G_nodeInfo(t);
   return G_degree(t) < S->K || Temp_look(S->precolored, tTemp) != NULL ||
@@ -322,7 +381,6 @@ function Conservative(nodes)
     if degree[n] ≥ K then k ← k + 1
   return (k < K)
 */
-
 int Conservative(Set nodes, Main_struct S) {
   int k = 0;
   SET_FOREACH(nodes, nptr) {
@@ -396,7 +454,6 @@ procedure Freeze()
   simplifyWorklist ← simplifyWorklist ∪ {u}
   FreezeMoves(u)
 */
-
 void Freeze(Main_struct S) {
   G_node u = SET_pop(S->freezeWorklist);
   SET_insert(S->simplifyWorklist, u);
@@ -452,7 +509,8 @@ procedure SelectSpill()
   spillWorklist ← spillWorklist \ {m}
   simplifyWorklist ← simplifyWorklist ∪ {m}
   FreezeMoves(m)
- */
+*/
+void SelectSpill(Main_struct S) {}
 
 /*
 procedure AssignColors()
