@@ -168,7 +168,10 @@ void build(Main_struct S) {
           Temp_temp n = *nptr;
           G_node node = G_findNodeWithInfo(S->live_graph.graph, n);
           Set moveList = G_look(S->moveList, node);
+          if (!moveList)
+            moveList = SET_empty(SET_default_cmp);
           SET_insert(moveList, cur_instr); // moveList[n] ← moveList[n] ∪ {I}
+          G_enter(S->moveList, node, moveList);
         }
         SET_insert(S->worklistMoves,
                    cur_instr); // worklistMoves ← worklistMoves ∪ {I}
@@ -619,9 +622,7 @@ procedure RewriteProgram()
   coloredNodes ← {}
   coalescedNodes ← {}
 */
-void RewriteProgram(AS_instrList iList, Main_struct S) {
-
-}
+void RewriteProgram(AS_instrList iList, Main_struct S) { assert(0); }
 
 /*
 procedure Main()
@@ -646,8 +647,18 @@ void Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
   S->K = F_numGPR;
   S->flowgraph = FG_AssemFlowGraph(iList);
   S->live_graph = Live_Liveness(S->flowgraph);
+  S->liveIn = S->live_graph.liveIn;
+  S->liveOut = S->live_graph.liveOut;
+  S->temp2Node = S->live_graph.tempToNode;
   S->precolored = F_tempMap;
+
+  // init to empty
+  S->moveList = G_empty();
+  S->worklistMoves = SET_empty(SET_default_cmp);
+
+
   build(S);
+  checkInvariant(S);
   MakeWorkList(S);
   while (TRUE) {
     if (!SET_isEmpty(S->simplifyWorklist))
