@@ -37,14 +37,8 @@ typedef struct Main_struct_ {
 
   // G_table adjList; // Map<G_Node<Temp_temp>, <G_Node<Temp_temp>>>
   // G_table degree; // Map<G_Node<Temp_temp>, int>
-  Set adjSet; // Set<Adj(Temp_temp, Temp_temp)>
   int K;
 } *Main_struct;
-
-typedef struct Adj_ {
-  Temp_temp u;
-  Temp_temp v;
-} *Adj;
 
 void build(Main_struct S);
 void AddEdge(Temp_temp u, Temp_temp v, Main_struct S);
@@ -61,14 +55,6 @@ void AddWorkList(G_node u, Main_struct S);
 int OK(G_node t, G_node r, Main_struct S);
 int Conservative(Set nodes, Main_struct S);
 void Combine(G_node u, G_node v, Main_struct S);
-
-int AdjComparer(void *a, void *b) {
-  Adj x = a;
-  Adj y = b;
-  if (x->u == y->u && x->v == y->v)
-    return 0;
-  return a - b;
-}
 
 /*
  * generate block_end_list for every instr in stmt_instr_set, find the node in
@@ -92,6 +78,65 @@ void buildupLiveOut(Main_struct S) {
 int isBlockStart(Main_struct S, G_node node) {
   G_nodeList preds = G_pred(node);
   return preds->head == NULL || G_inNodeList(preds->head, S->block_end_list);
+}
+
+/*
+Degree invariant.
+  (u ∈ simplifyWorklist ∪ freezeWorklist ∪ spillWorklist) ⇒
+  degree(u) = |adjList(u) ∩ (precolored ∪ simplifyWorklist
+  ∪ freezeWorklist ∪ spillWorklist)|
+
+Simplify worklist invariant.
+  (u ∈ simplifyWorklist) ⇒
+  degree(u) < K ∧ moveList[u] ∩ (activeMoves ∪ worklistMoves) = {}
+
+Freeze worklist invariant.
+  (u ∈ freezeWorklist) ⇒
+  degree(u) < K ∧ moveList[u] ∩ (activeMoves ∪ worklistMoves) ̸= {}
+
+Spill worklist invariant.
+  (u ∈ spillWorklist) ⇒ degree(u) ≥ K
+*/
+void checkInvariant(Main_struct S) {
+  // Degree invariant
+  Set precolored = SET_empty(SET_default_cmp);
+  SET_FOREACH(Temp_dumpKey2Set(S->precolored), cptr) {
+    Temp_temp c = *cptr;
+    SET_insert(precolored, TAB_look(S->temp2Node, c));
+  }
+  Set unions = SET_union(S->freezeWorklist, S->simplifyWorklist);
+  unions = SET_union(unions, S->spillWorklist);
+  unions = SET_union(unions, precolored);
+  SET_FOREACH(SET_union(SET_union(S->simplifyWorklist, S->freezeWorklist),
+                        S->spillWorklist),
+              uptr) {
+    G_node u = *uptr;
+    int degree = 0;
+    Set adjListU = G_toSet(G_adj(u));
+    assert(G_degree(u) == SET_size(SET_intersect(adjListU, unions)));
+  }
+
+  // Simplify worklist
+  SET_FOREACH(S->simplifyWorklist, uptr) {
+    G_node u = *uptr;
+    assert(G_degree(u) < S->K);
+    assert(SET_isEmpty(SET_intersect(
+        G_look(S->moveList, u), SET_union(S->activeMoves, S->worklistMoves))));
+  }
+
+  // Freeze worklist
+  SET_FOREACH(S->freezeWorklist, uptr) {
+    G_node u = *uptr;
+    assert(G_degree(u) < S->K);
+    assert(!SET_isEmpty(SET_intersect(
+        G_look(S->moveList, u), SET_union(S->activeMoves, S->worklistMoves))));
+  }
+
+  // Spill worklist
+  SET_FOREACH(S->spillWorklist, uptr) {
+    G_node u = *uptr;
+    assert(G_degree(u) > S->K);
+  }
 }
 
 /*
@@ -184,7 +229,7 @@ void Simplify(Main_struct S) {
 function Adjacent(n)
   adjList[n] \ (selectStack ∪ coalescedNodes)
 */
-Set Adjacent(G_node n, Main_struct S) {
+Set Adjacent(G_node n, Main_struct S) __attribute__((pure)) {
   return SET_difference(G_toSet(G_adj(n)),
                         SET_union(G_toSet(S->selectStack), S->coalescedNodes));
 }
@@ -336,8 +381,10 @@ void Coalesce(Main_struct S) {
   } else if ((Temp_look(S->precolored, G_nodeInfo(u)) && ({
                 int _temp = 1;
                 SET_FOREACH(Adjacent(v, S), tptr) {
-                  if (!OK(*tptr, u, S))
+                  if (!OK(*tptr, u, S)) {
                     _temp = 0;
+                    break;
+                  }
                 }
                 _temp;
               })) ||
