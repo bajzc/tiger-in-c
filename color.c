@@ -1,13 +1,10 @@
 #include "color.h"
-
 #include "codegen.h"
 #include "flowgraph.h"
 #include "frame.h"
 #include "graph.h"
 #include "liveness.h"
 #include "set.h"
-
-extern Temp_map F_tempMap;
 
 typedef struct Main_struct_ {
   G_table liveOut, liveIn; // Map<G_Node<AS_instr>, Set<G_Node<Temp_temp>>>
@@ -32,7 +29,7 @@ typedef struct Main_struct_ {
   Temp_map precolored; // Temp_map<Temp_temp, String>
   Temp_map color; // Temp_map<Temp_temp, String>
   struct Live_graph
-      *live_graph; // Live_graph<G_graph<Temp_temp>,Live_moveList<>>
+      live_graph; // Live_graph<G_graph<Temp_temp>,Live_moveList<>>
   TAB_table temp2Node; // TAB_table<Temp_temp, G_node<Temp_temp>>
 
   // G_table adjList; // Map<G_Node<Temp_temp>, <G_Node<Temp_temp>>>
@@ -169,7 +166,7 @@ void build(Main_struct S) {
         Set defAndUse = SET_union(FG_use(cur_node), FG_def(cur_node));
         SET_FOREACH(defAndUse, nptr) { // forall n ∈ def(I) ∪ use(I)
           Temp_temp n = *nptr;
-          G_node node = G_findNodeWithInfo(S->live_graph->graph, n);
+          G_node node = G_findNodeWithInfo(S->live_graph.graph, n);
           Set moveList = G_look(S->moveList, node);
           SET_insert(moveList, cur_instr); // moveList[n] ← moveList[n] ∪ {I}
         }
@@ -622,6 +619,9 @@ procedure RewriteProgram()
   coloredNodes ← {}
   coalescedNodes ← {}
 */
+void RewriteProgram(AS_instrList iList, Main_struct S) {
+
+}
 
 /*
 procedure Main()
@@ -640,6 +640,31 @@ procedure Main()
     RewriteProgram(spilledNodes)
     Main()
 */
-void Color_Main() {
+void Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
+  Main_struct S = checked_malloc(sizeof(*S));
+  S->stmt_instr_set = stmt_instr_set;
+  S->K = F_numGPR;
+  S->flowgraph = FG_AssemFlowGraph(iList);
+  S->live_graph = Live_Liveness(S->flowgraph);
+  S->precolored = F_tempMap;
+  build(S);
+  MakeWorkList(S);
+  while (TRUE) {
+    if (!SET_isEmpty(S->simplifyWorklist))
+      Simplify(S);
+    else if (!SET_isEmpty(S->worklistMoves))
+      Coalesce(S);
+    else if (!SET_isEmpty(S->freezeWorklist))
+      Freeze(S);
+    else if (!SET_isEmpty(S->spillWorklist))
+      SelectSpill(S);
 
+    if (SET_isEmpty(S->simplifyWorklist) && SET_isEmpty(S->worklistMoves) && SET_isEmpty(S->freezeWorklist) && SET_isEmpty(S->spillWorklist))
+      break;
+    AssignColors(S);
+    if (!SET_isEmpty(S->spilledNodes)) {
+      RewriteProgram(iList, S);
+      Color_Main(stmt_instr_set,iList,frame);//TODO
+    }
+  }
 }

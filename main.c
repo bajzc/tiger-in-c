@@ -8,6 +8,7 @@
 #include "assem.h"
 #include "canon.h"
 #include "codegen.h"
+#include "color.h"
 #include "errormsg.h"
 #include "escape.h"
 #include "flowgraph.h"
@@ -84,6 +85,9 @@ static void doProc(FILE *out, char *outfile, F_frame frame, T_stm body) {
   Temp_map m = Temp_layerMap(F_tempMap, Temp_name());
   AS_printInstrList(out, proc->body, m);
   fprintf(out, "END %s\n\n", Temp_labelstring(F_name(frame)));
+
+  Color_Main(stmt_instr_set, iList, frame);
+
   G_graph graph = FG_AssemFlowGraph(iList);
   printFlowgraph(stdout, graph, m, Temp_labelstring(F_name(frame)));
   G_graph inter_graph = Live_Liveness(graph).graph;
