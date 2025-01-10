@@ -417,7 +417,31 @@ procedure FreezeMoves(u)
       simplifyWorklist ← simplifyWorklist ∪ {v}
 */
 void FreezeMoves(G_node u, Main_struct S) {
-  // TODO
+  Set nodeMoves = NodeMoves(u, S);
+
+  SET_FOREACH(nodeMoves, mptr) {
+    G_node m = *mptr;
+    AS_instr instr = G_nodeInfo(m);
+
+    // TODO verify that we only need to take care of one src and dst
+    G_node x = TAB_look(S->temp2Node, instr->u.MOVE.src->head);
+    G_node y = TAB_look(S->temp2Node, instr->u.MOVE.dst->head);
+
+    G_node v;
+    if (GetAlias(y, S) == GetAlias(u, S)) {
+      v = GetAlias(x, S);
+    } else {
+      v = GetAlias(y, S);
+    }
+
+    SET_delete(S->activeMoves, m);
+    SET_insert(S->frozenMoves, m);
+
+    if (SET_isEmpty(NodeMoves(v, S)) && G_degree(v) < S->K) {
+      SET_delete(S->freezeWorklist, v);
+      SET_insert(S->simplifyWorklist, v);
+    }
+  }
 }
 
 /*
