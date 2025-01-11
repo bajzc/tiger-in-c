@@ -47,54 +47,13 @@ bool calcLiveness(G_nodeList l) {
 
 struct Live_graph Live_Liveness(G_graph flow) {
   in_map = G_empty(), out_map = G_empty();
-  Set temps = SET_empty(SET_default_cmp); // Set<Temp_temp>
   for (G_nodeList l = G_nodes(flow); l; l = l->tail) {
     G_node n = l->head;
     enterLiveMap(in_map, n, SET_empty(SET_default_cmp));
     enterLiveMap(out_map, n, SET_empty(SET_default_cmp));
-    temps = SET_union(temps, FG_def(n));
-    temps = SET_union(temps, FG_use(n));
   }
 
   while (!calcLiveness(G_nodes(flow)))
     ;
-
-  G_graph intgraph = G_Graph();
-  TAB_table tab = TAB_empty();
-  Live_moveList ll = NULL;
-  Set initials = SET_empty(SET_default_cmp);
-
-  for (void **p = SET_begin(temps); p < SET_end(temps); p++) {
-    Temp_temp d = *p;
-    G_node n = G_Node(intgraph, d);
-    TAB_enter(tab, d, n);
-    if (!Temp_look(F_tempMap, d)) // not precolored
-      SET_insert(initials, n);
-  }
-
-  for (G_nodeList l = G_nodes(flow); l; l = l->tail) {
-    G_node n = l->head;
-    AS_instr instr = G_nodeInfo(n);
-    Set defs = FG_def(n);
-    if (!SET_isEmpty(defs)) {
-      for (void **def = SET_begin(defs); def < SET_end(defs); def++) {
-        Temp_temp d = *def;
-        Set lives = lookupLiveMap(in_map, n);
-        for (void **live = SET_begin(lives); live < SET_end(lives); live++) {
-          G_node d_node = TAB_look(tab, d);
-          G_node live_node = TAB_look(tab, *live);
-
-          if (instr->kind == I_MOVE)
-            ll = Live_MoveList(live_node, d_node, ll);
-
-          if (d_node == live_node || G_goesTo(d_node, live_node) ||
-              (instr->kind == I_MOVE && instr->u.MOVE.src->head == *live))
-            continue;
-
-          G_addBiEdge(d_node, live_node);
-        }
-      }
-    }
-  }
-  return (struct Live_graph) {intgraph, ll, tab, in_map, out_map, initials};
+  return (struct Live_graph) {in_map, out_map};
 }

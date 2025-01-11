@@ -35,6 +35,7 @@ typedef struct Main_struct_ {
   // +
   struct Live_graph
       live_graph; // Live_graph<G_graph<Temp_temp>,Live_moveList<>>
+  G_graph interference_graph;
   // TODO initialize these
   TAB_table temp2Node; // TAB_table<Temp_temp, G_node<Temp_temp>>
   G_table adjList;
@@ -387,8 +388,7 @@ void AddEdge(Temp_temp u, Temp_temp v, Main_struct S) {
   SET_insert(S->adjSet, tuple2);
   if (!Temp_look(S->precolored, u)) {
     Set adjListU = G_look(S->adjList, U);
-    if (!adjListU)
-      adjListU = SET_empty(SET_default_cmp);
+    Set
     SET_insert(adjListU, v);
   }
   if (!Temp_look(S->precolored, v)) {
@@ -738,9 +738,7 @@ void Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
   S->live_graph = Live_Liveness(S->flowgraph);
   S->liveIn = S->live_graph.liveIn;
   S->liveOut = S->live_graph.liveOut;
-  S->temp2Node = S->live_graph.tempToNode;
   S->precolored = F_tempMap;
-  S->initial = S->live_graph.initials;
   S->color = Temp_layerMap(Temp_empty(), S->precolored);
   S->adjSet = SET_empty(AdjComparer);
 
@@ -758,6 +756,18 @@ void Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
   S->activeMoves = SET_empty(SET_default_cmp);
   S->coloredNodes = SET_empty(SET_default_cmp);
   S->selectStack = NULL;
+
+  Set temps = SET_empty(SET_default_cmp); // Set<Temp_temp>
+  for (G_nodeList l = G_nodes(S->flowgraph); l; l = l->tail) {
+    G_node n = l->head;
+    temps = SET_union(temps, FG_def(n));
+    temps = SET_union(temps, FG_use(n));
+  }
+  temps = SET_difference(temps, F_regTemp);
+  SET_FOREACH(temps, tptr) {
+    Temp_temp t = *tptr;
+    G_node node = G_Node(S->live_graph)
+  }
 
 
   build(S);
