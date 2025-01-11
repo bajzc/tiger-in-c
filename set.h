@@ -3,7 +3,7 @@
 
 #define SET_FOREACH(set, elementVar)                                           \
   for (void *_set = set, **elementVar = SET_begin(_set);                       \
-       elementVar < SET_end(_set); elementVar++) // double evaluation!!!
+       elementVar < SET_end(_set); elementVar++)
 
 typedef struct Set_ *Set;
 

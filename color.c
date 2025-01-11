@@ -24,17 +24,27 @@ typedef struct Main_struct_ {
   Set activeMoves; // Set<AS_instr>
   Set initial; // Set<G_node<Temp_temp>>
   Set coloredNodes; // Set<G_node<Temp_temp>>
+  Set adjSet; // Set<Adj>
   G_nodeList selectStack; // List<G_node<Temp_temp>>
   G_graph flowgraph; // G_graph<AS_instr>
   Temp_map precolored; // Temp_map<Temp_temp, String>
   Temp_map color; // Temp_map<Temp_temp, String>
+  // TODO: Problems with this:
+  // + AddEdge operates on this graph
+  // + In pseudocode, adjList is not pre-initialized to reflect this graph
+  // +
   struct Live_graph
       live_graph; // Live_graph<G_graph<Temp_temp>,Live_moveList<>>
+  // TODO initialize these
   TAB_table temp2Node; // TAB_table<Temp_temp, G_node<Temp_temp>>
+  G_table adjList;
+  G_table degree;
 
   // G_table adjList; // Map<G_Node<Temp_temp>, <G_Node<Temp_temp>>>
   // G_table degree; // Map<G_Node<Temp_temp>, int>
   int K;
+  F_frame frame;
+  AS_instrList iList;
 } *Main_struct;
 
 void build(Main_struct S);
@@ -52,6 +62,27 @@ void AddWorkList(G_node u, Main_struct S);
 int OK(G_node t, G_node r, Main_struct S);
 int Conservative(Set nodes, Main_struct S);
 void Combine(G_node u, G_node v, Main_struct S);
+
+typedef struct Adj_ {
+  G_node u;
+  G_node v;
+} *Adj;
+
+int AdjComparer(void *a, void *b) {
+  Adj x = a;
+  Adj y = b;
+  if (x->u == y->u)
+    return x->v - y->v;
+  return x->u - y->u;
+}
+
+Adj makeAdj(G_node u, G_node v) {
+  Adj adj = checked_malloc(sizeof(*adj));
+  adj->u = u;
+  adj->v = v;
+  return adj;
+}
+
 
 /*
  * generate block_end_list for every instr in stmt_instr_set, find the node in
@@ -112,12 +143,23 @@ void checkInvariant(Main_struct S) {
               uptr) {
     G_node u = *uptr;
     Set adjListU = G_toSet(G_adj(u));
-    int degree = SET_size(adjListU);
     Set adjListU_temp = SET_empty(SET_default_cmp);
     SET_FOREACH(adjListU, adjptr) {
       SET_insert(adjListU_temp, G_nodeInfo(*adjptr));
     }
+    int degree = SET_size(adjListU_temp);
     int size = SET_size(SET_intersect(adjListU_temp, unions_temps));
+    printf("adjListU_temp = {");
+    SET_FOREACH(adjListU_temp, adjptr) {
+      printf("%d, ", ((Temp_temp) *adjptr)->num);
+    }
+    printf("}\n");
+    printf("unions_temps = {");
+    SET_FOREACH(unions_temps, adjptr) {
+      printf("%d, ", ((Temp_temp) *adjptr)->num);
+    }
+    printf("}\n\n\n");
+    fflush(stdout);
     assert(degree == size);
   }
 
@@ -125,7 +167,7 @@ void checkInvariant(Main_struct S) {
   SET_FOREACH(S->simplifyWorklist, uptr) {
     G_node u = *uptr;
     Set moveListU = G_look(S->moveList, u);
-    assert(G_degree(u) < S->K);
+    assert(SET_size(G_toSet(G_adj(u))) < S->K);
     if (moveListU != NULL)
       assert(SET_isEmpty(SET_intersect(
           moveListU, SET_union(S->activeMoves, S->worklistMoves))));
@@ -135,7 +177,7 @@ void checkInvariant(Main_struct S) {
   SET_FOREACH(S->freezeWorklist, uptr) {
     G_node u = *uptr;
     Set moveListU = G_look(S->moveList, u);
-    assert(G_degree(u) < S->K);
+    assert(SET_size(G_toSet(G_adj(u))) < S->K);
     if (moveListU != NULL)
       assert(!SET_isEmpty(SET_intersect(
           moveListU, SET_union(S->activeMoves, S->worklistMoves))));
@@ -144,7 +186,7 @@ void checkInvariant(Main_struct S) {
   // Spill worklist
   SET_FOREACH(S->spillWorklist, uptr) {
     G_node u = *uptr;
-    assert(G_degree(u) > S->K);
+    assert(SET_size(G_toSet(G_adj(u))) > S->K);
   }
 }
 
@@ -262,7 +304,7 @@ procedure DecrementDegree(m)
       simplifyWorklist ← simplifyWorklist ∪ {m}
 */
 void DecrementDegree(G_node m, Main_struct S) {
-  int d = G_degree(m); // let d = degree[m]
+  int d = SET_size(G_toSet(G_adj(m))); // let d = degree[m]
   if (d != S->K)
     return;
 
@@ -311,7 +353,7 @@ procedure MakeWorklist()
 void MakeWorkList(Main_struct S) {
   SET_FOREACH(S->initial, ptr) { // forall n ∈ initial
     G_node n = *ptr;
-    if (G_degree(n) >= S->K) { // if degree[n] ≥ K then
+    if (SET_size(G_toSet(G_adj(n))) >= S->K) { // if degree[n] ≥ K then
       SET_insert(S->spillWorklist, n); // spillWorklist ← spillWorklist ∪ {n}
     } else if (MoveRelated(n, S)) { // else if MoveRelated(n) then
       SET_insert(S->freezeWorklist, n); // freezeWorklist ← freezeWorklist ∪ {n}
@@ -336,8 +378,23 @@ procedure AddEdge(u, v)
 */
 void AddEdge(Temp_temp u, Temp_temp v, Main_struct S) {
   G_node U = TAB_look(S->temp2Node, u), V = TAB_look(S->temp2Node, v);
-  if (!G_goesTo(U, V) && U != V)
-    G_addBiEdge(U, V);
+  Adj tuple = makeAdj(U, V);
+  Adj tuple2 = makeAdj(V, U);
+  if (SET_contains(S->adjSet, tuple) || u != v)
+    return;
+
+  SET_insert(S->adjSet, tuple);
+  SET_insert(S->adjSet, tuple2);
+  if (!Temp_look(S->precolored, u)) {
+    Set adjListU = G_look(S->adjList, U);
+    if (!adjListU)
+      adjListU = SET_empty(SET_default_cmp);
+    SET_insert(adjListU, v);
+  }
+  if (!Temp_look(S->precolored, v)) {
+    Set adjListU = G_look(S->adjList, V);
+    SET_insert(adjListU, u);
+  }
 }
 
 /*
@@ -421,7 +478,7 @@ procedure AddWorkList(u)
 */
 void AddWorkList(G_node u, Main_struct S) {
   if (Temp_look(S->precolored, G_nodeInfo(u)) || MoveRelated(u, S) ||
-      G_degree(u) >= S->K)
+      SET_size(G_toSet(G_adj(u))) >= S->K)
     return;
 
   SET_delete(S->freezeWorklist, u);
@@ -434,8 +491,8 @@ function OK(t,r)
 */
 int OK(G_node t, G_node r, Main_struct S) {
   Temp_temp tTemp = G_nodeInfo(t);
-  return G_degree(t) < S->K || Temp_look(S->precolored, tTemp) != NULL ||
-         G_goesTo(t, r);
+  return SET_size(G_toSet(G_adj(t))) < S->K ||
+         Temp_look(S->precolored, tTemp) != NULL || G_goesTo(t, r);
 }
 
 /*
@@ -449,7 +506,7 @@ int Conservative(Set nodes, Main_struct S) {
   int k = 0;
   SET_FOREACH(nodes, nptr) {
     G_node n = *nptr;
-    if (G_degree(n) >= S->K)
+    if (SET_size(G_toSet(G_adj(n))) >= S->K)
       k++;
   }
   return k < S->K;
@@ -505,7 +562,8 @@ void Combine(G_node u, G_node v, Main_struct S) {
     DecrementDegree(t, S);
   }
 
-  if (G_degree(u) >= S->K && SET_contains(S->freezeWorklist, u)) {
+  if (SET_size(G_toSet(G_adj(u))) >= S->K &&
+      SET_contains(S->freezeWorklist, u)) {
     SET_delete(S->freezeWorklist, u);
     SET_insert(S->spillWorklist, u);
   }
@@ -560,7 +618,7 @@ void FreezeMoves(G_node u, Main_struct S) {
     SET_delete(S->activeMoves, m);
     SET_insert(S->frozenMoves, m);
 
-    if (SET_isEmpty(NodeMoves(v, S)) && G_degree(v) < S->K) {
+    if (SET_isEmpty(NodeMoves(v, S)) && SET_size(G_toSet(G_adj(v))) < S->K) {
       SET_delete(S->freezeWorklist, v);
       SET_insert(S->simplifyWorklist, v);
     }
@@ -642,7 +700,16 @@ procedure RewriteProgram()
   coloredNodes ← {}
   coalescedNodes ← {}
 */
-void RewriteProgram(AS_instrList iList, Main_struct S) { assert(0); }
+void RewriteProgram(Main_struct S) {
+  Set newTemps = SET_empty(SET_default_cmp);
+  SET_FOREACH(S->spilledNodes, vptr) { G_node v = *vptr; }
+
+  S->spilledNodes = SET_empty(SET_default_cmp);
+  S->coloredNodes = SET_empty(SET_default_cmp);
+  S->initial =
+      SET_union(S->coloredNodes, SET_union(S->coalescedNodes, newTemps));
+  S->coalescedNodes = SET_empty(SET_default_cmp);
+}
 
 /*
 procedure Main()
@@ -663,6 +730,8 @@ procedure Main()
 */
 void Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
   Main_struct S = checked_malloc(sizeof(*S));
+  S->iList = iList;
+  S->frame = frame;
   S->stmt_instr_set = stmt_instr_set;
   S->K = F_numGPR;
   S->flowgraph = FG_AssemFlowGraph(iList);
@@ -673,6 +742,7 @@ void Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
   S->precolored = F_tempMap;
   S->initial = S->live_graph.initials;
   S->color = Temp_layerMap(Temp_empty(), S->precolored);
+  S->adjSet = SET_empty(AdjComparer);
 
   // init to empty
   S->moveList = G_empty();
@@ -707,11 +777,11 @@ void Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
 
     if (SET_isEmpty(S->simplifyWorklist) && SET_isEmpty(S->worklistMoves) && SET_isEmpty(S->freezeWorklist) && SET_isEmpty(S->spillWorklist))
       break;
-    AssignColors(S);
-    checkInvariant(S);
-    if (!S->spilledNodes || !SET_isEmpty(S->spilledNodes)) {
-      RewriteProgram(iList, S);
-      Color_Main(stmt_instr_set,iList,frame);//TODO
-    }
+  }
+  AssignColors(S);
+  checkInvariant(S);
+  if (!SET_isEmpty(S->spilledNodes)) {
+    RewriteProgram(S);
+    Color_Main(stmt_instr_set,iList,frame);//TODO
   }
 }
