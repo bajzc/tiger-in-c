@@ -41,8 +41,6 @@ Temp_map Temp_layerMap(Temp_map over, Temp_map under);
 void Temp_enter(Temp_map m, Temp_temp t, string s);
 string Temp_look(Temp_map m, Temp_temp t);
 void Temp_dumpMap(FILE *out, Temp_map m);
-Set Temp_dumpVal2Set(Temp_map m);
-Set Temp_dumpKey2Set(Temp_map m);
 
 Temp_map Temp_name(void);
 #endif

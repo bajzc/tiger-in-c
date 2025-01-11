@@ -1,5 +1,6 @@
 #include "liveness.h"
 #include "flowgraph.h"
+#include "frame.h"
 #include "graph.h"
 #include "set.h"
 #include "table.h"
@@ -46,7 +47,7 @@ bool calcLiveness(G_nodeList l) {
 
 struct Live_graph Live_Liveness(G_graph flow) {
   in_map = G_empty(), out_map = G_empty();
-  Set temps = SET_empty(SET_default_cmp);
+  Set temps = SET_empty(SET_default_cmp); // Set<Temp_temp>
   for (G_nodeList l = G_nodes(flow); l; l = l->tail) {
     G_node n = l->head;
     enterLiveMap(in_map, n, SET_empty(SET_default_cmp));
@@ -61,11 +62,14 @@ struct Live_graph Live_Liveness(G_graph flow) {
   G_graph intgraph = G_Graph();
   TAB_table tab = TAB_empty();
   Live_moveList ll = NULL;
+  Set initials = SET_empty(SET_default_cmp);
 
   for (void **p = SET_begin(temps); p < SET_end(temps); p++) {
     Temp_temp d = *p;
     G_node n = G_Node(intgraph, d);
     TAB_enter(tab, d, n);
+    if (!Temp_look(F_tempMap, d)) // not precolored
+      SET_insert(initials, n);
   }
 
   for (G_nodeList l = G_nodes(flow); l; l = l->tail) {
@@ -92,5 +96,5 @@ struct Live_graph Live_Liveness(G_graph flow) {
       }
     }
   }
-  return (struct Live_graph) {intgraph, ll, tab, in_map, out_map};
+  return (struct Live_graph) {intgraph, ll, tab, in_map, out_map, initials};
 }

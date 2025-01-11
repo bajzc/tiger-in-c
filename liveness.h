@@ -16,6 +16,7 @@ struct Live_graph {
   Live_moveList moves;
   TAB_table tempToNode;
   G_table liveOut,liveIn;
+  Set initials;
 };
 
 Live_moveList Live_MoveList(G_node src, G_node dst, Live_moveList tail);

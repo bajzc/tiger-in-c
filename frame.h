@@ -3,10 +3,10 @@
 #ifndef FRAME_H
 #define FRAME_H
 
+#include "assem.h"
 #include "temp.h"
 #include "tree.h"
 #include "types.h"
-#include "assem.h"
 
 typedef struct F_frame_ *F_frame;
 typedef struct F_access_ *F_access;
@@ -43,6 +43,8 @@ extern Temp_map F_tempMap;
 extern const int F_numGPR;
 extern Temp_map F_reg2colorscheme;
 extern Temp_map F_reg2color;
+extern Set F_regTemp; // Set<Temp_temp>
+extern Set F_regString; // Set<String> aka color
 
 F_frag F_StringFrag(Temp_label label, string str);
 F_frag F_ProcFrag(T_stm body, F_frame frame);

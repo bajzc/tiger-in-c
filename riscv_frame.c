@@ -5,6 +5,7 @@
 #include "assem.h"
 #include "frame.h"
 #include "util.h"
+#include "set.h"
 
 #define ARG_IN_REG 7 // a1-a7
 const int F_wordSize = 4; // target machine is RV32
@@ -13,6 +14,8 @@ Temp_map F_tempMap;
 // used for generate graphviz graph
 Temp_map F_reg2colorscheme;
 Temp_map F_reg2color;
+Set F_regTemp; // Set<Temp_temp>
+Set F_regString; // Set<String> aka color
 
 struct F_access_ {
   enum { inFrame, inReg } kind;
@@ -180,7 +183,9 @@ T_stm F_procEntryExit1(F_frame frame, T_stm stm) { return stm; }
   vname = Temp_newtemp();                                                      \
   Temp_enter(F_tempMap, vname, #mname);                                        \
   Temp_enter(F_reg2colorscheme, vname, #color_schemes);                        \
-  Temp_enter(F_reg2color, vname, #color);
+  Temp_enter(F_reg2color, vname, #color);                                      \
+  SET_insert(F_regString, #mname);                                             \
+  SET_insert(F_regTemp, vname);
 
 DECLARE_REG(ZERO)
 DECLARE_REG(RA)
@@ -223,10 +228,15 @@ static void initRegMap() {
   F_tempMap = Temp_empty();
   F_reg2colorscheme = Temp_empty();
   F_reg2color = Temp_empty();
-  INIT_REG(ZERO, zero, x11, gold);
+  F_regString = SET_empty((int (*)(void *, void *))strcmp);
+  F_regTemp = SET_empty(SET_default_cmp);
+  // INIT_REG(ZERO, zero, x11, gold);
   INIT_REG(RA, ra, x11, gold3);
-  INIT_REG(SP, sp, x11, gold4);
-  INIT_REG(FP, fp, x11, goldenrod);
+  // INIT_REG(SP, sp, x11, gold4);
+  // INIT_REG(FP, fp, x11, goldenrod);
+  ZERO = Temp_newtemp();
+  SP = Temp_newtemp();
+  FP = Temp_newtemp();
 
   // Caller saved
   INIT_REG(A0, a0, reds8, 1);
@@ -300,14 +310,15 @@ AS_instrList F_procEntryExit2(AS_instrList body) {
   if (!returnSink)
     returnSink =
         Temp_TempList(ZERO, Temp_TempList(RA, Temp_TempList(SP, calleeSaves)));
-  return AS_splice(body,
-                   AS_InstrList(AS_Oper("TODO: F_procEntryExit2", NULL, returnSink, NULL), NULL));
+  return AS_splice(body, AS_InstrList(AS_Oper("TODO: F_procEntryExit2", NULL,
+                                              returnSink, NULL),
+                                      NULL));
 }
 
 AS_proc F_procEntryExit3(F_frame frame, AS_instrList body) {
   char buf[80];
   snprintf(buf, 80, "PROCEDURE %s\n", S_name(frame->frame_label));
-  return AS_Proc(String(buf),body,"END\n");
+  return AS_Proc(String(buf), body, "END\n");
 }
 
 Temp_temp F_FP(void) {
