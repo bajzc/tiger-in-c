@@ -7,16 +7,16 @@
 #include "set.h"
 
 typedef struct Main_struct_ {
-  G_table liveOut, liveIn; // Map<G_Node<AS_instr>, Set<G_Node<Temp_temp>>>
-  G_table moveList; // Map<G_Node<Temp_temp>, Set<AS_instr>>
-  G_table alias; // Map<G_Node, G_Node>
+  G_table liveOut, liveIn; // G_table<G_Node<AS_instr>, Set<G_Node<Temp_temp>>>
+  G_table moveList; // G_table<G_Node<Temp_temp>, Set<AS_instr>>
+  G_table alias; // G_table<G_Node, G_Node>
   Set stmt_instr_set; // Set<stmt_instr<stmt, AS_instr>>
   G_nodeList block_end_list; // List<G_node<AS_instr>>
   Set simplifyWorklist; // Set<G_Node<Temp_temp>>
   Set freezeWorklist; // Set<G_node<Temp_temp>>
   Set spillWorklist; // Set<G_node<Temp_temp>>
-  Set spilledNodes; // Set<>
-  Set coalescedNodes; // Set<>
+  Set spilledNodes; // Set<G_node>
+  Set coalescedNodes; // Set<G_node>
   Set coalescedMoves; // Set<AS_instr>
   Set constrainedMoves; // Set<AS_instr>
   Set frozenMoves; // Set<AS_instr>
@@ -29,20 +29,12 @@ typedef struct Main_struct_ {
   G_graph flowgraph; // G_graph<AS_instr>
   Temp_map precolored; // Temp_map<Temp_temp, String>
   Temp_map color; // Temp_map<Temp_temp, String>
-  // TODO: Problems with this:
-  // + AddEdge operates on this graph
-  // + In pseudocode, adjList is not pre-initialized to reflect this graph
-  // +
   struct Live_graph
       live_graph; // Live_graph<G_graph<Temp_temp>,Live_moveList<>>
   G_graph interference_graph;
-  // TODO initialize these
-  TAB_table temp2Node; // TAB_table<Temp_temp, G_node<Temp_temp>>
-  G_table adjList;
-  G_table degree;
-
-  // G_table adjList; // Map<G_Node<Temp_temp>, <G_Node<Temp_temp>>>
-  // G_table degree; // Map<G_Node<Temp_temp>, int>
+  TAB_table temp2Node; // Map<Temp_temp, G_node<Temp_temp>>
+  G_table adjList; // G_table<G_node<Temp_temp>, Set<G_node<Temp_temp>>>
+  G_table degree; // G_table<G_node<Temp_temp>, int>
   int K;
   F_frame frame;
   AS_instrList iList;
@@ -73,8 +65,8 @@ int AdjComparer(void *a, void *b) {
   Adj x = a;
   Adj y = b;
   if (x->u == y->u)
-    return x->v - y->v;
-  return x->u - y->u;
+    return (size_t) (x->v) - (size_t) (y->v);
+  return (size_t) (x->u) - (size_t) (y->u);
 }
 
 Adj makeAdj(G_node u, G_node v) {
@@ -91,9 +83,9 @@ Adj makeAdj(G_node u, G_node v) {
  */
 void buildupLiveOut(Main_struct S) {
   S->block_end_list = NULL;
-  for (void **instr = SET_begin(S->stmt_instr_set);
-       instr < SET_end(S->stmt_instr_set); instr++) {
-    AS_instr last = ((struct stmt_instr *) *instr)->last;
+  SET_FOREACH(S->stmt_instr_set, instrptr) {
+    struct stmt_instr *instr = *instrptr;
+    AS_instr last = instr->last;
     for (G_nodeList node = G_nodes(S->flowgraph); node; node = node->tail) {
       if (G_nodeInfo(node->head) == last) {
         S->block_end_list = G_NodeList(node->head, S->block_end_list);
@@ -104,7 +96,7 @@ void buildupLiveOut(Main_struct S) {
 }
 
 // worklistMoves: moves enabled for possible coalescing
-int isBlockStart(Main_struct S, G_node node) {
+int isBlockStart(G_node node, Main_struct S) {
   G_nodeList preds = G_pred(node);
   return preds == NULL || preds->head == NULL ||
          G_inNodeList(preds->head, S->block_end_list);
@@ -143,24 +135,23 @@ void checkInvariant(Main_struct S) {
                         S->spillWorklist),
               uptr) {
     G_node u = *uptr;
-    Set adjListU = G_toSet(G_adj(u));
+    int degree = *(int *) G_look(S->degree, u);
+    Set adjListU = G_look(S->adjList, u);
     Set adjListU_temp = SET_empty(SET_default_cmp);
     SET_FOREACH(adjListU, adjptr) {
       SET_insert(adjListU_temp, G_nodeInfo(*adjptr));
     }
-    int degree = SET_size(adjListU_temp);
     int size = SET_size(SET_intersect(adjListU_temp, unions_temps));
-    printf("adjListU_temp = {");
+    fprintf(stderr, "\nadjListU_temp = {");
     SET_FOREACH(adjListU_temp, adjptr) {
-      printf("%d, ", ((Temp_temp) *adjptr)->num);
+      fprintf(stderr, "%d, ", ((Temp_temp) *adjptr)->num);
     }
-    printf("}\n");
-    printf("unions_temps = {");
+    fprintf(stderr, "}\n");
+    fprintf(stderr, "unions_temps = {");
     SET_FOREACH(unions_temps, adjptr) {
-      printf("%d, ", ((Temp_temp) *adjptr)->num);
+      fprintf(stderr, "%d, ", ((Temp_temp) *adjptr)->num);
     }
-    printf("}\n\n\n");
-    fflush(stdout);
+    fprintf(stderr, "}\n");
     assert(degree == size);
   }
 
@@ -168,7 +159,7 @@ void checkInvariant(Main_struct S) {
   SET_FOREACH(S->simplifyWorklist, uptr) {
     G_node u = *uptr;
     Set moveListU = G_look(S->moveList, u);
-    assert(SET_size(G_toSet(G_adj(u))) < S->K);
+    assert(*(int *) G_look(S->degree, u) < S->K);
     if (moveListU != NULL)
       assert(SET_isEmpty(SET_intersect(
           moveListU, SET_union(S->activeMoves, S->worklistMoves))));
@@ -178,7 +169,7 @@ void checkInvariant(Main_struct S) {
   SET_FOREACH(S->freezeWorklist, uptr) {
     G_node u = *uptr;
     Set moveListU = G_look(S->moveList, u);
-    assert(SET_size(G_toSet(G_adj(u))) < S->K);
+    assert(*(int *) G_look(S->degree, u) < S->K);
     if (moveListU != NULL)
       assert(!SET_isEmpty(SET_intersect(
           moveListU, SET_union(S->activeMoves, S->worklistMoves))));
@@ -187,7 +178,7 @@ void checkInvariant(Main_struct S) {
   // Spill worklist
   SET_FOREACH(S->spillWorklist, uptr) {
     G_node u = *uptr;
-    assert(SET_size(G_toSet(G_adj(u))) > S->K);
+    assert(*(int *) G_look(S->degree, u) > S->K);
   }
 }
 
@@ -214,14 +205,15 @@ void build(Main_struct S) {
     G_node cur_node = cur_block_end_list->head;
     Set live = G_look(S->liveOut, cur_node); // let live = liveOut(b)
     while (cur_node &&
-           !isBlockStart(S, cur_node)) { // forall I ∈ instructions(b)
+           !isBlockStart(cur_node, S)) { // forall I ∈ instructions(b)
       AS_instr cur_instr = G_nodeInfo(cur_node);
       if (FG_isMove(cur_node)) { // if isMoveInstruction(I) then
         live = SET_difference(live, FG_use(cur_node)); // live ← live \ use(I)
         Set defAndUse = SET_union(FG_use(cur_node), FG_def(cur_node));
         SET_FOREACH(defAndUse, nptr) { // forall n ∈ def(I) ∪ use(I)
           Temp_temp n = *nptr;
-          G_node node = G_findNodeWithInfo(S->live_graph.graph, n);
+          G_node node = TAB_look(S->temp2Node, n);
+          assert(node);
           Set moveList = G_look(S->moveList, node);
           if (!moveList)
             moveList = SET_empty(SET_default_cmp);
@@ -287,8 +279,9 @@ void Simplify(Main_struct S) {
 function Adjacent(n)
   adjList[n] \ (selectStack ∪ coalescedNodes)
 */
-Set Adjacent(G_node n, Main_struct S) __attribute__((pure)) {
-  return SET_difference(G_toSet(G_adj(n)),
+Set Adjacent(G_node n, Main_struct S) {
+  Set adjListN = G_look(S->adjList, n);
+  return SET_difference(adjListN,
                         SET_union(G_toSet(S->selectStack), S->coalescedNodes));
 }
 
@@ -305,9 +298,11 @@ procedure DecrementDegree(m)
       simplifyWorklist ← simplifyWorklist ∪ {m}
 */
 void DecrementDegree(G_node m, Main_struct S) {
-  int d = SET_size(G_toSet(G_adj(m))); // let d = degree[m]
-  if (d != S->K)
+  int *d = G_look(S->degree, m); // let d = degree[m]
+  if (*d != S->K)
     return;
+  *d -= 1;
+  G_enter(S->degree, m, d);
 
   EnableMoves(SET_with(Adjacent(m, S), m), S); // EnableMoves({m} ∪ Adjacent(m))
   SET_delete(S->spillWorklist, m); // spillWorklist ← spillWorklist \ {m}
@@ -354,7 +349,7 @@ procedure MakeWorklist()
 void MakeWorkList(Main_struct S) {
   SET_FOREACH(S->initial, ptr) { // forall n ∈ initial
     G_node n = *ptr;
-    if (SET_size(G_toSet(G_adj(n))) >= S->K) { // if degree[n] ≥ K then
+    if (*(int *) G_look(S->degree, n) >= S->K) { // if degree[n] ≥ K then
       SET_insert(S->spillWorklist, n); // spillWorklist ← spillWorklist ∪ {n}
     } else if (MoveRelated(n, S)) { // else if MoveRelated(n) then
       SET_insert(S->freezeWorklist, n); // freezeWorklist ← freezeWorklist ∪ {n}
@@ -379,21 +374,29 @@ procedure AddEdge(u, v)
 */
 void AddEdge(Temp_temp u, Temp_temp v, Main_struct S) {
   G_node U = TAB_look(S->temp2Node, u), V = TAB_look(S->temp2Node, v);
+  assert(!((U == V && u != v) || (U != V && u == v))); // they are both unique
   Adj tuple = makeAdj(U, V);
   Adj tuple2 = makeAdj(V, U);
-  if (SET_contains(S->adjSet, tuple) || u != v)
+  if (SET_contains(S->adjSet, tuple) || u == v)
     return;
 
   SET_insert(S->adjSet, tuple);
   SET_insert(S->adjSet, tuple2);
   if (!Temp_look(S->precolored, u)) {
     Set adjListU = G_look(S->adjList, U);
-    Set
-    SET_insert(adjListU, v);
+    SET_insert(adjListU, V);
+    G_enter(S->adjList, U, adjListU);
+    int *deg = G_look(S->degree, U);
+    *deg += 1;
+    G_enter(S->degree, U, deg);
   }
   if (!Temp_look(S->precolored, v)) {
-    Set adjListU = G_look(S->adjList, V);
-    SET_insert(adjListU, u);
+    Set adjListV = G_look(S->adjList, V);
+    SET_insert(adjListV, U);
+    G_enter(S->adjList, V, adjListV);
+    int *deg = G_look(S->degree, V);
+    *deg += 1;
+    G_enter(S->degree, V, deg);
   }
 }
 
@@ -478,7 +481,7 @@ procedure AddWorkList(u)
 */
 void AddWorkList(G_node u, Main_struct S) {
   if (Temp_look(S->precolored, G_nodeInfo(u)) || MoveRelated(u, S) ||
-      SET_size(G_toSet(G_adj(u))) >= S->K)
+      *(int *) G_look(S->degree, u) >= S->K)
     return;
 
   SET_delete(S->freezeWorklist, u);
@@ -491,8 +494,10 @@ function OK(t,r)
 */
 int OK(G_node t, G_node r, Main_struct S) {
   Temp_temp tTemp = G_nodeInfo(t);
-  return SET_size(G_toSet(G_adj(t))) < S->K ||
-         Temp_look(S->precolored, tTemp) != NULL || G_goesTo(t, r);
+  Adj tuple = makeAdj(t, r);
+  return *(int *) G_look(S->degree, t) < S->K ||
+         Temp_look(S->precolored, tTemp) != NULL ||
+         SET_contains(S->adjSet, tuple);
 }
 
 /*
@@ -506,7 +511,7 @@ int Conservative(Set nodes, Main_struct S) {
   int k = 0;
   SET_FOREACH(nodes, nptr) {
     G_node n = *nptr;
-    if (SET_size(G_toSet(G_adj(n))) >= S->K)
+    if (*(int *) G_look(S->degree, n) >= S->K)
       k++;
   }
   return k < S->K;
@@ -562,7 +567,7 @@ void Combine(G_node u, G_node v, Main_struct S) {
     DecrementDegree(t, S);
   }
 
-  if (SET_size(G_toSet(G_adj(u))) >= S->K &&
+  if (*(int *) G_look(S->degree, u) >= S->K &&
       SET_contains(S->freezeWorklist, u)) {
     SET_delete(S->freezeWorklist, u);
     SET_insert(S->spillWorklist, u);
@@ -618,7 +623,7 @@ void FreezeMoves(G_node u, Main_struct S) {
     SET_delete(S->activeMoves, m);
     SET_insert(S->frozenMoves, m);
 
-    if (SET_isEmpty(NodeMoves(v, S)) && SET_size(G_toSet(G_adj(v))) < S->K) {
+    if (SET_isEmpty(NodeMoves(v, S)) && *(int *) G_look(S->degree, v) < S->K) {
       SET_delete(S->freezeWorklist, v);
       SET_insert(S->simplifyWorklist, v);
     }
@@ -740,9 +745,13 @@ void Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
   S->liveOut = S->live_graph.liveOut;
   S->precolored = F_tempMap;
   S->color = Temp_layerMap(Temp_empty(), S->precolored);
-  S->adjSet = SET_empty(AdjComparer);
 
   // init to empty
+  S->adjSet = SET_empty(AdjComparer);
+  S->adjList = G_empty();
+  S->degree = G_empty();
+  S->temp2Node = TAB_empty();
+  S->initial = SET_empty(SET_default_cmp);
   S->moveList = G_empty();
   S->worklistMoves = SET_empty(SET_default_cmp);
   S->alias = G_empty();
@@ -763,16 +772,29 @@ void Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
     temps = SET_union(temps, FG_def(n));
     temps = SET_union(temps, FG_use(n));
   }
-  temps = SET_difference(temps, F_regTemp);
+  S->interference_graph = G_Graph();
   SET_FOREACH(temps, tptr) {
     Temp_temp t = *tptr;
-    G_node node = G_Node(S->live_graph)
+    G_node node = G_Node(S->interference_graph, t);
+    int *deg = checked_malloc(sizeof(*deg));
+    *deg = 0;
+    G_enter(S->adjList, node, SET_empty(SET_default_cmp));
+    G_enter(S->degree, node, deg);
+    TAB_enter(S->temp2Node, t, node);
   }
 
+  fprintf(stderr, "\ninitial = ");
+  SET_FOREACH(SET_difference(temps, F_regTemp), tptr) {
+    Temp_temp t = *tptr;
+    SET_insert(S->initial, TAB_look(S->temp2Node, t));
+    fprintf(stderr, "%d, ",t->num);
+  }
+  fprintf(stderr, "\n");
 
   build(S);
   checkInvariant(S);
   MakeWorkList(S);
+  checkInvariant(S);
   while (TRUE) {
     if (!SET_isEmpty(S->simplifyWorklist))
       Simplify(S);

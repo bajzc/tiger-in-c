@@ -262,7 +262,7 @@ AS_instrList F_codegen(Set stmt2last_instr, F_frame f, T_stmList stmList) {
   struct stmt_instr *new = checked_malloc(sizeof(*new));
   for (sl = stmList; sl; sl = sl->tail) {
     munchStm(sl->head);
-    if (last->head->kind == I_LABEL) {
+    if (new->stm && new->last && last->head->kind == I_LABEL) {
       SET_insert(stmt2last_instr, new);
       new = checked_malloc(sizeof(*new));
     }

@@ -70,8 +70,8 @@ static void printInterGraph(FILE *out, G_graph graph) {
 static void doProc(FILE *out, char *outfile, F_frame frame, T_stm body) {
   AS_proc proc;
   // struct RA_result allocation;
-  T_stmList stmList;
-  AS_instrList iList;
+  T_stmList stmList = NULL;
+  AS_instrList iList = NULL;
 
   stmList = C_linearize(body);
   stmList = C_traceSchedule(C_basicBlocks(stmList));
@@ -87,17 +87,17 @@ static void doProc(FILE *out, char *outfile, F_frame frame, T_stm body) {
   fprintf(out, "END %s\n\n", Temp_labelstring(F_name(frame)));
 
   Color_Main(stmt_instr_set, iList, frame);
-
-  G_graph graph = FG_AssemFlowGraph(iList);
-  printFlowgraph(stdout, graph, m, Temp_labelstring(F_name(frame)));
-  G_graph inter_graph = Live_Liveness(graph).graph;
-
-  char graph_file[100];
-  snprintf(graph_file, 100, "%s-%s.dot", outfile,
-           Temp_labelstring(F_name(frame)));
-  FILE *graph_out = fopen(graph_file, "w");
-  printInterGraph(graph_out, inter_graph);
-  fclose(graph_out);
+  //
+  // G_graph graph = FG_AssemFlowGraph(iList);
+  // printFlowgraph(stdout, graph, m, Temp_labelstring(F_name(frame)));
+  // G_graph inter_graph = Live_Liveness(graph).graph;
+  //
+  // char graph_file[100];
+  // snprintf(graph_file, 100, "%s-%s.dot", outfile,
+  //          Temp_labelstring(F_name(frame)));
+  // FILE *graph_out = fopen(graph_file, "w");
+  // printInterGraph(graph_out, inter_graph);
+  // fclose(graph_out);
 }
 
 char *escape(const char *input) {

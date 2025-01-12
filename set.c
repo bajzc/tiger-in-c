@@ -171,5 +171,5 @@ void *SET_pop(Set a) {
   if (a->size == 0)
     return NULL;
   else
-    return a->elements[--a->size];
+    return a->elements[--(a->size)];
 }
