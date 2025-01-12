@@ -260,11 +260,13 @@ AS_instrList F_codegen(Set stmt2last_instr, F_frame f, T_stmList stmList) {
   AS_instrList list = NULL;
 
   struct stmt_instr *new = checked_malloc(sizeof(*new));
+  new->stm = NULL;
   for (sl = stmList; sl; sl = sl->tail) {
     munchStm(sl->head);
-    if (new->stm && new->last && last->head->kind == I_LABEL) {
+    if (new->stm && last->head->kind == I_LABEL) {
       SET_insert(stmt2last_instr, new);
       new = checked_malloc(sizeof(*new));
+      new->stm = NULL;
     }
     new->stm = sl->head;
     new->last = last->head;
