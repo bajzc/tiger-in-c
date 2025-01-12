@@ -178,8 +178,6 @@ F_fragList F_FragList(F_frag head, F_fragList tail) {
   return l;
 }
 
-T_stm F_procEntryExit1(F_frame frame, T_stm stm) { return stm; }
-
 #define DECLARE_REG(vname) static Temp_temp vname;
 #define INIT_REG(vname, mname, color_schemes, color)                           \
   vname = Temp_newtemp();                                                      \
@@ -244,34 +242,34 @@ static void initRegMap() {
   RA = Temp_newtemp();
 
   // Caller saved
-  INIT_REG(A0, a0, reds8, 1);
-  INIT_REG(A1, a1, reds8, 2);
-  INIT_REG(A2, a2, reds8, 3);
-  INIT_REG(A3, a3, reds8, 4);
-  INIT_REG(A4, a4, reds8, 5);
-  INIT_REG(A5, a5, reds8, 6);
-  INIT_REG(A6, a6, reds8, 7);
-  INIT_REG(A7, a7, reds8, 8);
-  INIT_REG(T0, t0, ylgn7, 1);
-  INIT_REG(T1, t1, ylgn7, 2);
-  INIT_REG(T2, t2, ylgn7, 3);
-  INIT_REG(T3, t3, ylgn7, 4);
-  INIT_REG(T4, t4, ylgn7, 5);
-  INIT_REG(T5, t5, ylgn7, 6);
-  INIT_REG(T6, t6, ylgn7, 7);
+  INIT_REG(A0, a0, x11, red);
+  INIT_REG(A1, a1, x11, green);
+  INIT_REG(A2, a2, x11, blue);
+  INIT_REG(A3, a3, x11, yellow);
+  INIT_REG(A4, a4, x11, cyan);
+  INIT_REG(A5, a5, x11, magenta);
+  INIT_REG(A6, a6, x11, orange);
+  INIT_REG(A7, a7, x11, pink);
+  INIT_REG(T0, t0, x11, purple);
+  INIT_REG(T1, t1, x11, brown);
+  INIT_REG(T2, t2, x11, lightblue);
+  INIT_REG(T3, t3, x11, darkgreen);
+  INIT_REG(T4, t4, x11, gray);
+  INIT_REG(T5, t5, x11, lightgray);
+  INIT_REG(T6, t6, x11, darkred);
 
   // Callee
-  INIT_REG(S1, s1, x11, grey11);
-  INIT_REG(S2, s2, x11, grey16);
-  INIT_REG(S3, s3, x11, grey20);
-  INIT_REG(S4, s4, x11, grey25);
-  INIT_REG(S5, s5, x11, grey34);
-  INIT_REG(S6, s6, x11, grey39);
-  INIT_REG(S7, s7, x11, grey43);
-  INIT_REG(S8, s8, x11, grey48);
-  INIT_REG(S9, s9, x11, grey52);
-  INIT_REG(S10, s10, x11, grey57);
-  INIT_REG(S11, s11, x11, grey61);
+  INIT_REG(S1, s1, x11, navy);
+  INIT_REG(S2, s2, x11, teal);
+  INIT_REG(S3, s3, x11, olive);
+  INIT_REG(S4, s4, x11, gold);
+  INIT_REG(S5, s5, x11, lime);
+  INIT_REG(S6, s6, x11, maroon);
+  INIT_REG(S7, s7, x11, violet);
+  INIT_REG(S8, s8, x11, aquamarine);
+  INIT_REG(S9, s9, x11, indigo);
+  INIT_REG(S10, s10, x11, chartreuse);
+  INIT_REG(S11, s11, x11, turquoise);
 
   specialRegs = Temp_TempList(
       ZERO,
@@ -315,6 +313,8 @@ static void initRegMap() {
                                                            S11, NULL)))))))))));
 }
 
+T_stm F_procEntryExit1(F_frame frame, T_stm stm) { return stm; }
+
 static Temp_tempList returnSink = NULL;
 AS_instrList F_procEntryExit2(AS_instrList body) {
   if (!returnSink)
@@ -327,8 +327,8 @@ AS_instrList F_procEntryExit2(AS_instrList body) {
 
 AS_proc F_procEntryExit3(F_frame frame, AS_instrList body) {
   char buf[80];
-  snprintf(buf, 80, "PROCEDURE %s\n", S_name(frame->frame_label));
-  return AS_Proc(String(buf), body, "END\n");
+  snprintf(buf, 80, "#PROCEDURE %s\n", S_name(frame->frame_label));
+  return AS_Proc(String(buf), body, "#END\n");
 }
 
 Temp_temp F_FP(void) {

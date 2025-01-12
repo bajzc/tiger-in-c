@@ -835,6 +835,7 @@ void visual_color(Set temps, Main_struct S) {
   snprintf(out_file, 80, "%s.dot", Temp_labelstring(F_name(S->frame)));
   FILE *out = fopen(out_file, "w");
   fprintf(out, "strict graph{\n");
+  fprintf(out, "\tsplines=false;\n");
   fprintf(out, "\tnode [style=filled, shape=circle];\n");
 
   SET_FOREACH(temps, tptr) {
@@ -842,7 +843,7 @@ void visual_color(Set temps, Main_struct S) {
     char *color = Temp_look(S->color, t);
     Temp_temp reg = TAB_lookOnString(F_color2reg, color);
     char *colorScheme = Temp_look(F_reg2colorscheme, reg);
-    fprintf(out, "\t\"%d\" [colorscheme=%s, color=%s]\n", t->num,colorScheme, Temp_look(F_reg2color, reg) );
+    fprintf(out, "\t\"%d\" [colorscheme=%s, color=%s]\n", t->num,colorScheme, Temp_look(F_reg2color, reg));
   }
   fprintf(out, "\n\n");
 
@@ -855,10 +856,16 @@ void visual_color(Set temps, Main_struct S) {
   SET_FOREACH(temps, tptr) {
     Temp_temp t = *tptr;
     G_node node = TAB_look(S->temp2Node, t);
+    G_node alias = GetAlias(node, S);
+    if (alias != node)
+       continue;
     Set adjs = G_look(S->adjList, node);
     SET_FOREACH(adjs, uptr) {
       G_node u = *uptr;
       Temp_temp tt = G_nodeInfo(u);
+      G_node alias2 = GetAlias(u, S);
+      if (alias2 != u)
+        continue;
       fprintf(out, "\t\"%d\" -- \"%d\"\n", t->num, tt->num);
     }
   }
