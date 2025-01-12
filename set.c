@@ -69,20 +69,9 @@ Set SET_intersect(Set a, Set b) {
 Set SET_difference(Set a, Set b) {
   if (a->cmp != b->cmp)
     debug("Set %p %p are using different cmp function", a->cmp, b->cmp);
-  Set s = SET_Set(0, a->size, a->cmp);
-  void **ae = a->elements;
-  void **be = b->elements;
-  while (ae - a->elements < a->size && be - b->elements < b->size) {
-    int c = s->cmp(*ae, *be);
-    if (c == 0) {
-      ae++;
-      be++;
-    } else if (c < 0) {
-      s->elements[s->size++] = *ae;
-      ae++;
-    } else {
-      be++;
-    }
+  Set s = SET_copy(a);
+  SET_FOREACH(b, uptr) {
+    SET_delete(s, *uptr);
   }
   return s;
 }
