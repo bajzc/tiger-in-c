@@ -7,6 +7,7 @@
 #include "temp.h"
 #include "tree.h"
 #include "types.h"
+#include "table.h"
 
 typedef struct F_frame_ *F_frame;
 typedef struct F_access_ *F_access;
@@ -45,6 +46,8 @@ extern Temp_map F_reg2colorscheme;
 extern Temp_map F_reg2color;
 extern Set F_regTemp; // Set<Temp_temp>
 extern Set F_regString; // Set<String> aka color
+extern TAB_table F_color2reg; // Map<String, Temp_temp>
+
 
 F_frag F_StringFrag(Temp_label label, string str);
 F_frag F_ProcFrag(T_stm body, F_frame frame);

@@ -81,12 +81,12 @@ static void doProc(FILE *out, char *outfile, F_frame frame, T_stm body) {
   iList = F_procEntryExit2(iList);
   proc = F_procEntryExit3(frame, iList);
 
+  Temp_map color_map = Color_Main(stmt_instr_set, iList, frame);
+
   fprintf(out, "BEGIN %s\n", Temp_labelstring(F_name(frame)));
   Temp_map m = Temp_layerMap(F_tempMap, Temp_name());
-  AS_printInstrList(out, proc->body, m);
+  AS_printInstrList(out, proc->body, color_map);
   fprintf(out, "END %s\n\n", Temp_labelstring(F_name(frame)));
-
-  Color_Main(stmt_instr_set, iList, frame);
   //
   // G_graph graph = FG_AssemFlowGraph(iList);
   // printFlowgraph(stdout, graph, m, Temp_labelstring(F_name(frame)));

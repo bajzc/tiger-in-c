@@ -167,7 +167,8 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
         if (l)
           EM_error(a->pos, "passed less arguments than needed");
         return expTy(Tr_callExp(funTy->u.fun.label, argv, argc, level,
-                                funTy->u.fun.level),
+                                funTy->u.fun.level,
+                                (S_look(E_venv, a->u.call.func) != NULL)),
                      actual_ty(funTy->u.fun.result));
       }
       EM_error(a->pos, "function '%s' not declared", S_name(a->u.call.func));

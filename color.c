@@ -55,6 +55,7 @@ void AddWorkList(G_node u, Main_struct S);
 int OK(G_node t, G_node r, Main_struct S);
 int Conservative(Set nodes, Main_struct S);
 void Combine(G_node u, G_node v, Main_struct S);
+void visual_color(Set temps, Main_struct S);
 
 typedef struct Adj_ {
   G_node u;
@@ -142,16 +143,16 @@ void checkInvariant(Main_struct S) {
       SET_insert(adjListU_temp, G_nodeInfo(*adjptr));
     }
     int size = SET_size(SET_intersect(adjListU_temp, unions_temps));
-    fprintf(stderr, "\nadjListU_temp = {");
+    // fprintf(stderr, "\nadjListU_temp = {");
     SET_FOREACH(adjListU_temp, adjptr) {
-      fprintf(stderr, "%d, ", ((Temp_temp) *adjptr)->num);
+      // fprintf(stderr, "%d, ", ((Temp_temp) *adjptr)->num);
     }
-    fprintf(stderr, "}\n");
-    fprintf(stderr, "unions_temps = {");
+    // fprintf(stderr, "}\n");
+    // fprintf(stderr, "unions_temps = {");
     SET_FOREACH(unions_temps, adjptr) {
-      fprintf(stderr, "%d, ", ((Temp_temp) *adjptr)->num);
+      // fprintf(stderr, "%d, ", ((Temp_temp) *adjptr)->num);
     }
-    fprintf(stderr, "}\n");
+    // fprintf(stderr, "}\n");
     assert(degree == size);
   }
 
@@ -178,7 +179,8 @@ void checkInvariant(Main_struct S) {
   // Spill worklist
   SET_FOREACH(S->spillWorklist, uptr) {
     G_node u = *uptr;
-    assert(*(int *) G_look(S->degree, u) > S->K);
+    int k = *(int *) G_look(S->degree, u);
+    assert(k >= S->K);
   }
 }
 
@@ -385,7 +387,6 @@ void AddEdge(Temp_temp u, Temp_temp v, Main_struct S) {
   if (!Temp_look(S->precolored, u)) {
     Set adjListU = G_look(S->adjList, U);
     SET_insert(adjListU, V);
-    G_enter(S->adjList, U, adjListU);
     int *deg = G_look(S->degree, U);
     *deg += 1;
     G_enter(S->degree, U, deg);
@@ -393,7 +394,6 @@ void AddEdge(Temp_temp u, Temp_temp v, Main_struct S) {
   if (!Temp_look(S->precolored, v)) {
     Set adjListV = G_look(S->adjList, V);
     SET_insert(adjListV, U);
-    G_enter(S->adjList, V, adjListV);
     int *deg = G_look(S->degree, V);
     *deg += 1;
     G_enter(S->degree, V, deg);
@@ -524,7 +524,7 @@ function GetAlias (n)
   else n
  */
 G_node GetAlias(G_node n, Main_struct S) {
-  if (SET_contains(S->coalescedMoves, n)) {
+  if (SET_contains(S->coalescedNodes, n)) {
     return GetAlias(G_look(S->alias, n), S);
   }
   return n;
@@ -687,8 +687,8 @@ void AssignColors(Main_struct S) {
   }
   SET_FOREACH(S->coalescedNodes, nptr) {
     G_node n = *nptr;
-    Temp_enter(S->color, G_nodeInfo(n),
-               Temp_look(S->color, G_nodeInfo(GetAlias(n, S))));
+    char *aliasColor = Temp_look(S->color, G_nodeInfo(GetAlias(n, S)));
+    Temp_enter(S->color, G_nodeInfo(n), aliasColor);
   }
 }
 
@@ -708,6 +708,7 @@ procedure RewriteProgram()
 void RewriteProgram(Main_struct S) {
   Set newTemps = SET_empty(SET_default_cmp);
   SET_FOREACH(S->spilledNodes, vptr) { G_node v = *vptr; }
+  assert(0);
 
   S->spilledNodes = SET_empty(SET_default_cmp);
   S->coloredNodes = SET_empty(SET_default_cmp);
@@ -733,7 +734,7 @@ procedure Main()
     RewriteProgram(spilledNodes)
     Main()
 */
-void Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
+Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
   Main_struct S = checked_malloc(sizeof(*S));
   S->iList = iList;
   S->frame = frame;
@@ -748,6 +749,7 @@ void Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
 
   // init to empty
   S->adjSet = SET_empty(AdjComparer);
+  S->spilledNodes = SET_empty(SET_default_cmp);
   S->adjList = G_empty();
   S->degree = G_empty();
   S->temp2Node = TAB_empty();
@@ -772,6 +774,7 @@ void Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
     temps = SET_union(temps, FG_def(n));
     temps = SET_union(temps, FG_use(n));
   }
+  // we probably won't construct edges, but we need the G_node to warp the data
   S->interference_graph = G_Graph();
   SET_FOREACH(temps, tptr) {
     Temp_temp t = *tptr;
@@ -787,7 +790,13 @@ void Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
   SET_FOREACH(SET_difference(temps, F_regTemp), tptr) {
     Temp_temp t = *tptr;
     SET_insert(S->initial, TAB_look(S->temp2Node, t));
-    fprintf(stderr, "%d, ",t->num);
+    fprintf(stderr, "%d, ", t->num);
+  }
+  fprintf(stderr, "\n");
+
+  fprintf(stderr, "\nF_regTemp = ");
+  SET_FOREACH(F_regTemp, tptr) {
+    fprintf(stderr, "%d, ", (*(Temp_temp *) tptr)->num);
   }
   fprintf(stderr, "\n");
 
@@ -805,15 +814,54 @@ void Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
     else if (!SET_isEmpty(S->spillWorklist))
       SelectSpill(S);
 
-    checkInvariant(S);
+    // checkInvariant(S);
 
-    if (SET_isEmpty(S->simplifyWorklist) && SET_isEmpty(S->worklistMoves) && SET_isEmpty(S->freezeWorklist) && SET_isEmpty(S->spillWorklist))
+    if (SET_isEmpty(S->simplifyWorklist) && SET_isEmpty(S->worklistMoves) &&
+        SET_isEmpty(S->freezeWorklist) && SET_isEmpty(S->spillWorklist))
       break;
   }
   AssignColors(S);
   checkInvariant(S);
   if (!SET_isEmpty(S->spilledNodes)) {
     RewriteProgram(S);
-    Color_Main(stmt_instr_set,iList,frame);//TODO
+    Color_Main(stmt_instr_set, iList, frame); // TODO
   }
+  visual_color(temps, S);
+  return S->color;
+}
+
+void visual_color(Set temps, Main_struct S) {
+  char out_file[80];
+  snprintf(out_file, 80, "%s.dot", Temp_labelstring(F_name(S->frame)));
+  FILE *out = fopen(out_file, "w");
+  fprintf(out, "strict graph{\n");
+  fprintf(out, "\tnode [style=filled, shape=circle];\n");
+
+  SET_FOREACH(temps, tptr) {
+    Temp_temp t = *tptr;
+    char *color = Temp_look(S->color, t);
+    Temp_temp reg = TAB_lookOnString(F_color2reg, color);
+    char *colorScheme = Temp_look(F_reg2colorscheme, reg);
+    fprintf(out, "\t\"%d\" [colorscheme=%s, color=%s]\n", t->num,colorScheme, Temp_look(F_reg2color, reg) );
+  }
+  fprintf(out, "\n\n");
+
+  // show all nodes' color only
+  // SET_FOREACH(temps, tptr) {
+  //   Temp_temp t = *tptr;
+  //   fprintf(out, "\t\"%d\"\n", t->num);
+  // }
+
+  SET_FOREACH(temps, tptr) {
+    Temp_temp t = *tptr;
+    G_node node = TAB_look(S->temp2Node, t);
+    Set adjs = G_look(S->adjList, node);
+    SET_FOREACH(adjs, uptr) {
+      G_node u = *uptr;
+      Temp_temp tt = G_nodeInfo(u);
+      fprintf(out, "\t\"%d\" -- \"%d\"\n", t->num, tt->num);
+    }
+  }
+
+  fprintf(out, "}\n");
 }

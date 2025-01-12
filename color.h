@@ -15,6 +15,6 @@ struct COL_result {
   Temp_tempList spills;
 };
 struct COL_result COL_color(G_graph ig, Temp_map initial, Temp_tempList regs);
-void Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame);
+Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame);
 
 #endif

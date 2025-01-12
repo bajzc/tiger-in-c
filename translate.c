@@ -67,7 +67,8 @@ Tr_exp Tr_stringExp(string s) {
 }
 
 Tr_exp Tr_callExp(Temp_label name, Tr_exp *argv, int argc,
-                  Tr_level caller_level, Tr_level callee_level) {
+                  Tr_level caller_level, Tr_level callee_level,
+                  bool isExternCall) {
   T_expList *l = checked_malloc(sizeof(*l)), l_head = NULL;
   for (int i = 0; i < argc; i++) {
     *l = T_ExpList(unEx(argv[i]), NULL);
@@ -85,6 +86,9 @@ Tr_exp Tr_callExp(Temp_label name, Tr_exp *argv, int argc,
         break;
       c = c->parent;
     }
+  }
+  if (isExternCall) {
+    return Tr_Ex(T_Call(T_Name(name), l_head));
   }
   return Tr_Ex(T_Call(T_Name(name), T_ExpList(static_link, l_head)));
 }

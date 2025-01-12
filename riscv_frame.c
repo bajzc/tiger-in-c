@@ -4,18 +4,20 @@
 
 #include "assem.h"
 #include "frame.h"
-#include "util.h"
 #include "set.h"
+#include "table.h"
+#include "util.h"
 
 #define ARG_IN_REG 7 // a1-a7
 const int F_wordSize = 4; // target machine is RV32
-const int F_numGPR = 27; // General Purpose Registers: 32 - 5
+const int F_numGPR = 26; // General Purpose Registers: 32 - 6
 Temp_map F_tempMap;
 // used for generate graphviz graph
 Temp_map F_reg2colorscheme;
 Temp_map F_reg2color;
 Set F_regTemp; // Set<Temp_temp>
 Set F_regString; // Set<String> aka color
+TAB_table F_color2reg; // Map<String, Temp_temp>
 
 struct F_access_ {
   enum { inFrame, inReg } kind;
@@ -182,7 +184,8 @@ T_stm F_procEntryExit1(F_frame frame, T_stm stm) { return stm; }
 #define INIT_REG(vname, mname, color_schemes, color)                           \
   vname = Temp_newtemp();                                                      \
   Temp_enter(F_tempMap, vname, #mname);                                        \
-  Temp_enter(F_reg2colorscheme, vname, #color_schemes);                        \
+  Temp_enter(F_reg2colorscheme, vname, (#color_schemes));                      \
+  TAB_enterString(F_color2reg, (#mname), vname);                               \
   Temp_enter(F_reg2color, vname, #color);                                      \
   SET_insert(F_regString, #mname);                                             \
   SET_insert(F_regTemp, vname);
@@ -228,15 +231,17 @@ static void initRegMap() {
   F_tempMap = Temp_empty();
   F_reg2colorscheme = Temp_empty();
   F_reg2color = Temp_empty();
-  F_regString = SET_empty((int (*)(void *, void *))strcmp);
+  F_regString = SET_empty((int (*)(void *, void *)) strcmp);
   F_regTemp = SET_empty(SET_default_cmp);
+  F_color2reg = TAB_empty();
   // INIT_REG(ZERO, zero, x11, gold);
-  INIT_REG(RA, ra, x11, gold3);
+  // INIT_REG(RA, ra, x11, gold3);
   // INIT_REG(SP, sp, x11, gold4);
   // INIT_REG(FP, fp, x11, goldenrod);
   ZERO = Temp_newtemp();
   SP = Temp_newtemp();
   FP = Temp_newtemp();
+  RA = Temp_newtemp();
 
   // Caller saved
   INIT_REG(A0, a0, reds8, 1);
@@ -268,41 +273,46 @@ static void initRegMap() {
   INIT_REG(S10, s10, x11, grey57);
   INIT_REG(S11, s11, x11, grey61);
 
-  specialRegs = Temp_TempList(ZERO,
-                Temp_TempList(RA,
-                  Temp_TempList(SP,
-                    Temp_TempList(FP,
-                      Temp_TempList(A0, NULL)))));
+  specialRegs = Temp_TempList(
+      ZERO,
+      Temp_TempList(
+          RA, Temp_TempList(SP, Temp_TempList(FP, Temp_TempList(A0, NULL)))));
 
-  callerSaves = Temp_TempList(T0,
-                Temp_TempList(T1,
-                  Temp_TempList(T2,
-                    Temp_TempList(T3,
-                      Temp_TempList(T4,
-                        Temp_TempList(T5,
-                          Temp_TempList(T6, NULL)))))));
+  callerSaves = Temp_TempList(
+      T0, Temp_TempList(
+              T1, Temp_TempList(
+                      T2, Temp_TempList(
+                              T3, Temp_TempList(
+                                      T4, Temp_TempList(
+                                              T5, Temp_TempList(T6, NULL)))))));
 
-  argRegs =Temp_TempList(A1,
-            Temp_TempList(A2,
-              Temp_TempList(A3,
-                Temp_TempList(A4,
-                  Temp_TempList(A5,
-                    Temp_TempList(A6,
-                      Temp_TempList(A7, NULL)))))));
+  argRegs = Temp_TempList(
+      A1, Temp_TempList(
+              A2, Temp_TempList(
+                      A3, Temp_TempList(
+                              A4, Temp_TempList(
+                                      A5, Temp_TempList(
+                                              A6, Temp_TempList(A7, NULL)))))));
 
-  calleeSaves = Temp_TempList(S1,
-                  Temp_TempList(S2,
-                    Temp_TempList(S3,
-                      Temp_TempList(S4,
-                        Temp_TempList(S5,
-                          Temp_TempList(S6,
-                            Temp_TempList(S7,
-                              Temp_TempList(S8,
-                                Temp_TempList(S9,
-                                  Temp_TempList(S10,
-                                    Temp_TempList(S11, NULL)))))))))));
-
-  F_reg2colorscheme = Temp_empty();
+  calleeSaves = Temp_TempList(
+      S1,
+      Temp_TempList(
+          S2,
+          Temp_TempList(
+              S3,
+              Temp_TempList(
+                  S4,
+                  Temp_TempList(
+                      S5,
+                      Temp_TempList(
+                          S6,
+                          Temp_TempList(
+                              S7,
+                              Temp_TempList(
+                                  S8, Temp_TempList(
+                                          S9, Temp_TempList(
+                                                  S10, Temp_TempList(
+                                                           S11, NULL)))))))))));
 }
 
 static Temp_tempList returnSink = NULL;

@@ -17,8 +17,12 @@ TAB_table TAB_empty(void);
  *    shadowing but not destroying any previous binding for "key". */
 void TAB_enter(TAB_table t, void *key, void *value);
 
+void TAB_enterString(TAB_table t, char *key, void *value);
+
 /* Look up the most recent binding for "key" in table "t" */
 void *TAB_look(TAB_table t, void *key);
+
+void *TAB_lookOnString(TAB_table t, char* key);
 
 /* Pop the most recent binding and return its key.
  * This may expose another binding for the same key, if there was one. */

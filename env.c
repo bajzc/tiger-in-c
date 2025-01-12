@@ -35,32 +35,32 @@ S_table E_base_tenv(void) {
   return tenv;
 }
 
-E_enventry E_base_fun(Ty_tyList formals, Ty_ty resulty) {
-  return E_FunEntry(Tr_outermost(), Temp_newlabel(), formals, resulty);
+E_enventry E_base_fun(Ty_tyList formals, Ty_ty resulty, char *name) {
+  return E_FunEntry(Tr_outermost(), Temp_namedlabel(name), formals, resulty);
 }
 
 S_table E_base_venv(void) {
   S_table venv = S_empty();
   S_enter(venv, S_Symbol("print"),
-          E_base_fun(Ty_TyList(Ty_String(), NULL), Ty_Void()));
-  S_enter(venv, S_Symbol("flush"), E_base_fun(NULL, Ty_Void()));
-  S_enter(venv, S_Symbol("getchar"), E_base_fun(NULL, Ty_String()));
+          E_base_fun(Ty_TyList(Ty_String(), NULL), Ty_Void(), "print"));
+  S_enter(venv, S_Symbol("flush"), E_base_fun(NULL, Ty_Void(), "flush"));
+  S_enter(venv, S_Symbol("getchar"), E_base_fun(NULL, Ty_String(), "getchar"));
   S_enter(venv, S_Symbol("ord"),
-          E_base_fun(Ty_TyList(Ty_String(), NULL), Ty_Int()));
+          E_base_fun(Ty_TyList(Ty_String(), NULL), Ty_Int(), "ord"));
   S_enter(venv, S_Symbol("chr"),
-          E_base_fun(Ty_TyList(Ty_Int(), NULL), Ty_String()));
+          E_base_fun(Ty_TyList(Ty_Int(), NULL), Ty_String(), "chr"));
   S_enter(venv, S_Symbol("size"),
-          E_base_fun(Ty_TyList(Ty_String(), NULL), Ty_Int()));
+          E_base_fun(Ty_TyList(Ty_String(), NULL), Ty_Int(), "size"));
   S_enter(venv, S_Symbol("substring"),
           E_base_fun(Ty_TyList(Ty_String(),
                                Ty_TyList(Ty_Int(), Ty_TyList(Ty_Int(), NULL))),
-                     Ty_String()));
+                     Ty_String(), "substring"));
   S_enter(venv, S_Symbol("concat"),
           E_base_fun(Ty_TyList(Ty_String(), Ty_TyList(Ty_String(), NULL)),
-                     Ty_String()));
+                     Ty_String(), "concat"));
   S_enter(venv, S_Symbol("not"),
-          E_base_fun(Ty_TyList(Ty_Int(), NULL), Ty_Int()));
+          E_base_fun(Ty_TyList(Ty_Int(), NULL), Ty_Int(), "not"));
   S_enter(venv, S_Symbol("exit"),
-          E_base_fun(Ty_TyList(Ty_Int(), NULL), Ty_Void()));
+          E_base_fun(Ty_TyList(Ty_Int(), NULL), Ty_Void(), "exit"));
   return venv;
 }

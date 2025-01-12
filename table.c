@@ -58,6 +58,18 @@ void TAB_enter(TAB_table t, void *key, void *value) {
   t->top = key;
 }
 
+void TAB_enterString(TAB_table t, char *key, void *value) {
+  int index;
+  assert(t && key);
+  unsigned long hash = 5381;
+  int c;
+  while ((c = *key++))
+    hash = ((hash << 5) + hash) + c;
+  index = ((unsigned long) hash) % TABSIZE;
+  t->table[index] = Binder(key, value, t->table[index], t->top);
+  t->top = key;
+}
+
 void *TAB_look(TAB_table t, void *key) {
   int index;
   binder b;
@@ -65,6 +77,21 @@ void *TAB_look(TAB_table t, void *key) {
   index = ((unsigned long) key) % TABSIZE;
   for (b = t->table[index]; b; b = b->next)
     if (b->key == key)
+      return b->value;
+  return NULL;
+}
+
+void *TAB_lookOnString(TAB_table t, char *key) {
+  int index;
+  binder b;
+  assert(t && key);
+  unsigned long hash = 5381;
+  int c;
+  while ((c = *key++))
+    hash = ((hash << 5) + hash) + c;
+  index = ((unsigned long) hash) % TABSIZE;
+  for (b = t->table[index]; b; b = b->next)
+    if (!strcmp(b->key, key))
       return b->value;
   return NULL;
 }
