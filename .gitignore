@@ -8,3 +8,4 @@ vgcore*
 a.out
 tiger.tab.c
 tiger.tab.h
+*.dot
