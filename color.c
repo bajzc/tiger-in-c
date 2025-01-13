@@ -668,7 +668,7 @@ void AssignColors(Main_struct S) {
     S->selectStack = S->selectStack->tail;
     // FIXME could include shadowed bindings
     Set okColors = SET_copy(F_regString); // Set<String>
-    SET_FOREACH(G_toSet(G_adj(n)), wptr) {
+    SET_FOREACH(G_look(S->adjList, n), wptr) {
       G_node w = *wptr;
       if (SET_contains(
               SET_union(S->coloredNodes,
