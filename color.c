@@ -666,14 +666,10 @@ void AssignColors(Main_struct S) {
   while (S->selectStack) {
     G_node n = G_top(S->selectStack);
     S->selectStack = S->selectStack->tail;
-    // FIXME could include shadowed bindings
     Set okColors = SET_copy(F_regString); // Set<String>
     SET_FOREACH(G_look(S->adjList, n), wptr) {
       G_node w = *wptr;
-      if (SET_contains(
-              SET_union(S->coloredNodes,
-                        F_regTemp), // FIXME could include shadowed bindings
-              GetAlias(w, S))) {
+      if (SET_contains(SET_union(S->coloredNodes, F_regTemp), GetAlias(w, S))) {
         SET_delete(okColors, Temp_look(S->color, G_nodeInfo(GetAlias(w, S))));
       }
     }
@@ -843,7 +839,8 @@ void visual_color(Set temps, Main_struct S) {
     char *color = Temp_look(S->color, t);
     Temp_temp reg = TAB_lookOnString(F_color2reg, color);
     char *colorScheme = Temp_look(F_reg2colorscheme, reg);
-    fprintf(out, "\t\"%d\" [colorscheme=%s, color=%s]\n", t->num,colorScheme, Temp_look(F_reg2color, reg));
+    fprintf(out, "\t\"%d\" [colorscheme=%s, color=%s]\n", t->num, colorScheme,
+            Temp_look(F_reg2color, reg));
   }
   fprintf(out, "\n\n");
 

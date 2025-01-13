@@ -233,13 +233,13 @@ static void initRegMap() {
   F_regTemp = SET_empty(SET_default_cmp);
   F_color2reg = TAB_empty();
   // INIT_REG(ZERO, zero, x11, gold);
-  // INIT_REG(RA, ra, x11, gold3);
-  // INIT_REG(SP, sp, x11, gold4);
-  // INIT_REG(FP, fp, x11, goldenrod);
+  INIT_REG(RA, ra, x11, gold3);
+  INIT_REG(SP, sp, x11, gold4);
+  INIT_REG(FP, fp, x11, goldenrod);
   ZERO = Temp_newtemp();
-  SP = Temp_newtemp();
-  FP = Temp_newtemp();
-  RA = Temp_newtemp();
+  // SP = Temp_newtemp();
+  // FP = Temp_newtemp();
+  // RA = Temp_newtemp();
 
   // Caller saved
   INIT_REG(A0, a0, x11, red);
@@ -256,7 +256,7 @@ static void initRegMap() {
   INIT_REG(T3, t3, x11, darkgreen);
   INIT_REG(T4, t4, x11, gray);
   INIT_REG(T5, t5, x11, lightgray);
-  INIT_REG(T6, t6, x11, darkred);
+  INIT_REG(T6, t6, SVG, darksalmon);
 
   // Callee
   INIT_REG(S1, s1, x11, navy);
