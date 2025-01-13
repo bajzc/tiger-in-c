@@ -64,6 +64,16 @@ static void munchStm(T_stm s) {
           emit(AS_Oper("sw `s1 0(`s0) # MOVE(MEM(e1),e2)", NULL,
                        L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
         }
+      } else if (dst->kind == T_TEMP && src->kind == T_CALL) {
+        /* MOVE(TEMP(i),CALL(NAME(lab),args)) */
+        assert(src->u.CALL.fun->kind == T_NAME);
+        Temp_tempList l = munchArgs(0, src->u.CALL.args);
+        // TODO
+        S("call %s", Temp_labelstring(src->u.CALL.fun->u.NAME));
+        emit(AS_Oper(STRDUP(buf), L(F_RV(), F_calldefs()), l, NULL));
+        //
+        emit(AS_Move("mv `d0, `s0 # copy return value", L(dst->u.TEMP, NULL),
+                     L(F_RV(), NULL)));
       } else if (dst->kind == T_TEMP) {
         /* MOVE(TEMP(i),e2) */
         T_exp e2 = src;
@@ -240,7 +250,7 @@ static Temp_temp munchExp(T_exp e) {
       /* CALL(NAME(lab), args) */
       assert(e->u.CALL.fun->kind == T_NAME);
       Temp_tempList l = munchArgs(0, e->u.CALL.args);
-      //
+      // TODO
       S("call %s", Temp_labelstring(e->u.CALL.fun->u.NAME));
       emit(AS_Oper(STRDUP(buf), F_calldefs(), l, NULL));
       //

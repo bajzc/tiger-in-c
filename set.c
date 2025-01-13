@@ -70,9 +70,7 @@ Set SET_difference(Set a, Set b) {
   if (a->cmp != b->cmp)
     debug("Set %p %p are using different cmp function", a->cmp, b->cmp);
   Set s = SET_copy(a);
-  SET_FOREACH(b, uptr) {
-    SET_delete(s, *uptr);
-  }
+  SET_FOREACH(b, uptr) { SET_delete(s, *uptr); }
   return s;
 }
 
