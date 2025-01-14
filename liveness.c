@@ -50,5 +50,5 @@ struct Live_graph Live_Liveness(G_graph flow) {
     }
   }
 
-  return (struct Live_graph) {in_map, out_map};
+  return (struct Live_graph) {out_map, in_map};
 }
