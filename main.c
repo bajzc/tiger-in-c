@@ -89,7 +89,7 @@ static void doProc(FILE *out, char *outfile, F_frame frame, T_stm body) {
   // fprintf(out, "END %s\n\n", Temp_labelstring(F_name(frame)));
   //
   G_graph graph = FG_AssemFlowGraph(iList);
-  printFlowgraph(stdout, graph, color_map, Temp_labelstring(F_name(frame)));
+  printFlowgraph(stderr, graph, color_map, Temp_labelstring(F_name(frame)));
   // G_graph inter_graph = Live_Liveness(graph).graph;
   //
   // char graph_file[100];

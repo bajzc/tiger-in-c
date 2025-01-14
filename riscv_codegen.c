@@ -64,23 +64,30 @@ static void munchStm(T_stm s) {
           emit(AS_Oper("sw `s1 0(`s0) # MOVE(MEM(e1),e2)", NULL,
                        L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
         }
-      } else if (dst->kind == T_TEMP && src->kind == T_CALL) {
-        /* MOVE(TEMP(i),CALL(NAME(lab),args)) */
-        assert(src->u.CALL.fun->kind == T_NAME);
-        Temp_tempList l = munchArgs(0, src->u.CALL.args);
-        // TODO
-        S("call %s", Temp_labelstring(src->u.CALL.fun->u.NAME));
-        emit(AS_Oper(STRDUP(buf), L(F_RV(), F_calldefs()), l, NULL));
-        //
-        emit(AS_Move("mv `d0, `s0 # copy return value", L(dst->u.TEMP, NULL),
-                     L(F_RV(), NULL)));
       } else if (dst->kind == T_TEMP) {
-        /* MOVE(TEMP(i),e2) */
-        T_exp e2 = src;
-        Temp_temp i = dst->u.TEMP;
-        Temp_temp j = munchExp(e2);
-        S("mv `d0, `s0 # MOVE(TEMP(i),e2) T%d -> T%d", j->num, i->num);
-        emit(AS_Move(STRDUP(buf), L(i, NULL), L(j, NULL)));
+        if (src->kind == T_CALL) {
+          /* MOVE(TEMP(i),CALL(NAME(lab),args)) */
+          assert(src->u.CALL.fun->kind == T_NAME);
+          Temp_tempList l = munchArgs(0, src->u.CALL.args);
+          // TODO
+          S("call %s", Temp_labelstring(src->u.CALL.fun->u.NAME));
+          emit(AS_Oper(STRDUP(buf), L(F_RV(), F_calldefs()), l, NULL));
+          //
+          emit(AS_Move("mv `d0, `s0 # copy return value", L(dst->u.TEMP, NULL),
+                       L(F_RV(), NULL)));
+        } else if (src->kind == T_CONST) {
+          /* MOVE(TEMP(i),CONST(c)) */
+          S("li `d0, %d # MOVE(TEMP(i),CONST(c)) T%d <- %d", src->u.CONST,
+            dst->u.TEMP->num, src->u.CONST);
+          emit(AS_Oper(STRDUP(buf), L(dst->u.TEMP, NULL), NULL, NULL));
+        } else {
+          /* MOVE(TEMP(i),e2) */
+          T_exp e2 = src;
+          Temp_temp i = dst->u.TEMP;
+          Temp_temp j = munchExp(e2);
+          S("mv `d0, `s0 # MOVE(TEMP(i),e2) T%d -> T%d", j->num, i->num);
+          emit(AS_Move(STRDUP(buf), L(i, NULL), L(j, NULL)));
+        }
       } else {
         assert(0);
       }

@@ -6,8 +6,9 @@
 #include "liveness.h"
 #include "set.h"
 
+#define T(n) ((Temp_temp)n->info)
 typedef struct Main_struct_ {
-  G_table liveOut, liveIn; // G_table<G_Node<AS_instr>, Set<G_Node<Temp_temp>>>
+  G_table liveOut, liveIn; // G_table<G_Node<AS_instr>, Set<Temp_temp>>
   G_table moveList; // G_table<G_Node<Temp_temp>, Set<AS_instr>>
   G_table alias; // G_table<G_Node, G_Node>
   Set stmt_instr_set; // Set<stmt_instr<stmt, AS_instr>>
@@ -96,7 +97,6 @@ void buildupLiveOut(Main_struct S) {
   }
 }
 
-// worklistMoves: moves enabled for possible coalescing
 int isBlockStart(G_node node, Main_struct S) {
   G_nodeList preds = G_pred(node);
   return preds == NULL || preds->head == NULL ||
@@ -204,10 +204,16 @@ void build(Main_struct S) {
   buildupLiveOut(S);
   G_nodeList cur_block_end_list = S->block_end_list;
   while (cur_block_end_list) { // forall b ∈ blocks in program
-    G_node cur_node = cur_block_end_list->head;
+    G_node cur_node = cur_block_end_list->head; // G_node<AS_instr>
     Set live = G_look(S->liveOut, cur_node); // let live = liveOut(b)
     while (cur_node &&
            !isBlockStart(cur_node, S)) { // forall I ∈ instructions(b)
+      fprintf(stderr,"liveout = ");
+      SET_FOREACH(live, sptr) {
+        Temp_temp s = (*sptr);
+        fprintf(stderr,"%d, ", s->num);
+      }
+      fprintf(stderr,"\n");
       AS_instr cur_instr = G_nodeInfo(cur_node);
       if (FG_isMove(cur_node)) { // if isMoveInstruction(I) then
         live = SET_difference(live, FG_use(cur_node)); // live ← live \ use(I)
@@ -217,7 +223,7 @@ void build(Main_struct S) {
           G_node node = TAB_look(S->temp2Node, n);
           assert(node);
           Set moveList = G_look(S->moveList, node);
-          if (!moveList)
+          if (moveList == NULL)
             moveList = SET_empty(SET_default_cmp);
           SET_insert(moveList, cur_instr); // moveList[n] ← moveList[n] ∪ {I}
           G_enter(S->moveList, node, moveList);
@@ -303,7 +309,7 @@ void DecrementDegree(G_node m, Main_struct S) {
   int *d = G_look(S->degree, m); // let d = degree[m]
   *d -= 1;
   G_enter(S->degree, m, d);
-  if (*d != S->K)
+  if (*d + 1 != S->K)
     return;
   EnableMoves(SET_with(Adjacent(m, S), m), S); // EnableMoves({m} ∪ Adjacent(m))
   SET_delete(S->spillWorklist, m); // spillWorklist ← spillWorklist \ {m}

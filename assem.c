@@ -182,11 +182,11 @@ void AS_print(FILE *out, AS_instr i, Temp_map m) {
       /* i->u.LABEL->label); */
       break;
     case I_MOVE:
-      // if (Temp_look(m, i->u.MOVE.src->head) ==
-      //     Temp_look(m, i->u.MOVE.dst->head)) { // redundant move filter
-      //   assert(i->u.MOVE.src->tail == NULL && i->u.MOVE.dst->tail == NULL);
-      //   break;
-      // }
+      if (Temp_look(m, i->u.MOVE.src->head) ==
+          Temp_look(m, i->u.MOVE.dst->head)) { // redundant move filter
+        assert(i->u.MOVE.src->tail == NULL && i->u.MOVE.dst->tail == NULL);
+        break;
+      }
       format(r, i->u.MOVE.assem, i->u.MOVE.dst, i->u.MOVE.src, NULL, m);
       fprintf(out, "\t%s", r);
       break;

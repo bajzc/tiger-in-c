@@ -5,7 +5,6 @@
 #include "set.h"
 #include "table.h"
 
-static G_table in_map, out_map;
 
 static void enterLiveMap(G_table t, G_node flowNode, Set temps) {
   G_enter(t, flowNode, temps);
@@ -25,6 +24,7 @@ Live_moveList Live_MoveList(G_node src, G_node dst, Live_moveList tail) {
 Temp_temp Live_gtemp(G_node n) { return (Temp_temp) G_nodeInfo(n); }
 
 struct Live_graph Live_Liveness(G_graph flow) {
+  G_table in_map, out_map;
   in_map = G_empty(), out_map = G_empty();
   for (G_nodeList l = G_nodes(flow); l; l = l->tail) {
     G_node n = l->head;
@@ -32,8 +32,9 @@ struct Live_graph Live_Liveness(G_graph flow) {
     enterLiveMap(out_map, n, SET_empty(SET_default_cmp));
   }
 
-  bool changed = FALSE;
-  while (!changed) {
+  bool changed = TRUE;
+  while (changed) {
+    changed = FALSE;
     for (G_nodeList l = G_nodes(flow); l; l = l->tail) {
       G_node n = l->head;
       Set in_ = lookupLiveMap(in_map, n); // copy
@@ -44,11 +45,34 @@ struct Live_graph Live_Liveness(G_graph flow) {
       for (G_nodeList s = G_succ(n); s; s = s->tail) {
         out = SET_union(out, lookupLiveMap(in_map, s->head));
       }
-      if (SET_iseq(in_, in) != 1 || SET_iseq(out_, out) != 1) {
+      if (!(SET_iseq(in_, in) && SET_iseq(out_, out))) {
         changed = TRUE;
       }
+      enterLiveMap(in_map, n, in);
+      enterLiveMap(out_map, n, out);
     }
   }
+#if DEBUG
+  for (G_nodeList l = G_nodes(flow); l; l = l->tail) {
+    Set in = lookupLiveMap(in_map, l->head);
+    Set out = lookupLiveMap(out_map, l->head);
+    AS_instr instr = G_nodeInfo(l->head);
+    fprintf(stderr, "%s\n\tin = ",
+            instr->u.LABEL.assem); // the string will always be there
+    SET_FOREACH(in, tptr) {
+      Temp_temp t = *tptr;
+      if (!Temp_look(F_tempMap, t))
+        fprintf(stderr, "%d, ", ((Temp_temp) *tptr)->num);
+    }
+    fprintf(stderr, "\n\tout = ");
+    SET_FOREACH(out, tptr) {
+      Temp_temp t = *tptr;
+      if (!Temp_look(F_tempMap, t))
+        fprintf(stderr, "%d, ", ((Temp_temp) *tptr)->num);
+    }
+    fprintf(stderr, "\n\n");
+  }
+#endif
 
   return (struct Live_graph) {out_map, in_map};
 }
