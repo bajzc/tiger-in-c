@@ -305,7 +305,7 @@ void Tr_procEntryExit(Tr_level level, Tr_exp body, Tr_accessList formals,
   F_fragments = F_FragList(frag, F_fragments);
   F_procEntryExit1(level->frame, stm);
   debug("call printStmList on function '%s'\n", Temp_labelstring(level->name));
-  printStmList(stderr, T_StmList(stm, NULL));
+  // printStmList(stderr, T_StmList(stm, NULL));
 }
 
 static Tr_exp Tr_Ex(T_exp ex) {

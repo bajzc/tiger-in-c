@@ -114,7 +114,7 @@ int SET_delete(Set a, void *element) {
   return 1;
 }
 
-int SET_eq(Set a, Set b) {
+int SET_iseq(Set a, Set b) {
   if (a->size != b->size)
     return 0;
   for (int i = 0; i < a->size; i++) {

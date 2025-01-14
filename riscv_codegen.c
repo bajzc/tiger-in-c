@@ -78,8 +78,9 @@ static void munchStm(T_stm s) {
         /* MOVE(TEMP(i),e2) */
         T_exp e2 = src;
         Temp_temp i = dst->u.TEMP;
-        emit(AS_Move("mv `d0, `s0 # MOVE(TEMP(i),e2)", L(i, NULL),
-                     L(munchExp(e2), NULL)));
+        Temp_temp j = munchExp(e2);
+        S("mv `d0, `s0 # MOVE(TEMP(i),e2) T%d -> T%d", j->num, i->num);
+        emit(AS_Move(STRDUP(buf), L(i, NULL), L(j, NULL)));
       } else {
         assert(0);
       }
@@ -236,7 +237,7 @@ static Temp_temp munchExp(T_exp e) {
     }
     case T_CONST: {
       /* CONST(i) */
-      S("li `d0, %d # CONST(i)", e->u.CONST);
+      S("li `d0, %d # load CONST(i) to T%d", e->u.CONST, r->num);
       emit(AS_Oper(STRDUP(buf), L(r, NULL), NULL, NULL));
       return r;
     }

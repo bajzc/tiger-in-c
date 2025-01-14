@@ -8,6 +8,7 @@
 #include "table.h"
 #include "util.h"
 
+#define L(h, t) Temp_TempList((Temp_temp) h, (Temp_tempList) t)
 #define ARG_IN_REG 7 // a1-a7
 const int F_wordSize = 4; // target machine is RV32
 const int F_numGPR = 26; // General Purpose Registers: 32 - 6
@@ -235,7 +236,7 @@ static void initRegMap() {
   // INIT_REG(ZERO, zero, x11, gold);
   INIT_REG(RA, ra, x11, gold3);
   INIT_REG(SP, sp, x11, gold4);
-  INIT_REG(FP, fp, x11, goldenrod);
+  INIT_REG(FP, s0, x11, goldenrod);
   ZERO = Temp_newtemp();
   // SP = Temp_newtemp();
   // FP = Temp_newtemp();
@@ -316,13 +317,28 @@ static void initRegMap() {
 T_stm F_procEntryExit1(F_frame frame, T_stm stm) { return stm; }
 
 static Temp_tempList returnSink = NULL;
-AS_instrList F_procEntryExit2(AS_instrList body) {
+AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame) {
   if (!returnSink)
     returnSink =
-        Temp_TempList(ZERO, Temp_TempList(RA, Temp_TempList(SP, calleeSaves)));
-  return AS_splice(body, AS_InstrList(AS_Oper("TODO: F_procEntryExit2", NULL,
-                                              returnSink, NULL),
-                                      NULL));
+        Temp_TempList(A0, Temp_TempList(RA, Temp_TempList(SP, calleeSaves)));
+  // FIXME
+  // copy stack pointer to frame pointer at function entry and restore it when
+  // exit
+  int frameSize = frame->stack_size * F_wordSize;
+  char buf[80];
+  AS_instrList insert_entry = NULL;
+  assert(body->head->kind == I_LABEL);
+  snprintf(buf, 80, "addi `d0, `s0, -%d # alloc stack space", frameSize);
+  insert_entry = AS_InstrList(
+      body->head, AS_InstrList(AS_Oper("mv `d0, `s0 # update frame pointer",
+                                       L(FP, NULL), L(SP, NULL), NULL),
+                               AS_InstrList(AS_Oper(STRDUP(buf), L(SP, NULL),
+                                                    L(SP, NULL), NULL),
+                                            body->tail)));
+      return AS_splice(insert_entry,
+                       AS_InstrList(AS_Oper("TODO: F_procEntryExit2", NULL,
+                                            returnSink, NULL),
+                                    NULL));
 }
 
 AS_proc F_procEntryExit3(F_frame frame, AS_instrList body) {
@@ -350,5 +366,8 @@ Temp_temp F_SP(void) {
 }
 
 Temp_tempList F_calldefs(void) {
-  return Temp_TempList(A0, Temp_TempList(RA, Temp_TempList(ZERO, callerSaves)));
+  // FIXME
+  // We either store the RA reg each time when we call other functions or store
+  // it at the beginning of each function
+  return Temp_TempList(A0, Temp_TempList(RA, callerSaves));
 }

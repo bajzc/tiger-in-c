@@ -246,10 +246,10 @@ function NodeMoves (n)
   moveList[n] ∩ (activeMoves ∪ worklistMoves)
 */
 Set NodeMoves(G_node n, Main_struct S) {
-  if (!G_look(S->moveList, n))
+  Set moveListN = G_look(S->moveList, n);
+  if (!moveListN)
     return SET_empty(SET_default_cmp);
-  return SET_intersect(G_look(S->moveList, n),
-                       SET_union(S->activeMoves, S->worklistMoves));
+  return SET_intersect(moveListN, SET_union(S->activeMoves, S->worklistMoves));
 }
 
 /*
@@ -301,11 +301,10 @@ procedure DecrementDegree(m)
 */
 void DecrementDegree(G_node m, Main_struct S) {
   int *d = G_look(S->degree, m); // let d = degree[m]
-  if (*d != S->K)
-    return;
   *d -= 1;
   G_enter(S->degree, m, d);
-
+  if (*d != S->K)
+    return;
   EnableMoves(SET_with(Adjacent(m, S), m), S); // EnableMoves({m} ∪ Adjacent(m))
   SET_delete(S->spillWorklist, m); // spillWorklist ← spillWorklist \ {m}
   if (MoveRelated(m, S)) {
@@ -548,7 +547,9 @@ procedure Combine(u,v)
     spillWorkList ← spillWorkList ∪ {u}
 */
 void Combine(G_node u, G_node v, Main_struct S) {
-  if (!SET_delete(S->freezeWorklist, v))
+  if (SET_contains(S->freezeWorklist, v))
+    SET_delete(S->freezeWorklist, v);
+  if (SET_contains(S->spillWorklist, v))
     SET_delete(S->spillWorklist, v);
 
   SET_insert(S->coalescedNodes, v);
@@ -604,8 +605,7 @@ void FreezeMoves(G_node u, Main_struct S) {
   Set nodeMoves = NodeMoves(u, S);
 
   SET_FOREACH(nodeMoves, mptr) {
-    G_node m = *mptr;
-    AS_instr instr = G_nodeInfo(m);
+    AS_instr instr = *mptr;
 
     // verify that we only need to take care of one src and dst
     assert(instr->u.MOVE.src->tail == NULL);
@@ -620,8 +620,8 @@ void FreezeMoves(G_node u, Main_struct S) {
       v = GetAlias(y, S);
     }
 
-    SET_delete(S->activeMoves, m);
-    SET_insert(S->frozenMoves, m);
+    SET_delete(S->activeMoves, instr);
+    SET_insert(S->frozenMoves, instr);
 
     if (SET_isEmpty(NodeMoves(v, S)) && *(int *) G_look(S->degree, v) < S->K) {
       SET_delete(S->freezeWorklist, v);
@@ -669,7 +669,13 @@ void AssignColors(Main_struct S) {
     Set okColors = SET_copy(F_regString); // Set<String>
     SET_FOREACH(G_look(S->adjList, n), wptr) {
       G_node w = *wptr;
-      if (SET_contains(SET_union(S->coloredNodes, F_regTemp), GetAlias(w, S))) {
+      Set coloredNodes_temp = SET_empty(SET_default_cmp);
+      SET_FOREACH(S->coloredNodes, cptr) {
+        G_node c = *cptr;
+        SET_insert(coloredNodes_temp, G_nodeInfo(c));
+      }
+      if (SET_contains(SET_union(coloredNodes_temp, F_regTemp),
+                       G_nodeInfo(GetAlias(w, S)))) {
         SET_delete(okColors, Temp_look(S->color, G_nodeInfo(GetAlias(w, S))));
       }
     }
@@ -679,6 +685,7 @@ void AssignColors(Main_struct S) {
       SET_insert(S->coloredNodes, n);
       string c = SET_pop(okColors);
       Temp_enter(S->color, G_nodeInfo(n), c);
+      SET_insert(okColors, c); // c was not deleted
     }
   }
   SET_FOREACH(S->coalescedNodes, nptr) {
@@ -782,19 +789,19 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
     TAB_enter(S->temp2Node, t, node);
   }
 
-  fprintf(stderr, "\ninitial = ");
+  // fprintf(stderr, "\ninitial = ");
   SET_FOREACH(SET_difference(temps, F_regTemp), tptr) {
     Temp_temp t = *tptr;
     SET_insert(S->initial, TAB_look(S->temp2Node, t));
-    fprintf(stderr, "%d, ", t->num);
+    // fprintf(stderr, "%d, ", t->num);
   }
-  fprintf(stderr, "\n");
+  // fprintf(stderr, "\n");
 
-  fprintf(stderr, "\nF_regTemp = ");
-  SET_FOREACH(F_regTemp, tptr) {
-    fprintf(stderr, "%d, ", (*(Temp_temp *) tptr)->num);
-  }
-  fprintf(stderr, "\n");
+  // fprintf(stderr, "\nF_regTemp = ");
+  // SET_FOREACH(F_regTemp, tptr) {
+  //   fprintf(stderr, "%d, ", (*(Temp_temp *) tptr)->num);
+  // }
+  // fprintf(stderr, "\n");
 
   build(S);
   checkInvariant(S);
@@ -820,7 +827,7 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
   checkInvariant(S);
   if (!SET_isEmpty(S->spilledNodes)) {
     RewriteProgram(S);
-    Color_Main(stmt_instr_set, iList, frame); // TODO
+    return Color_Main(stmt_instr_set, iList, frame); // TODO
   }
   visual_color(temps, S);
   return S->color;

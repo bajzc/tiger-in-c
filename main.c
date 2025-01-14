@@ -29,18 +29,19 @@ extern bool anyErrors;
 
 static void printFlowgraph(FILE *out, G_graph graph, Temp_map m, char *name) {
   G_nodeList nodes = G_nodes(graph);
-  fprintf(out, "digraph %s{\n", name);
+  fprintf(out, "strict digraph %s{\n", name);
+  fprintf(out, "splines=false;\n");
   while (nodes) {
     AS_instr instr = G_nodeInfo(nodes->head);
     G_nodeList adj = G_succ(nodes->head);
     while (adj) {
       fprintf(out, "\"");
-      AS_print_graph(out, instr, m);
+      AS_print(out, instr, m);
       fprintf(out, "\"");
       AS_instr adj_instr = G_nodeInfo(adj->head);
       fprintf(out, " -> ");
       fprintf(out, "\"");
-      AS_print_graph(out, adj_instr, m);
+      AS_print(out, adj_instr, m);
       fprintf(out, "\"");
       adj = adj->tail;
       fprintf(out, "\n");
@@ -78,18 +79,17 @@ static void doProc(FILE *out, char *outfile, F_frame frame, T_stm body) {
   Set stmt_instr_set = SET_empty(SET_default_cmp);
   /* printStmList(stdout, stmList);*/
   iList = F_codegen(stmt_instr_set, frame, stmList); /* 9 */
-  iList = F_procEntryExit2(iList);
+  iList = F_procEntryExit2(iList, frame);
+  Temp_map color_map = Color_Main(stmt_instr_set, iList, frame);
   proc = F_procEntryExit3(frame, iList);
 
-  Temp_map color_map = Color_Main(stmt_instr_set, iList, frame);
 
-  // fprintf(out, "BEGIN %s\n", Temp_labelstring(F_name(frame)));
-  Temp_map m = Temp_layerMap(F_tempMap, Temp_name());
+  fprintf(out, "%s:\n", Temp_labelstring(F_name(frame)));
   AS_printInstrList(out, proc->body, color_map);
   // fprintf(out, "END %s\n\n", Temp_labelstring(F_name(frame)));
   //
-  // G_graph graph = FG_AssemFlowGraph(iList);
-  // printFlowgraph(stdout, graph, m, Temp_labelstring(F_name(frame)));
+  G_graph graph = FG_AssemFlowGraph(iList);
+  printFlowgraph(stdout, graph, color_map, Temp_labelstring(F_name(frame)));
   // G_graph inter_graph = Live_Liveness(graph).graph;
   //
   // char graph_file[100];

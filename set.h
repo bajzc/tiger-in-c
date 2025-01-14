@@ -29,7 +29,7 @@ Set SET_copy(Set a);
 
 int SET_contains(Set a, void *element);
 
-int SET_eq(Set a, Set b);
+int SET_iseq(Set a, Set b);
 
 void SET_foreach(Set a, void (*f)(void *));
 

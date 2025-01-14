@@ -119,7 +119,8 @@ static int decNumber(A_decList decs) {
 
 struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
                       Temp_label break_label) {
-  assert(a);
+  if (a == NULL)
+    return expTy(Tr_nilExp(), Ty_Nil());
   switch (a->kind) {
     case A_varExp: {
       return transVar(venv, tenv, a->u.var, level);
@@ -663,6 +664,9 @@ F_fragList SEM_transProg(A_exp exp) {
   printf("\nLinearized:\n");
   printStmList(stdout, C_linearize(unNx(res.exp)));
 #endif
+  if (res.ty->kind!=Ty_void) {
+    fprintf(stderr, "WARN: The return value from outermost expression will be ignored\n");
+  }
   Tr_procEntryExit(Tr_outermost(), res.exp, NULL, FALSE); // let in
   return Tr_getResult();
 }
