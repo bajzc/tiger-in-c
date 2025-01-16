@@ -117,12 +117,10 @@ static void munchStm(T_stm s) {
       // TODO: pseudo instruction for compare to 0
       Temp_temp e1 = munchExp(s->u.CJUMP.left);
       Temp_temp e2 = munchExp(s->u.CJUMP.right);
-      // Temp_temp r1 = Temp_newtemp();
-      // Temp_temp r2 = Temp_newtemp();
-      // // FIXME: Do we need this safe copy?
-      // emit(AS_Move("mv `d0, `s0 # safe copy of e1", L(r1, NULL), L(e1,
-      // NULL))); emit(AS_Move("mv `d0, `s0 # safe copy of e2", L(r2, NULL),
-      // L(e2, NULL)));
+      Temp_temp r1 = Temp_newtemp();
+      Temp_temp r2 = Temp_newtemp();
+      emit(AS_Move("mv `d0, `s0 # safe copy of e1", L(r1, NULL), L(e1, NULL)));
+      emit(AS_Move("mv `d0, `s0 # safe copy of e2", L(r2, NULL), L(e2, NULL)));
 
       char *op_code;
       switch (s->u.CJUMP.op) {
