@@ -288,11 +288,15 @@ Tr_exp Tr_breakExp(Temp_label done) {
 }
 
 Tr_exp Tr_letExp(Tr_exp *decs, int size, Tr_exp body) {
-  T_exp exp = unEx(body);
-  for (int i = 0; i < size; i++) {
-    if (decs[i] != NULL)
-      exp = T_Eseq(unNx(decs[i]), exp);
+  T_exp exp = T_Eseq(NULL, unEx(body));
+  T_stm *right_most = &(exp->u.ESEQ.stm);
+  for (int i = 0; i < size - 1; i++) {
+    assert(decs[i]);
+    *right_most = T_Seq(unNx(decs[i]), NULL);
+    right_most = &(*right_most)->u.SEQ.right;
   }
+  *right_most = unNx(decs[size - 1]);
+
   return Tr_Ex(exp);
 }
 
