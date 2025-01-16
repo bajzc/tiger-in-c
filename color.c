@@ -453,10 +453,22 @@ void Coalesce(Main_struct S) {
     v = y;
   }
   SET_delete(S->worklistMoves, m);
-  if (u == v) {
+  if (Temp_temp_cmp(G_nodeInfo(u), G_nodeInfo(v)) == 0) {
     SET_insert(S->coalescedMoves, m);
     AddWorkList(u, S);
-  } else if (Temp_look(S->precolored, G_nodeInfo(v)) || G_goesTo(u, v)) {
+    /*
+     *   else if (Temp_look(S->precolored, G_nodeInfo(v)) || G_goesTo(u, v))
+     *   TO
+     *   else if (Temp_look(S->precolored, G_nodeInfo(v)) ||
+     *            SET_contains(S->adjSet, makeAdj(u, v)))
+     *   It takes about THREE DAYS to find this bug. However, countless bugs was
+     *   found on the way of debugging
+     *   This bug was caused by a mindless refactor from using G_node to record
+     *   the interference graph information, to use a set of Adj to store all
+     *   the edges
+     */
+  } else if (Temp_look(S->precolored, G_nodeInfo(v)) ||
+             SET_contains(S->adjSet, makeAdj(u, v))) {
     SET_insert(S->constrainedMoves, m);
     AddWorkList(u, S);
     AddWorkList(v, S);
