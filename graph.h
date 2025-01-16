@@ -78,5 +78,6 @@ G_node G_findNodeWithInfo(G_graph graph, void* data);
 G_nodeList G_push(G_nodeList list, G_node node);
 G_node G_top(G_nodeList list);
 Set G_toSet(G_nodeList list);
+int G_node_cmp(void *a, void *b);
 
 #endif

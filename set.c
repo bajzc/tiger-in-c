@@ -1,4 +1,5 @@
 #include "set.h"
+#include "graph.h"
 #include "util.h"
 
 #define INITIAL_CAPACITY 4
@@ -55,6 +56,8 @@ Set SET_union(Set a, Set b) {
 }
 
 Set SET_intersect(Set a, Set b) {
+  if (a->cmp != b->cmp)
+    debug("Set %p %p are using different cmp function", a->cmp, b->cmp);
   Set s = SET_Set(a->size, a->capacity, a->cmp);
   int j = 0;
   for (int i = 0; i < a->size; i++) {
@@ -115,6 +118,8 @@ int SET_delete(Set a, void *element) {
 }
 
 int SET_iseq(Set a, Set b) {
+  if (a->cmp != b->cmp)
+    debug("Set %p %p are using different cmp function", a->cmp, b->cmp);
   if (a->size != b->size)
     return 0;
   for (int i = 0; i < a->size; i++) {

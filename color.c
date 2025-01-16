@@ -6,7 +6,7 @@
 #include "liveness.h"
 #include "set.h"
 
-#define T(n) ((Temp_temp)n->info)
+#define T(n) ((Temp_temp) n->info)
 typedef struct Main_struct_ {
   G_table liveOut, liveIn; // G_table<G_Node<AS_instr>, Set<Temp_temp>>
   G_table moveList; // G_table<G_Node<Temp_temp>, Set<AS_instr>>
@@ -138,7 +138,7 @@ void checkInvariant(Main_struct S) {
     G_node u = *uptr;
     int degree = *(int *) G_look(S->degree, u);
     Set adjListU = G_look(S->adjList, u);
-    Set adjListU_temp = SET_empty(SET_default_cmp);
+    Set adjListU_temp = SET_empty(Temp_temp_cmp);
     SET_FOREACH(adjListU, adjptr) {
       SET_insert(adjListU_temp, G_nodeInfo(*adjptr));
     }
@@ -208,13 +208,14 @@ void build(Main_struct S) {
     Set live = G_look(S->liveOut, cur_node); // let live = liveOut(b)
     while (cur_node &&
            !isBlockStart(cur_node, S)) { // forall I ∈ instructions(b)
-      fprintf(stderr,"liveout = ");
+      fprintf(stderr, "liveout = ");
       SET_FOREACH(live, sptr) {
         Temp_temp s = (*sptr);
-        fprintf(stderr,"%d, ", s->num);
+        fprintf(stderr, "%d, ", s->num);
       }
-      fprintf(stderr,"\n");
+      fprintf(stderr, "\n");
       AS_instr cur_instr = G_nodeInfo(cur_node);
+      fprintf(stderr, "\t%s\n", cur_instr->u.OPER.assem);
       if (FG_isMove(cur_node)) { // if isMoveInstruction(I) then
         live = SET_difference(live, FG_use(cur_node)); // live ← live \ use(I)
         Set defAndUse = SET_union(FG_use(cur_node), FG_def(cur_node));
@@ -432,6 +433,7 @@ procedure Coalesce()
     activeMoves ← activeMoves ∪ {m}
 */
 void Coalesce(Main_struct S) {
+  debug("\n");
   AS_instr m = NULL;
   SET_FOREACH(S->worklistMoves, mptr) {
     m = *mptr;
@@ -439,7 +441,7 @@ void Coalesce(Main_struct S) {
       break;
   }
   if (!m)
-    return;
+    assert(0);
   G_node x = GetAlias(TAB_look(S->temp2Node, m->u.MOVE.src->head), S);
   G_node y = GetAlias(TAB_look(S->temp2Node, m->u.MOVE.dst->head), S);
   G_node u, v;
@@ -675,7 +677,7 @@ void AssignColors(Main_struct S) {
     Set okColors = SET_copy(F_regString); // Set<String>
     SET_FOREACH(G_look(S->adjList, n), wptr) {
       G_node w = *wptr;
-      Set coloredNodes_temp = SET_empty(SET_default_cmp);
+      Set coloredNodes_temp = SET_empty(Temp_temp_cmp);
       SET_FOREACH(S->coloredNodes, cptr) {
         G_node c = *cptr;
         SET_insert(coloredNodes_temp, G_nodeInfo(c));
@@ -726,6 +728,26 @@ void RewriteProgram(Main_struct S) {
   S->coalescedNodes = SET_empty(SET_default_cmp);
 }
 
+void print_edges(Main_struct S) {
+  static int graph_count = 0;
+  char out_file[80];
+  snprintf(out_file, 80, "%d-edges.dot", graph_count);
+  FILE *fp = fopen(out_file, "w");
+  fprintf(fp, "strict graph{\n");
+  SET_FOREACH(S->adjSet, tptr) {
+    Adj t = *tptr;
+    Temp_temp u = ((Temp_temp) G_nodeInfo(t->u));
+    Temp_temp v = ((Temp_temp) G_nodeInfo(t->v));
+    if (Temp_look(F_tempMap, u) || Temp_look(F_tempMap, v))
+      continue;
+    fprintf(fp, "\tT%d -- T%d\n", u->num, v->num);
+  }
+  fprintf(fp, "}\n");
+  fclose(fp);
+  debug("generate %d-edges.dot\n", graph_count);
+  graph_count++;
+}
+
 /*
 procedure Main()
   LivenessAnalysis()
@@ -758,26 +780,26 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
 
   // init to empty
   S->adjSet = SET_empty(AdjComparer);
-  S->spilledNodes = SET_empty(SET_default_cmp);
+  S->spilledNodes = SET_empty(G_node_cmp);
   S->adjList = G_empty();
   S->degree = G_empty();
   S->temp2Node = TAB_empty();
-  S->initial = SET_empty(SET_default_cmp);
+  S->initial = SET_empty(G_node_cmp);
   S->moveList = G_empty();
   S->worklistMoves = SET_empty(SET_default_cmp);
   S->alias = G_empty();
-  S->simplifyWorklist = SET_empty(SET_default_cmp);
-  S->freezeWorklist = SET_empty(SET_default_cmp);
-  S->spillWorklist = SET_empty(SET_default_cmp);
-  S->coalescedNodes = SET_empty(SET_default_cmp);
+  S->simplifyWorklist = SET_empty(G_node_cmp);
+  S->freezeWorklist = SET_empty(G_node_cmp);
+  S->spillWorklist = SET_empty(G_node_cmp);
+  S->coalescedNodes = SET_empty(G_node_cmp);
   S->coalescedMoves = SET_empty(SET_default_cmp);
   S->constrainedMoves = SET_empty(SET_default_cmp);
   S->frozenMoves = SET_empty(SET_default_cmp);
   S->activeMoves = SET_empty(SET_default_cmp);
-  S->coloredNodes = SET_empty(SET_default_cmp);
+  S->coloredNodes = SET_empty(G_node_cmp);
   S->selectStack = NULL;
 
-  Set temps = SET_empty(SET_default_cmp); // Set<Temp_temp>
+  Set temps = SET_empty(Temp_temp_cmp); // Set<Temp_temp>
   for (G_nodeList l = G_nodes(S->flowgraph); l; l = l->tail) {
     G_node n = l->head;
     temps = SET_union(temps, FG_def(n));
@@ -790,7 +812,7 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
     G_node node = G_Node(S->interference_graph, t);
     int *deg = checked_malloc(sizeof(*deg));
     *deg = 0;
-    G_enter(S->adjList, node, SET_empty(SET_default_cmp));
+    G_enter(S->adjList, node, SET_empty(G_node_cmp));
     G_enter(S->degree, node, deg);
     TAB_enter(S->temp2Node, t, node);
   }
@@ -811,6 +833,7 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
 
   build(S);
   checkInvariant(S);
+  print_edges(S);
   MakeWorkList(S);
   checkInvariant(S);
   while (TRUE) {
@@ -823,7 +846,8 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
     else if (!SET_isEmpty(S->spillWorklist))
       SelectSpill(S);
 
-    // checkInvariant(S);
+    print_edges(S);
+    checkInvariant(S);
 
     if (SET_isEmpty(S->simplifyWorklist) && SET_isEmpty(S->worklistMoves) &&
         SET_isEmpty(S->freezeWorklist) && SET_isEmpty(S->spillWorklist))
@@ -868,7 +892,7 @@ void visual_color(Set temps, Main_struct S) {
     G_node node = TAB_look(S->temp2Node, t);
     G_node alias = GetAlias(node, S);
     if (alias != node)
-       continue;
+      continue;
     Set adjs = G_look(S->adjList, node);
     SET_FOREACH(adjs, uptr) {
       G_node u = *uptr;

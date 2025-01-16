@@ -231,7 +231,7 @@ static void initRegMap() {
   F_reg2colorscheme = Temp_empty();
   F_reg2color = Temp_empty();
   F_regString = SET_empty((int (*)(void *, void *)) strcmp);
-  F_regTemp = SET_empty(SET_default_cmp);
+  F_regTemp = SET_empty(Temp_temp_cmp);
   F_color2reg = TAB_empty();
   // INIT_REG(ZERO, zero, x11, gold);
   INIT_REG(RA, ra, x11, gold3);

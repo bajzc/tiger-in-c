@@ -28,8 +28,8 @@ struct Live_graph Live_Liveness(G_graph flow) {
   in_map = G_empty(), out_map = G_empty();
   for (G_nodeList l = G_nodes(flow); l; l = l->tail) {
     G_node n = l->head;
-    enterLiveMap(in_map, n, SET_empty(SET_default_cmp));
-    enterLiveMap(out_map, n, SET_empty(SET_default_cmp));
+    enterLiveMap(in_map, n, SET_empty(Temp_temp_cmp));
+    enterLiveMap(out_map, n, SET_empty(Temp_temp_cmp));
   }
 
   bool changed = TRUE;
@@ -70,7 +70,12 @@ struct Live_graph Live_Liveness(G_graph flow) {
       if (!Temp_look(F_tempMap, t))
         fprintf(stderr, "%d, ", ((Temp_temp) *tptr)->num);
     }
-    fprintf(stderr, "\n\n");
+    fprintf(stderr, "\n");
+    for (G_nodeList succL = G_succ(l->head); succL; succL = succL->tail) {
+      AS_instr child = G_nodeInfo(succL->head);
+      fprintf(stderr, "\tsucc: %s\n", child->u.LABEL.assem);
+    }
+    fprintf(stderr, "\n");
   }
 #endif
 

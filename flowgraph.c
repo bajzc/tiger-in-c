@@ -2,7 +2,7 @@
 #include "set.h"
 
 static Set FG_TempList2Set(Temp_tempList l) {
-  Set s = SET_empty(SET_default_cmp);
+  Set s = SET_empty(Temp_temp_cmp);
   for (; l; l = l->tail) {
     SET_insert(s, l->head);
   }
@@ -60,12 +60,14 @@ G_node FG_AssemFlowGraph_Internal(AS_instrList il, G_graph graph,
     G_node fallthrough =
         FG_AssemFlowGraph_Internal(il->tail, graph, label_map, NULL);
 
-    // all labels should be in label_map at this point
     if (il->head->kind == I_OPER && il->head->u.OPER.jumps != NULL) {
       Temp_labelList cur = il->head->u.OPER.jumps->labels;
       while (cur != NULL) {
         G_node next = S_look(label_map, cur->head);
-        if (next != NULL)
+        assert(next); // all labels should be in label_map at this point
+        if (G_inNodeList(next, G_succ(fallthrough)))
+          G_addEdge(node, fallthrough);
+        else
           G_addEdge(node, next);
         cur = cur->tail;
       }

@@ -323,12 +323,14 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
                  "result of condition should be an integer value (%s)",
                  str_ty[test.ty->kind]);
       beginBreakScope();
+      S_beginScope(venv, 1);
       Temp_label new_break = Temp_newlabel();
       debug("new break label '%s' created at line %d\n",
             Temp_labelstring(new_break), a->pos.first_line);
       struct expty body =
           transExp(venv, tenv, a->u.whilee.body, level, new_break);
       endBreakScope();
+      S_endScope(venv, 1);
       if (body.ty->kind != Ty_void)
         EM_error(a->u.whilee.body->pos,
                  "expression of while-body(%s) must produce no value",
@@ -383,6 +385,8 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
       int i = 0;
       for (A_decList d = a->u.let.decs; d; d = d->tail) {
         decs[i++] = transDec(venv, tenv, d->head, level, break_label);
+        if (decs[i - 1] == NULL) // is function dec
+          i--;
       }
       struct expty exp =
           transExp(venv, tenv, a->u.let.body, level, break_label);
@@ -418,7 +422,7 @@ struct expty transVar(S_table venv, S_table tenv, A_var v, Tr_level level) {
     case A_simpleVar: {
       // ID
       E_enventry x = S_look(venv, v->u.simple);
-      debug("transVar: simple variable %s\n", S_name(v->u.simple));
+      debug2("transVar: simple variable %s\n", S_name(v->u.simple));
       if (x && x->kind == E_varEntry)
         return expTy(Tr_simpleVar(x->u.var.access, level),
                      actual_ty(x->u.var.ty));
@@ -664,8 +668,10 @@ F_fragList SEM_transProg(A_exp exp) {
   printf("\nLinearized:\n");
   printStmList(stdout, C_linearize(unNx(res.exp)));
 #endif
-  if (res.ty->kind!=Ty_void) {
-    fprintf(stderr, "WARN: The return value from outermost expression will be ignored\n");
+  if (res.ty->kind != Ty_void) {
+    fprintf(
+        stderr,
+        "WARN: The return value from outermost expression will be ignored\n");
   }
   Tr_procEntryExit(Tr_outermost(), res.exp, NULL, FALSE); // let in
   return Tr_getResult();

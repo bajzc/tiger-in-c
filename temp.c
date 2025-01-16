@@ -112,3 +112,10 @@ void Temp_dumpMap(FILE *out, Temp_map m) {
     Temp_dumpMap(out, m->under);
   }
 }
+
+int Temp_temp_cmp(void *a, void *b) {
+  Temp_temp x = a;
+  Temp_temp y = b;
+  assert(x->num < 1000 && y->num < 1000);
+  return x->num - y->num;
+}

@@ -85,7 +85,7 @@ static void munchStm(T_stm s) {
           T_exp e2 = src;
           Temp_temp i = dst->u.TEMP;
           Temp_temp j = munchExp(e2);
-          S("mv `d0, `s0 # MOVE(TEMP(i),e2) T%d -> T%d", j->num, i->num);
+          S("mv `d0, `s0 # MOVE(TEMP(i),e2) T%d <- T%d", i->num, j->num);
           emit(AS_Move(STRDUP(buf), L(i, NULL), L(j, NULL)));
         }
       } else {
@@ -117,11 +117,12 @@ static void munchStm(T_stm s) {
       // TODO: pseudo instruction for compare to 0
       Temp_temp e1 = munchExp(s->u.CJUMP.left);
       Temp_temp e2 = munchExp(s->u.CJUMP.right);
-      Temp_temp r1 = Temp_newtemp();
-      Temp_temp r2 = Temp_newtemp();
-      // FIXME: Do we need this safe copy?
-      emit(AS_Move("mv `d0, `s0 # safe copy of e1", L(r1, NULL), L(e1, NULL)));
-      emit(AS_Move("mv `d0, `s0 # safe copy of e2", L(r2, NULL), L(e2, NULL)));
+      // Temp_temp r1 = Temp_newtemp();
+      // Temp_temp r2 = Temp_newtemp();
+      // // FIXME: Do we need this safe copy?
+      // emit(AS_Move("mv `d0, `s0 # safe copy of e1", L(r1, NULL), L(e1,
+      // NULL))); emit(AS_Move("mv `d0, `s0 # safe copy of e2", L(r2, NULL),
+      // L(e2, NULL)));
 
       char *op_code;
       switch (s->u.CJUMP.op) {
@@ -136,9 +137,12 @@ static void munchStm(T_stm s) {
       S("%s `s0, `s1, `j0 # compare e1 e2, true '%s', false '%s'", op_code,
         Temp_labelstring(s->u.CJUMP.true), Temp_labelstring(s->u.CJUMP.false));
       emit(AS_Oper(
-          STRDUP(buf), NULL, L(r1, L(r2, NULL)),
+          STRDUP(buf), NULL, L(e1, L(e2, NULL)),
           AS_Targets(Temp_LabelList(s->u.CJUMP.true,
                                     Temp_LabelList(s->u.CJUMP.false, NULL)))));
+      S("j `j0 # jump to false");
+      emit(AS_Oper(STRDUP(buf), NULL, NULL,
+                   AS_Targets(Temp_LabelList(s->u.CJUMP.false, NULL))));
       break;
     }
     case T_LABEL: {
@@ -193,15 +197,28 @@ static Temp_temp munchExp(T_exp e) {
         return r;
       } else {
         /* BINOP(*,e1,e2) */
+        Temp_temp e1r = munchExp(e1);
+        Temp_temp e2r = munchExp(e2);
         switch (op) {
-          case T_plus: S("add `d0, `s0, `s1"); break;
-          case T_minus: S("sub `d0, `s0, `s1"); break;
-          case T_mul: S("mul `d0, `s0, `s1"); break;
-          case T_div: S("div `d0, `s0, `s1"); break;
+          case T_plus:
+            S("add `d0, `s0, `s1 # T%d <- T%d + T%d", r->num, e1r->num,
+              e2r->num);
+            break;
+          case T_minus:
+            S("sub `d0, `s0, `s1 # T%d <- T%d - T%d", r->num, e1r->num,
+              e2r->num);
+            break;
+          case T_mul:
+            S("mul `d0, `s0, `s1 # T%d <- T%d * T%d", r->num, e1r->num,
+              e2r->num);
+            break;
+          case T_div:
+            S("div `d0, `s0, `s1 # T%d <- T%d / T%d", r->num, e1r->num,
+              e2r->num);
+            break;
           default: assert(0);
         }
-        emit(AS_Oper(STRDUP(buf), L(r, NULL),
-                     L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
+        emit(AS_Oper(STRDUP(buf), L(r, NULL), L(e1r, L(e2r, NULL)), NULL));
         return r;
       }
     }
@@ -277,11 +294,14 @@ AS_instrList F_codegen(Set stmt2last_instr, F_frame f, T_stmList stmList) {
   T_stmList sl;
   AS_instrList list = NULL;
 
+  // FIXME
+  // single jump instruction was ignored
+
   struct stmt_instr *new = checked_malloc(sizeof(*new));
   new->stm = NULL;
   for (sl = stmList; sl; sl = sl->tail) {
     munchStm(sl->head);
-    if (new->stm && last->head->kind == I_LABEL) {
+    if (new->stm && last->head->kind == I_LABEL &&new->last->kind != I_LABEL) {
       SET_insert(stmt2last_instr, new);
       new = checked_malloc(sizeof(*new));
       new->stm = NULL;

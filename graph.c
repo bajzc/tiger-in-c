@@ -195,8 +195,15 @@ G_nodeList G_push(G_nodeList list, G_node node) {
 
 G_node G_top(G_nodeList list) { return list->head; }
 
+int G_node_cmp(void *a, void *b) {
+  G_node x = a;
+  G_node y = b;
+  assert(x->mykey < 1000 && y->mykey < 1000);
+  return x->mykey - y->mykey;
+}
+
 Set G_toSet(G_nodeList list) {
-  Set set = SET_empty(SET_default_cmp);
+  Set set = SET_empty(G_node_cmp);
   while (list) {
     SET_insert(set, list->head);
     list = list->tail;
