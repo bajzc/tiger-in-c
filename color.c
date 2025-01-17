@@ -311,6 +311,8 @@ procedure DecrementDegree(m)
 void DecrementDegree(G_node m, Main_struct S) {
   int *d = G_look(S->degree, m); // let d = degree[m]
   *d -= 1;
+  // *d = MAX(*d, 0);
+  assert(*d >= 0);
   G_enter(S->degree, m, d);
   if (*d + 1 != S->K)
     return;
@@ -847,7 +849,7 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
 
   build(S);
   checkInvariant(S);
-  // print_edges(S);
+  print_edges(S);
   MakeWorkList(S);
   checkInvariant(S);
   while (TRUE) {
@@ -860,7 +862,7 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
     else if (!SET_isEmpty(S->spillWorklist))
       SelectSpill(S);
 
-    // print_edges(S);
+    print_edges(S);
     checkInvariant(S);
 
     if (SET_isEmpty(S->simplifyWorklist) && SET_isEmpty(S->worklistMoves) &&
