@@ -1,6 +1,9 @@
 #include <stdio.h>
 
 #include "codegen.h"
+#include "env.h"
+#include "frame.h"
+#include "semant.h"
 #include "set.h"
 
 #define L(h, t) Temp_TempList((Temp_temp) h, (Temp_tempList) t)
@@ -10,7 +13,8 @@ static AS_instrList iList = NULL, last = NULL;
 
 static void munchStm(T_stm s);
 static Temp_temp munchExp(T_exp e);
-static Temp_tempList munchArgs(int n, T_expList args);
+static Temp_tempList munchArgs(int n, T_expList args, Tr_accessList formals,
+                               Temp_tempList argRegs);
 
 static void emit(AS_instr inst) {
   if (last != NULL)
@@ -19,20 +23,48 @@ static void emit(AS_instr inst) {
     last = iList = AS_InstrList(inst, NULL);
 }
 
-static Temp_tempList munchArgs(int n, T_expList args) {
-  if (args == NULL)
+static Temp_tempList munchArgs(int n, T_expList args, Tr_accessList formals,
+                               Temp_tempList argRegs) {
+  if (formals == NULL)
     return NULL;
-  Temp_tempList right = munchArgs(n + 1, args->tail);
+  Temp_tempList right = NULL;
 
   Temp_temp r = munchExp(args->head);
 
-  emit(AS_Oper("addi `d0, `s0, -4 # grow up stack", L(F_SP(), NULL),
-               L(F_SP(), NULL), NULL));
-  // not sure if we need to use AS_Move here. If this instruction is eliminated,
-  // a word in stack is just wasted
-  emit(AS_Oper("sw `s0, 0(`d0) # push onto stack", L(F_SP(), NULL), L(r, NULL),
-               NULL));
+  if (F_isInReg(formals->head->access)) { // not escape
+    right = munchArgs(n + 1, args->tail, formals->tail, argRegs->tail);
+    emit(AS_Oper("mv `d0, `s0 # copy arg to reg", L(argRegs->head, NULL),
+                 L(r, NULL), NULL));
+  } else {
+    right = munchArgs(n + 1, args->tail, formals->tail, argRegs);
+    emit(AS_Oper("addi `d0, `s0, -4 # grow up stack", L(F_SP(), NULL),
+                 L(F_SP(), NULL), NULL));
+    // not sure if we need to use AS_Move here. If this instruction is
+    // eliminated, a word in stack is just wasted
+    emit(AS_Oper("sw `s0, 0(`d0) # push onto stack", L(F_SP(), NULL),
+                 L(r, NULL), NULL));
+  }
   return L(r, right);
+}
+
+static Temp_tempList saveCallerRegs(Temp_tempList regs) {
+  if (regs == NULL)
+    return NULL;
+  char buf[80];
+  Temp_temp t = Temp_newtemp();
+  S("mv `d0, `s0 # save caller reg to T%d", t->num);
+  emit(AS_Move(STRDUP(buf), L(t, NULL),
+               L(regs->head, NULL)));
+  return L(t, saveCallerRegs(regs->tail));
+}
+
+static void restoreCallerRegs(Temp_tempList regs, Temp_tempList temps) {
+  if (regs == NULL)
+    return;
+  char buf[80];
+  S("mv `d0, `s0 # restore caller reg from T%d", temps->head->num);
+  emit(AS_Move(STRDUP(buf), L(regs->head,NULL),L(temps->head, NULL)));
+  restoreCallerRegs(regs->tail, temps->tail);
 }
 
 static void munchStm(T_stm s) {
@@ -61,18 +93,24 @@ static void munchStm(T_stm s) {
         } else {
           /* MOVE(MEM(e1),e2) */
           T_exp e1 = dst->u.MEM, e2 = src;
-          emit(AS_Oper("sw `s1 0(`s0) # MOVE(MEM(e1),e2)", NULL,
+          emit(AS_Oper("sw `s1, 0(`s0) # MOVE(MEM(e1),e2)", NULL,
                        L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
         }
       } else if (dst->kind == T_TEMP) {
         if (src->kind == T_CALL) {
           /* MOVE(TEMP(i),CALL(NAME(lab),args)) */
           assert(src->u.CALL.fun->kind == T_NAME);
-          Temp_tempList l = munchArgs(0, src->u.CALL.args);
-          // TODO
+          E_enventry fun =
+              TAB_look(SEM_funLabel2funEntry, src->u.CALL.fun->u.NAME);
+          if (!fun)
+            fun = TAB_look(E_funLabel2funEntry, src->u.CALL.fun->u.NAME);
+          Temp_tempList l = munchArgs(
+              0, src->u.CALL.args,
+              Tr_formals_with_static_link(fun->u.fun.level), F_args());
+          Temp_tempList temps = saveCallerRegs(F_callerSaves());
           S("call %s", Temp_labelstring(src->u.CALL.fun->u.NAME));
           emit(AS_Oper(STRDUP(buf), L(F_RV(), F_calldefs()), l, NULL));
-          //
+          restoreCallerRegs(F_callerSaves(), temps);
           emit(AS_Move("mv `d0, `s0 # copy return value", L(dst->u.TEMP, NULL),
                        L(F_RV(), NULL)));
         } else if (src->kind == T_CONST) {
@@ -119,8 +157,10 @@ static void munchStm(T_stm s) {
       Temp_temp e2 = munchExp(s->u.CJUMP.right);
       Temp_temp r1 = Temp_newtemp();
       Temp_temp r2 = Temp_newtemp();
-      emit(AS_Move("mv `d0, `s0 # safe copy of e1", L(r1, NULL), L(e1, NULL)));
-      emit(AS_Move("mv `d0, `s0 # safe copy of e2", L(r2, NULL), L(e2, NULL)));
+      S("mv `d0, `s0 # safe copy of T%d", e1->num);
+      emit(AS_Move(STRDUP(buf), L(r1, NULL), L(e1, NULL)));
+      S("mv `d0, `s0 # safe copy of T%d", e2->num);
+      emit(AS_Move(STRDUP(buf), L(r2, NULL), L(e2, NULL)));
 
       char *op_code;
       switch (s->u.CJUMP.op) {
@@ -135,7 +175,7 @@ static void munchStm(T_stm s) {
       S("%s `s0, `s1, `j0 # compare e1 e2, true '%s', false '%s'", op_code,
         Temp_labelstring(s->u.CJUMP.true), Temp_labelstring(s->u.CJUMP.false));
       emit(AS_Oper(
-          STRDUP(buf), NULL, L(e1, L(e2, NULL)),
+          STRDUP(buf), NULL, L(r1, L(r2, NULL)),
           AS_Targets(Temp_LabelList(s->u.CJUMP.true,
                                     Temp_LabelList(s->u.CJUMP.false, NULL)))));
       S("j `j0 # jump to false");
@@ -237,18 +277,18 @@ static Temp_temp munchExp(T_exp e) {
           return r;
         } else {
           /* MEM(e) */
-          emit(AS_Oper("mv `d0, `s0 # MEM(e)", L(r, NULL),
+          emit(AS_Oper("lw `d0, (`s0) # MEM(e)", L(r, NULL),
                        L(munchExp(e->u.MEM), NULL), NULL));
           return r;
         }
       } else if (e->u.MEM->kind == T_CONST) {
         /* MEM(CONST(i)) */
-        S("li `d0, %d # MEM(CONST(i))", e->u.MEM->u.CONST);
+        S("lw `d0, %d(zero) # MEM(CONST(i))", e->u.MEM->u.CONST);
         emit(AS_Oper(STRDUP(buf), L(r, NULL), NULL, NULL));
         return r;
       } else {
         /* MEM(e) */
-        emit(AS_Oper("mv `d0, `s0 # MEM(e)", L(r, NULL),
+        emit(AS_Oper("lw `d0, (`s0) # MEM(e)", L(r, NULL),
                      L(munchExp(e->u.MEM), NULL), NULL));
         return r;
       }
@@ -272,11 +312,16 @@ static Temp_temp munchExp(T_exp e) {
     case T_CALL: {
       /* CALL(NAME(lab), args) */
       assert(e->u.CALL.fun->kind == T_NAME);
-      Temp_tempList l = munchArgs(0, e->u.CALL.args);
-      // TODO
+      E_enventry fun = TAB_look(SEM_funLabel2funEntry, e->u.CALL.fun->u.NAME);
+      if (!fun)
+        fun = TAB_look(E_funLabel2funEntry, e->u.CALL.fun->u.NAME);
+      Temp_tempList l =
+          munchArgs(0, e->u.CALL.args,
+                    Tr_formals_with_static_link(fun->u.fun.level), F_args());
+      Temp_tempList temps = saveCallerRegs(F_callerSaves());
       S("call %s", Temp_labelstring(e->u.CALL.fun->u.NAME));
       emit(AS_Oper(STRDUP(buf), F_calldefs(), l, NULL));
-      //
+      restoreCallerRegs(F_callerSaves(), temps);
       return r;
     }
     default: assert(0);

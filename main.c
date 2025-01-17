@@ -88,8 +88,8 @@ static void doProc(FILE *out, char *outfile, F_frame frame, T_stm body) {
   AS_printInstrList(out, proc->body, color_map);
   // fprintf(out, "END %s\n\n", Temp_labelstring(F_name(frame)));
   //
-  G_graph graph = FG_AssemFlowGraph(iList);
-  printFlowgraph(stderr, graph, color_map, Temp_labelstring(F_name(frame)));
+  // G_graph graph = FG_AssemFlowGraph(iList);
+  // printFlowgraph(stderr, graph, color_map, Temp_labelstring(F_name(frame)));
   // G_graph inter_graph = Live_Liveness(graph).graph;
   //
   // char graph_file[100];
@@ -197,6 +197,7 @@ int main(int argc, string *argv) {
     /* convert the filename */
     sprintf(outfile, "%s.s", argv[1]);
     out = fopen(outfile, "w");
+    fprintf(out, ".global\t_start\n");
     /* Chapter 8, 9, 10, 11 & 12 */
     for (; frags; frags = frags->tail) {
       if (frags->head->kind == F_procFrag)

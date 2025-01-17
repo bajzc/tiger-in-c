@@ -4,10 +4,10 @@
 #define FRAME_H
 
 #include "assem.h"
+#include "table.h"
 #include "temp.h"
 #include "tree.h"
 #include "types.h"
-#include "table.h"
 
 typedef struct F_frame_ *F_frame;
 typedef struct F_access_ *F_access;
@@ -66,6 +66,9 @@ Temp_temp F_RV(void);
 Temp_temp F_SP(void);
 T_exp F_Exp(F_access acc, T_exp framePtr);
 Temp_tempList F_calldefs(void);
+int F_isInReg(F_access a);
+Temp_tempList F_args(void);
+Temp_tempList F_callerSaves(void) __attribute__((pure));
 
 // call external helper function, eg. `initArray`
 T_exp F_externalCall(string s, T_expList args);

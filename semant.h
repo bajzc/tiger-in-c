@@ -4,6 +4,8 @@
 #include "absyn.h"
 #include "translate.h"
 #include "types.h"
+extern TAB_table SEM_funLabel2funEntry; // Map<Temp_label, E_enventry>
+
 F_fragList SEM_transProg(A_exp exp);
 
 struct expty transVar(S_table venv, S_table tenv, A_var v, Tr_level level);

@@ -208,14 +208,16 @@ void build(Main_struct S) {
     Set live = G_look(S->liveOut, cur_node); // let live = liveOut(b)
     while (cur_node &&
            !isBlockStart(cur_node, S)) { // forall I ∈ instructions(b)
-      fprintf(stderr, "liveout = ");
+      AS_instr cur_instr = G_nodeInfo(cur_node);
+#if DEBUG2
+      debug2("liveout = ");
       SET_FOREACH(live, sptr) {
         Temp_temp s = (*sptr);
         fprintf(stderr, "%d, ", s->num);
       }
       fprintf(stderr, "\n");
-      AS_instr cur_instr = G_nodeInfo(cur_node);
       fprintf(stderr, "\t%s\n", cur_instr->u.OPER.assem);
+#endif
       if (FG_isMove(cur_node)) { // if isMoveInstruction(I) then
         live = SET_difference(live, FG_use(cur_node)); // live ← live \ use(I)
         Set defAndUse = SET_union(FG_use(cur_node), FG_def(cur_node));
@@ -433,7 +435,7 @@ procedure Coalesce()
     activeMoves ← activeMoves ∪ {m}
 */
 void Coalesce(Main_struct S) {
-  debug("\n");
+  debug2("\n");
   AS_instr m = NULL;
   SET_FOREACH(S->worklistMoves, mptr) {
     m = *mptr;
@@ -829,23 +831,23 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
     TAB_enter(S->temp2Node, t, node);
   }
 
-  // fprintf(stderr, "\ninitial = ");
+  fprintf(stderr, "\ninitial = ");
   SET_FOREACH(SET_difference(temps, F_regTemp), tptr) {
     Temp_temp t = *tptr;
     SET_insert(S->initial, TAB_look(S->temp2Node, t));
-    // fprintf(stderr, "%d, ", t->num);
+    fprintf(stderr, "%d, ", t->num);
   }
-  // fprintf(stderr, "\n");
+  fprintf(stderr, "\n");
 
-  // fprintf(stderr, "\nF_regTemp = ");
-  // SET_FOREACH(F_regTemp, tptr) {
-  //   fprintf(stderr, "%d, ", (*(Temp_temp *) tptr)->num);
-  // }
-  // fprintf(stderr, "\n");
+  fprintf(stderr, "\nF_regTemp = ");
+  SET_FOREACH(F_regTemp, tptr) {
+  fprintf(stderr, "%d, ", (*(Temp_temp *) tptr)->num);
+  }
+  fprintf(stderr, "\n");
 
   build(S);
   checkInvariant(S);
-  print_edges(S);
+  // print_edges(S);
   MakeWorkList(S);
   checkInvariant(S);
   while (TRUE) {
@@ -858,7 +860,7 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
     else if (!SET_isEmpty(S->spillWorklist))
       SelectSpill(S);
 
-    print_edges(S);
+    // print_edges(S);
     checkInvariant(S);
 
     if (SET_isEmpty(S->simplifyWorklist) && SET_isEmpty(S->worklistMoves) &&

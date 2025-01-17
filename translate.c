@@ -152,13 +152,15 @@ Tr_exp Tr_recordExp(Tr_exp *l, int size) {
   return Tr_Ex(res_head);
 }
 
-Tr_exp Tr_arrayExp(Tr_exp init, int size) {
-  T_exp a = T_Temp(Temp_newtemp());
-  return Tr_Ex(T_Eseq(
-      T_Move(a, F_externalCall(
-                    "initArray",
-                    T_ExpList(unEx(init), T_ExpList(T_Const(size), NULL)))),
-      a));
+Tr_exp Tr_arrayExp(Tr_exp init, Tr_exp size) {
+  return Tr_Ex(F_externalCall("initArray",
+              T_ExpList(unEx(size), T_ExpList(unEx(init), NULL))));
+  // T_exp a = T_Temp(Temp_newtemp());
+  // return Tr_Ex(T_Eseq(
+  //     T_Move(a, F_externalCall(
+  //                   "initArray",
+  //                   T_ExpList(unEx(size), T_ExpList(unEx(init), NULL)))),
+  //     a));
 }
 
 Tr_exp Tr_seqExp(Tr_exp *seqs, int size) {
@@ -433,7 +435,7 @@ Tr_level Tr_outermost(void) {
     t->formals = NULL;
     // TODO: init the frame pointer before entering "global"
     // We need the static link in global!
-    t->frame = F_newFrame(Temp_namedlabel("global"), U_BoolList(TRUE, NULL));
+    t->frame = F_newFrame(Temp_namedlabel("_start"), U_BoolList(TRUE, NULL));
     OUTER_MOST = t;
     return t;
   }
@@ -461,9 +463,33 @@ Tr_level Tr_newLevel(Tr_level parent, Temp_label name, U_boolList formals) {
   return level;
 }
 
-Tr_accessList Tr_formals(Tr_level level) {
+Tr_level Tr_libFunLevel(Temp_label name, U_boolList formals) {
+  Tr_level level = checked_malloc(sizeof(*level));
+  level->parent = Tr_outermost();
+  level->name = name;
+  level->formals = formals;
+  // add the static links to the first place, rest is in order
+  level->frame = F_newFrame(name, formals);
+  return level;
+}
+
+static Tr_accessList reverseList(Tr_accessList list) {
+  Tr_accessList temp = NULL;
+  Tr_accessList prev = NULL;
+  Tr_accessList curr = list;
+  while (curr != NULL) {
+    temp = curr->tail;
+    curr->tail = prev;
+    prev = curr;
+    curr = temp;
+  }
+  return prev;
+}
+
+Tr_accessList Tr_formals_with_static_link(Tr_level level) {
   F_accessList f = F_formals(level->frame);
-  assert(f);
+  if (!f) // library function
+    return NULL;
   Tr_accessList l = NULL, l_head = NULL;
   // builtin functions will not occur here
   l = Tr_AccessList(Tr_Access(level, f->head), NULL);
@@ -473,7 +499,7 @@ Tr_accessList Tr_formals(Tr_level level) {
     Tr_accessList p = Tr_AccessList(Tr_Access(level, f->head), NULL);
     l->tail = p;
   }
-  return l_head;
+  return reverseList(l_head);
 }
 
 void Tr_printFormals(Tr_accessList formals) {

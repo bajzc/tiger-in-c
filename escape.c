@@ -41,15 +41,16 @@ static void traverseExp(S_table env, int depth, A_exp a);
 static void traverseDec(S_table env, int depth, A_dec d);
 static void traverseVar(S_table env, int depth, A_var v);
 
-U_boolList genEscapeList(Ty_tyList formals) {
+U_boolList genEscapeList(A_fieldList formals) {
+  // FIXME assumed all escape
   U_boolList l = NULL, l_head = NULL;
   if (formals) {
-    l = U_BoolList(TRUE, NULL);
+    l = U_BoolList(formals->head->escape, NULL);
     l_head = l;
     formals = formals->tail;
   }
   while (formals) {
-    l->tail = U_BoolList(TRUE, NULL);
+    l->tail = U_BoolList(formals->head->escape, NULL);
     l = l->tail;
     formals = formals->tail;
   }
