@@ -27,30 +27,6 @@
 
 extern bool anyErrors;
 
-static void printFlowgraph(FILE *out, G_graph graph, Temp_map m, char *name) {
-  G_nodeList nodes = G_nodes(graph);
-  fprintf(out, "strict digraph %s{\n", name);
-  fprintf(out, "splines=false;\n");
-  while (nodes) {
-    AS_instr instr = G_nodeInfo(nodes->head);
-    G_nodeList adj = G_succ(nodes->head);
-    while (adj) {
-      fprintf(out, "\"");
-      AS_print(out, instr, m);
-      fprintf(out, "\"");
-      AS_instr adj_instr = G_nodeInfo(adj->head);
-      fprintf(out, " -> ");
-      fprintf(out, "\"");
-      AS_print(out, adj_instr, m);
-      fprintf(out, "\"");
-      adj = adj->tail;
-      fprintf(out, "\n");
-    }
-    nodes = nodes->tail;
-  }
-  fprintf(out, "}\n");
-}
-
 static void printInterGraph(FILE *out, G_graph graph) {
   fprintf(out, "strict graph {\n");
   G_nodeList nodes = G_nodes(graph);
@@ -76,20 +52,31 @@ static void doProc(FILE *out, char *outfile, F_frame frame, T_stm body) {
 
   stmList = C_linearize(body);
   stmList = C_traceSchedule(C_basicBlocks(stmList));
-  Set stmt_instr_set = SET_empty(SET_default_cmp);
+  Set last_instr = SET_empty(SET_default_cmp);
   /* printStmList(stdout, stmList);*/
-  iList = F_codegen(stmt_instr_set, frame, stmList); /* 9 */
-  iList = F_procEntryExit2(iList, frame);
-  Temp_map color_map = Color_Main(stmt_instr_set, iList, frame);
+  iList = F_codegen(last_instr, frame, stmList); /* 9 */
+  iList = F_procEntryExit2(iList, frame, last_instr);
+
+  // add the last instruction appended in F_procEntryExit2 to last_instr
+   AS_instrList p;
+  for (p = iList; p->tail != NULL; p = p->tail)
+    ;
+  SET_insert(last_instr, p->head);
+
+  // G_graph graph = FG_AssemFlowGraph(iList);
+  // printFlowgraph(stderr, graph, Temp_layerMap(F_tempMap, Temp_name()),
+  //                Temp_labelstring(F_name(frame)));
+
+  // AS_printInstrList(out, iList, Temp_layerMap(F_tempMap, Temp_name()));
+
+  Temp_map color_map = Color_Main(last_instr, iList, frame);
   proc = F_procEntryExit3(frame, iList);
 
 
-  fprintf(out, "%s:\n", Temp_labelstring(F_name(frame)));
+  fprintf(out, ".text\n%s:\n", Temp_labelstring(F_name(frame)));
   AS_printInstrList(out, proc->body, color_map);
   // fprintf(out, "END %s\n\n", Temp_labelstring(F_name(frame)));
   //
-  G_graph graph = FG_AssemFlowGraph(iList);
-  printFlowgraph(stderr, graph, color_map, Temp_labelstring(F_name(frame)));
   // G_graph inter_graph = Live_Liveness(graph).graph;
   //
   // char graph_file[100];
@@ -197,6 +184,7 @@ int main(int argc, string *argv) {
     /* convert the filename */
     sprintf(outfile, "%s.s", argv[1]);
     out = fopen(outfile, "w");
+    fprintf(out, ".global\t_start\n");
     /* Chapter 8, 9, 10, 11 & 12 */
     for (; frags; frags = frags->tail) {
       if (frags->head->kind == F_procFrag)

@@ -15,6 +15,7 @@
 #include "util.h"
 
 static int breakLevel = 0;
+TAB_table SEM_funLabel2funEntry = NULL;
 
 struct expty {
   Tr_exp exp;
@@ -120,7 +121,7 @@ static int decNumber(A_decList decs) {
 struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
                       Temp_label break_label) {
   if (a == NULL)
-    return expTy(Tr_nilExp(), Ty_Nil());
+    return expTy(Tr_nilExp(), Ty_Void());
   switch (a->kind) {
     case A_varExp: {
       return transVar(venv, tenv, a->u.var, level);
@@ -167,10 +168,11 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
           EM_error(a->pos, "passed more arguments than needed");
         if (l)
           EM_error(a->pos, "passed less arguments than needed");
-        return expTy(Tr_callExp(funTy->u.fun.label, argv, argc, level,
-                                funTy->u.fun.level,
-                                (S_look(E_venv, a->u.call.func) != NULL)),
-                     actual_ty(funTy->u.fun.result));
+        return expTy(
+            Tr_callExp(
+                funTy->u.fun.label, argv, argc, level, funTy->u.fun.level,
+                (TAB_look(E_funLabel2funEntry, funTy->u.fun.label) != NULL)),
+            actual_ty(funTy->u.fun.result));
       }
       EM_error(a->pos, "function '%s' not declared", S_name(a->u.call.func));
     }
@@ -217,6 +219,12 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
                      "only integer, record, string and array can be compared "
                      "(%s <> %s)",
                      str_ty[l], str_ty[r]);
+          // FIXME evaluation of conditional exp not in if/while/for cause
+          // multiple edge toward done label
+          // eg: row[N-1] = N
+          // both branch will points to next instruction, causes a
+          // non-block-start
+          // instruction has multiple predecessors
           return expTy(Tr_opExp(left.exp, oper, right.exp), Ty_Int());
         default: assert(0);
       } // end switch(oper)
@@ -323,14 +331,12 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
                  "result of condition should be an integer value (%s)",
                  str_ty[test.ty->kind]);
       beginBreakScope();
-      S_beginScope(venv, 1);
       Temp_label new_break = Temp_newlabel();
       debug("new break label '%s' created at line %d\n",
             Temp_labelstring(new_break), a->pos.first_line);
       struct expty body =
           transExp(venv, tenv, a->u.whilee.body, level, new_break);
       endBreakScope();
-      S_endScope(venv, 1);
       if (body.ty->kind != Ty_void)
         EM_error(a->u.whilee.body->pos,
                  "expression of while-body(%s) must produce no value",
@@ -410,7 +416,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
       if (init.ty != array->u.array)
         EM_error(a->pos, "different array type (%p<-%p)", init.ty,
                  array->u.array);
-      return expTy(Tr_arrayExp(init.exp, size.exp->u.ex->u.CONST), array);
+      return expTy(Tr_arrayExp(init.exp, size.exp), array);
     }
     default: assert(0);
   } // end switch(a->kind)
@@ -496,12 +502,13 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
         // push the formal list into env instead of pushing individually
         Temp_label label = Temp_newlabel();
         S_enter(venv, f->name,
-                E_FunEntry(Tr_newLevel(level, label, genEscapeList(formalTys)),
+                E_FunEntry(Tr_newLevel(level, label, genEscapeList(f->params)),
                            label, formalTys, resultTy));
       }
       // Second, translate function body
       for (A_fundecList l = d->u.function; l; l = l->tail) {
         E_enventry funEntry = S_look(venv, l->head->name);
+        TAB_enter(SEM_funLabel2funEntry, funEntry->u.fun.label, funEntry);
         A_fundec f = l->head;
         debug2("functionDec: translating %s\n", S_name(f->name));
 
@@ -514,12 +521,14 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
           debug2("install function params\n\n");
           TyList_print(t);
 #endif
+          Tr_accessList access_list = Tr_formals_with_static_link(fun_level);
+          access_list = access_list->tail; // skip the static link
           for (A_fieldList L = f->params; L; L = L->tail, t = t->tail) {
             debug2("functionDec: %s->%s\n", S_name(L->head->name),
                    str_ty[t->head->kind]);
-            S_enter(
-                venv, L->head->name,
-                E_VarEntry(t->head, Tr_allocLocal(fun_level, L->head->escape)));
+            S_enter(venv, L->head->name,
+                    E_VarEntry(t->head, access_list->head));
+            access_list = access_list->tail;
           }
           debug2("install function params finished\n");
         }
@@ -541,10 +550,11 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
 #if DEBUG
         debug("call Tr_printFormals on function '%s'(%s)\n", S_name(f->name),
               F_frameLabel(fun_level->frame));
-        Tr_printFormals(Tr_formals(fun_level));
+        Tr_printFormals(Tr_formals_with_static_link(fun_level));
 #endif
 
-        Tr_procEntryExit(fun_level, resultExp.exp, Tr_formals(fun_level),
+        Tr_procEntryExit(fun_level, resultExp.exp,
+                         Tr_formals_with_static_link(fun_level),
                          resultTy->kind != Ty_void);
       }
       return Tr_nilExp();
@@ -658,6 +668,8 @@ Ty_ty transTy(S_table tenv, A_ty a) {
 F_fragList SEM_transProg(A_exp exp) {
   E_venv = E_base_venv();
   E_tenv = E_base_tenv();
+  if (!SEM_funLabel2funEntry)
+    SEM_funLabel2funEntry = TAB_empty();
   struct expty res = transExp(E_venv, E_tenv, exp, Tr_outermost(), NULL);
 #if DEBUG2
   debug("call Tr_printFormals on outermost evn(%s)\n",

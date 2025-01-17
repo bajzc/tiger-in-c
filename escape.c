@@ -41,15 +41,15 @@ static void traverseExp(S_table env, int depth, A_exp a);
 static void traverseDec(S_table env, int depth, A_dec d);
 static void traverseVar(S_table env, int depth, A_var v);
 
-U_boolList genEscapeList(Ty_tyList formals) {
+U_boolList genEscapeList(A_fieldList formals) {
   U_boolList l = NULL, l_head = NULL;
   if (formals) {
-    l = U_BoolList(TRUE, NULL);
+    l = U_BoolList(formals->head->escape, NULL);
     l_head = l;
     formals = formals->tail;
   }
   while (formals) {
-    l->tail = U_BoolList(TRUE, NULL);
+    l->tail = U_BoolList(formals->head->escape, NULL);
     l = l->tail;
     formals = formals->tail;
   }
@@ -132,10 +132,8 @@ static void traverseExp(S_table env, int depth, A_exp a) {
     case A_callExp: {
       A_expList e = a->u.call.args;
       while (e) {
-        debug("set all arguments be escaped\n");
-        traverseExp(env, depth + 1,
-                    e->head); // all variable used should be escaped
-        debug("\n");
+        traverseExp(env, depth,
+                    e->head);
         e = e->tail;
       }
       break;
@@ -144,7 +142,7 @@ static void traverseExp(S_table env, int depth, A_exp a) {
       traverseExp(env, depth, a->u.op.left);
       traverseExp(env, depth, a->u.op.right);
       break;
-    } // end case A_opExp
+    }
     case A_recordExp: {
       for (A_efieldList l = a->u.record.fields; l; l = l->tail) {
         traverseExp(env, depth, l->head->exp);
@@ -167,7 +165,6 @@ static void traverseExp(S_table env, int depth, A_exp a) {
       traverseExp(env, depth, a->u.iff.then);
       if (a->u.iff.elsee) { // if-then-else
         traverseExp(env, depth, a->u.iff.elsee);
-        return;
       }
       break;
     }
@@ -179,28 +176,28 @@ static void traverseExp(S_table env, int depth, A_exp a) {
     case A_forExp: {
       traverseExp(env, depth, a->u.forr.lo);
       traverseExp(env, depth, a->u.forr.hi);
-      depth += 1;
-      E_beginScope(env);
+      // depth += 1;
+      // E_beginScope(env);
       a->u.forr.escape = FALSE;
-      debug("set iterator '%s' in for-loop be non-escape\n",
-            S_name(a->u.forr.var));
+      // debug("set iterator '%s' in for-loop be non-escape\n",
+            // S_name(a->u.forr.var));
       E_TAB_enter(env, a->u.forr.var, EscapeEntry(depth, &(a->u.forr.escape)));
       {
         traverseExp(env, depth, a->u.forr.body);
       }
-      E_endScope(env);
-      depth -= 1;
+      // E_endScope(env);
+      // depth -= 1;
       break;
     }
     case A_breakExp: break;
     case A_letExp: {
-      depth += 1;
-      E_beginScope(env);
+      // depth += 1;
+      // E_beginScope(env);
       for (A_decList d = a->u.let.decs; d; d = d->tail)
         traverseDec(env, depth, d->head);
       traverseExp(env, depth, a->u.let.body);
-      depth -= 1;
-      E_endScope(env);
+      // depth -= 1;
+      // E_endScope(env);
       break;
     }
     case A_arrayExp: {

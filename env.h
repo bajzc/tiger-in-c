@@ -33,5 +33,6 @@ S_table E_base_tenv(void); // Ty_ty environment
 S_table E_base_venv(void); // E_enventry environment
 
 extern S_table E_venv, E_tenv;
+extern TAB_table E_funLabel2funEntry;
 
 #endif

@@ -8,10 +8,12 @@
 #include "table.h"
 #include "util.h"
 
-#define L(h, t) Temp_TempList((Temp_temp) h, (Temp_tempList) t)
+#define L(h, t) Temp_TempList(h, t)
+#define S(format, ...) snprintf(buf, 80, format, ##__VA_ARGS__)
+
 #define ARG_IN_REG 7 // a1-a7
 const int F_wordSize = 4; // target machine is RV32
-const int F_numGPR = 26; // General Purpose Registers: 32 - 6
+const int F_numGPR = 29; // General Purpose Registers: 32 - (zero, gp, tp)
 Temp_map F_tempMap;
 // used for generate graphviz graph
 Temp_map F_reg2colorscheme;
@@ -108,7 +110,7 @@ F_access F_allocLocal(F_frame f, bool escape) {
 }
 
 F_frame F_newFrame(Temp_label name, U_boolList formals) {
-  debug("'%s'\n", Temp_labelstring(name));
+  debug2("'%s'\n", Temp_labelstring(name));
   F_frame frame = checked_malloc(sizeof(*frame));
   frame->frame_label = name;
   frame->stack_size = 0;
@@ -119,20 +121,20 @@ F_frame F_newFrame(Temp_label name, U_boolList formals) {
   if (formals) { // the static links
     escape = formals->head;
     F_allocFormals(frame, escape);
-    assert(frame->formals_list->head->kind == inFrame);
-    debug("%s: installed static links\n", Temp_labelstring(name));
+    // assert(frame->formals_list->head->kind == inFrame);
+    debug2("%s: installed static links\n", Temp_labelstring(name));
     formals = formals->tail;
   }
 
   while (formals) {
     escape = formals->head;
     F_allocFormals(frame, escape);
-    debug("%s: install new param (escape=%d)\n", Temp_labelstring(name),
-          escape);
+    debug2("%s: install new param (escape=%d)\n", Temp_labelstring(name),
+           escape);
     formals = formals->tail;
   }
 
-  debug("finish %s\n", Temp_labelstring(name));
+  debug2("finish %s\n", Temp_labelstring(name));
   return frame;
 }
 
@@ -152,7 +154,6 @@ void F_printAccess(F_access access) {
 string F_frameLabel(F_frame f) { return Temp_labelstring(f->frame_label); }
 
 T_exp F_externalCall(string s, T_expList args) {
-  // TODO adjust for underscore label when linking
   return T_Call(T_Name(Temp_namedlabel(s)), args);
 }
 
@@ -236,11 +237,10 @@ static void initRegMap() {
   // INIT_REG(ZERO, zero, x11, gold);
   INIT_REG(RA, ra, x11, gold3);
   INIT_REG(SP, sp, x11, gold4);
-  INIT_REG(FP, s0, x11, goldenrod);
+  fprintf(stderr, "SP: %d\n\n", SP->num);
+  INIT_REG(FP, fp, x11, goldenrod);
+  fprintf(stderr, "FP: %d\n\n", FP->num);
   ZERO = Temp_newtemp();
-  // SP = Temp_newtemp();
-  // FP = Temp_newtemp();
-  // RA = Temp_newtemp();
 
   // Caller saved
   INIT_REG(A0, a0, x11, red);
@@ -272,79 +272,128 @@ static void initRegMap() {
   INIT_REG(S10, s10, x11, chartreuse);
   INIT_REG(S11, s11, x11, turquoise);
 
-  specialRegs = Temp_TempList(
-      ZERO,
-      Temp_TempList(
-          RA, Temp_TempList(SP, Temp_TempList(FP, Temp_TempList(A0, NULL)))));
+  specialRegs = L(ZERO, L(SP, L(FP, L(RA, NULL))));
 
-  callerSaves = Temp_TempList(
-      T0, Temp_TempList(
-              T1, Temp_TempList(
-                      T2, Temp_TempList(
-                              T3, Temp_TempList(
-                                      T4, Temp_TempList(
-                                              T5, Temp_TempList(T6, NULL)))))));
+  callerSaves = L(T0, L(T1, L(T2, L(T3, L(T4, L(T5, L(T6, NULL)))))));
 
-  argRegs = Temp_TempList(
-      A1, Temp_TempList(
-              A2, Temp_TempList(
-                      A3, Temp_TempList(
-                              A4, Temp_TempList(
-                                      A5, Temp_TempList(
-                                              A6, Temp_TempList(A7, NULL)))))));
+  argRegs = L(A0, L(A1, L(A2, L(A3, L(A4, L(A5, L(A6, L(A7, NULL))))))));
 
-  calleeSaves = Temp_TempList(
+  calleeSaves = L(
       S1,
-      Temp_TempList(
-          S2,
-          Temp_TempList(
-              S3,
-              Temp_TempList(
-                  S4,
-                  Temp_TempList(
-                      S5,
-                      Temp_TempList(
-                          S6,
-                          Temp_TempList(
-                              S7,
-                              Temp_TempList(
-                                  S8, Temp_TempList(
-                                          S9, Temp_TempList(
-                                                  S10, Temp_TempList(
-                                                           S11, NULL)))))))))));
+      L(S2,
+        L(S3, L(S4, L(S5, L(S6, L(S7, L(S8, L(S9, L(S10, L(S11, NULL)))))))))));
+}
+
+static F_accessList reverseList(F_accessList list) {
+  F_accessList temp = NULL;
+  F_accessList prev = NULL;
+  F_accessList curr = list;
+  while (curr != NULL) {
+    temp = curr->tail;
+    curr->tail = prev;
+    prev = curr;
+    curr = temp;
+  }
+  return prev;
 }
 
 T_stm F_procEntryExit1(F_frame frame, T_stm stm) { return stm; }
 
-static Temp_tempList returnSink = NULL;
-AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame) {
-  if (!returnSink)
-    returnSink =
-        Temp_TempList(A0, Temp_TempList(RA, Temp_TempList(SP, calleeSaves)));
-  // FIXME
-  // copy stack pointer to frame pointer at function entry and restore it when
-  // exit
-  int frameSize = frame->stack_size * F_wordSize;
+static Temp_tempList saveCalleeRegs(AS_instrList funEntry, Temp_tempList regs) {
+  if (regs == NULL)
+    return NULL;
   char buf[80];
-  AS_instrList insert_entry = NULL;
-  assert(body->head->kind == I_LABEL);
-  snprintf(buf, 80, "addi `d0, `s0, -%d # alloc stack space", frameSize);
-  insert_entry = AS_InstrList(
-      body->head, AS_InstrList(AS_Oper("mv `d0, `s0 # update frame pointer",
-                                       L(FP, NULL), L(SP, NULL), NULL),
-                               AS_InstrList(AS_Oper(STRDUP(buf), L(SP, NULL),
-                                                    L(SP, NULL), NULL),
-                                            body->tail)));
-      return AS_splice(insert_entry,
-                       AS_InstrList(AS_Oper("TODO: F_procEntryExit2", NULL,
-                                            returnSink, NULL),
-                                    NULL));
+  Temp_temp t = Temp_newtemp();
+  S("mv `d0, `s0 # save callee reg %s to T%d", Temp_look(F_tempMap, regs->head),
+    t->num);
+  AS_splice(funEntry,
+            AS_InstrList(AS_Move(STRDUP(buf), L(t, NULL), L(regs->head, NULL)),
+                         NULL));
+  return L(t, saveCalleeRegs(funEntry, regs->tail));
+}
+
+static void restoreCalleeRegs(AS_instrList funExit, Temp_tempList regs,
+                              Temp_tempList temps) {
+  if (regs == NULL)
+    return;
+  char buf[80];
+  // restore in reverse order, so that the liveness for each will be equal.
+  restoreCalleeRegs(funExit, regs->tail, temps->tail);
+  S("mv `d0, `s0 # restore callee reg %s from T%d",
+    Temp_look(F_tempMap, regs->head), temps->head->num);
+  AS_splice(funExit, AS_InstrList(AS_Move(STRDUP(buf), L(regs->head, NULL),
+                                          L(temps->head, NULL)),
+                                  NULL));
+}
+
+static Temp_tempList returnSink = NULL;
+AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame,
+                              Set last_instr) {
+  initRegMap();
+  if (!returnSink)
+    returnSink = L(SP, L(FP, L(RA, calleeSaves)));
+  Temp_tempList cur = argRegs;
+  char buf[80];
+  Temp_temp copyFP = Temp_newtemp();
+
+  AS_instrList insert_entry =
+      AS_InstrList(AS_Oper("nop", NULL, returnSink, NULL), NULL);
+
+  AS_splice(insert_entry,
+            AS_InstrList(AS_Move("mv `d0, `s0 # save frame pointer",
+                                 L(copyFP, NULL), L(T6, NULL)),
+                         NULL));
+
+  Temp_tempList temps = saveCalleeRegs(insert_entry, L(RA, calleeSaves));
+
+  AS_instrList il = insert_entry;
+  for (; il && il->tail; il = il->tail)
+    ;
+  SET_insert(last_instr, il->head);
+
+  for (F_accessList l = reverseList(frame->formals_list); l; l = l->tail) {
+    F_access a = l->head;
+    if (a->kind == inReg) {
+      S("mv `d0, `s0 # T%d <- %s", a->u.reg->num,
+        Temp_look(F_tempMap, cur->head));
+      AS_splice(insert_entry,
+                AS_InstrList(
+                    AS_Move(STRDUP(buf), L(a->u.reg, NULL), L(cur->head, NULL)),
+                    NULL));
+      cur = cur->tail;
+    } else {
+    }
+  }
+
+  restoreCalleeRegs(body, L(RA, calleeSaves), temps);
+
+  return AS_splice(
+      AS_splice(insert_entry, body),
+      AS_InstrList(AS_Move("mv `d0, `s0 # restore frame pointer", L(FP, NULL),
+                           L(copyFP, NULL)),
+                   AS_InstrList(AS_Oper("nop", NULL, returnSink, NULL), NULL)));
 }
 
 AS_proc F_procEntryExit3(F_frame frame, AS_instrList body) {
   char buf[80];
   snprintf(buf, 80, "#PROCEDURE %s\n", S_name(frame->frame_label));
-  return AS_Proc(String(buf), body, "#END\n");
+  int frameSize = frame->stack_size * F_wordSize;
+  S("addi sp, sp, -%d", frameSize);
+  AS_instrList insert_entry =
+      AS_InstrList(AS_Oper("mv t6, fp # save frame pointer", NULL, NULL, NULL),
+                   AS_InstrList(AS_Oper("mv fp, sp", NULL, NULL, NULL),
+                                AS_InstrList(AS_Oper(STRDUP(buf), L(SP, NULL),
+                                                     L(SP, NULL), NULL),
+                                             NULL)));
+
+
+  S("addi sp, sp, %d # restore stack pointer", frameSize);
+  AS_instrList insert_exit =
+      AS_InstrList(AS_Oper(STRDUP(buf), NULL, NULL, NULL),
+                   AS_InstrList(AS_Oper("ret", NULL, NULL, NULL), NULL));
+  return AS_Proc(String(buf),
+                 AS_splice(insert_entry, AS_splice(body, insert_exit)),
+                 "#END\n");
 }
 
 Temp_temp F_FP(void) {
@@ -365,9 +414,23 @@ Temp_temp F_SP(void) {
   return SP;
 }
 
-Temp_tempList F_calldefs(void) {
-  // FIXME
-  // We either store the RA reg each time when we call other functions or store
-  // it at the beginning of each function
-  return Temp_TempList(A0, Temp_TempList(RA, callerSaves));
+int F_isInReg(F_access a) { return a->kind == inReg; }
+
+Temp_tempList F_args(void) { return argRegs; }
+
+Temp_tempList F_callerSaves(void) {
+  initRegMap();
+  return L(
+      T0,
+      L(T1,
+        L(T2,
+          L(T3,
+            L(T4,
+              L(T5,
+                L(T6,
+                  L(A0,
+                    L(A1,
+                      L(A2,
+                        L(A3,
+                          L(A4, L(A5, L(A6, L(A7, L(RA, NULL))))))))))))))));
 }

@@ -31,7 +31,7 @@ Tr_exp Tr_simpleVar(Tr_access access, Tr_level level) {
       e = T_Mem(e);
       l = l->parent;
     }
-    f->u.MEM->u.BINOP.left = e; // TODO to be confirmed
+    f->u.MEM->u.BINOP.left = e;
   }
   return Tr_Ex(f);
 }
@@ -152,13 +152,15 @@ Tr_exp Tr_recordExp(Tr_exp *l, int size) {
   return Tr_Ex(res_head);
 }
 
-Tr_exp Tr_arrayExp(Tr_exp init, int size) {
-  T_exp a = T_Temp(Temp_newtemp());
-  return Tr_Ex(T_Eseq(
-      T_Move(a, F_externalCall(
-                    "initArray",
-                    T_ExpList(unEx(init), T_ExpList(T_Const(size), NULL)))),
-      a));
+Tr_exp Tr_arrayExp(Tr_exp init, Tr_exp size) {
+  return Tr_Ex(F_externalCall(
+      "initArray", T_ExpList(unEx(size), T_ExpList(unEx(init), NULL))));
+  // T_exp a = T_Temp(Temp_newtemp());
+  // return Tr_Ex(T_Eseq(
+  //     T_Move(a, F_externalCall(
+  //                   "initArray",
+  //                   T_ExpList(unEx(size), T_ExpList(unEx(init), NULL)))),
+  //     a));
 }
 
 Tr_exp Tr_seqExp(Tr_exp *seqs, int size) {
@@ -185,6 +187,7 @@ Tr_exp Tr_assignExp(Tr_exp lvalue, Tr_exp exp) {
 }
 
 Tr_exp Tr_ifExp(Tr_exp test, Tr_exp then, Tr_exp elsee) {
+  // FIXME broken when have multiple logic condition
   // TODO optimise
   // if (elsee != NULL) {
   //   debug("if-else-then statement\n");
@@ -226,6 +229,19 @@ Tr_exp Tr_ifExp(Tr_exp test, Tr_exp then, Tr_exp elsee) {
   if (elsee != NULL) {
     T_exp then_t = unEx(then);
     T_exp elsee_t = unEx(elsee);
+    // return Tr_Ex(T_Eseq(
+    //     cx.stm,
+    //     T_Eseq(T_Label(t),
+    //            T_Eseq(T_Move(T_Temp(r), then_t),
+    //                   T_Eseq(T_Jump(T_Name(merge), Temp_LabelList(merge,
+    //                   NULL)),
+    //                          T_Eseq(T_Label(f),
+    //                                 T_Eseq(T_Move(T_Temp(r), elsee_t),
+    //                                        T_Eseq(T_Jump(T_Name(merge),
+    //                                                      Temp_LabelList(merge,
+    //                                                                     NULL)),
+    //                                               T_Eseq(T_Label(merge),
+    //                                                      T_Temp(r))))))))));
     return Tr_Ex(T_Eseq(
         T_Seq(cx.stm,
               T_Seq(T_Seq(T_Seq(T_Label(t),
@@ -363,13 +379,18 @@ static T_exp unEx(Tr_exp e) {
     case Tr_cx: {
       Temp_temp r = Temp_newtemp();
       Temp_label t = Temp_newlabel(), f = Temp_newlabel();
+      // FIXME need a merge here
       doPatch(e->u.cx.trues, t);
       doPatch(e->u.cx.falses, f);
       return T_Eseq(
           T_Move(T_Temp(r), T_Const(1)),
-          T_Eseq(e->u.cx.stm,
-                 T_Eseq(T_Label(f), T_Eseq(T_Move(T_Temp(r), T_Const(0)),
-                                           T_Eseq(T_Label(t), T_Temp(r))))));
+          T_Eseq(
+              e->u.cx.stm,
+              T_Eseq(T_Label(f),
+                     T_Eseq(T_Move(T_Temp(r), T_Const(0)),
+                            T_Eseq(T_Jump(T_Name(t), Temp_LabelList(t,
+                            NULL)),
+                                   T_Eseq(T_Label(t), T_Temp(r)))))));
     }
     case Tr_nx: return T_Eseq(e->u.nx, T_Const(0));
   }
@@ -433,7 +454,7 @@ Tr_level Tr_outermost(void) {
     t->formals = NULL;
     // TODO: init the frame pointer before entering "global"
     // We need the static link in global!
-    t->frame = F_newFrame(Temp_namedlabel("global"), U_BoolList(TRUE, NULL));
+    t->frame = F_newFrame(Temp_namedlabel("_start"), U_BoolList(TRUE, NULL));
     OUTER_MOST = t;
     return t;
   }
@@ -461,9 +482,33 @@ Tr_level Tr_newLevel(Tr_level parent, Temp_label name, U_boolList formals) {
   return level;
 }
 
-Tr_accessList Tr_formals(Tr_level level) {
+Tr_level Tr_libFunLevel(Temp_label name, U_boolList formals) {
+  Tr_level level = checked_malloc(sizeof(*level));
+  level->parent = Tr_outermost();
+  level->name = name;
+  level->formals = formals;
+  // add the static links to the first place, rest is in order
+  level->frame = F_newFrame(name, formals);
+  return level;
+}
+
+static Tr_accessList reverseList(Tr_accessList list) {
+  Tr_accessList temp = NULL;
+  Tr_accessList prev = NULL;
+  Tr_accessList curr = list;
+  while (curr != NULL) {
+    temp = curr->tail;
+    curr->tail = prev;
+    prev = curr;
+    curr = temp;
+  }
+  return prev;
+}
+
+Tr_accessList Tr_formals_with_static_link(Tr_level level) {
   F_accessList f = F_formals(level->frame);
-  assert(f);
+  if (!f) // library function
+    return NULL;
   Tr_accessList l = NULL, l_head = NULL;
   // builtin functions will not occur here
   l = Tr_AccessList(Tr_Access(level, f->head), NULL);
@@ -473,7 +518,7 @@ Tr_accessList Tr_formals(Tr_level level) {
     Tr_accessList p = Tr_AccessList(Tr_Access(level, f->head), NULL);
     l->tail = p;
   }
-  return l_head;
+  return reverseList(l_head);
 }
 
 void Tr_printFormals(Tr_accessList formals) {
