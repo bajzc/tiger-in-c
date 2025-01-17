@@ -95,6 +95,8 @@ void buildupLiveOut(Main_struct S) {
       }
     }
   }
+  // FIXME
+  // Instruction appended is not in `stmt_instr_set`
 }
 
 int isBlockStart(G_node node, Main_struct S) {
@@ -160,7 +162,8 @@ void checkInvariant(Main_struct S) {
   SET_FOREACH(S->simplifyWorklist, uptr) {
     G_node u = *uptr;
     Set moveListU = G_look(S->moveList, u);
-    assert(*(int *) G_look(S->degree, u) < S->K);
+    int degree = *(int *) G_look(S->degree, u);
+    assert(degree < S->K);
     if (moveListU != NULL)
       assert(SET_isEmpty(SET_intersect(
           moveListU, SET_union(S->activeMoves, S->worklistMoves))));
@@ -209,14 +212,14 @@ void build(Main_struct S) {
     while (cur_node &&
            !isBlockStart(cur_node, S)) { // forall I ∈ instructions(b)
       AS_instr cur_instr = G_nodeInfo(cur_node);
-#if DEBUG2
+#if DEBUG
       debug2("liveout = ");
       SET_FOREACH(live, sptr) {
         Temp_temp s = (*sptr);
         fprintf(stderr, "%d, ", s->num);
       }
       fprintf(stderr, "\n");
-      fprintf(stderr, "\t%s\n", cur_instr->u.OPER.assem);
+      fprintf(stderr, "\t%s\n\n", cur_instr->u.OPER.assem);
 #endif
       if (FG_isMove(cur_node)) { // if isMoveInstruction(I) then
         live = SET_difference(live, FG_use(cur_node)); // live ← live \ use(I)
@@ -229,7 +232,7 @@ void build(Main_struct S) {
           if (moveList == NULL)
             moveList = SET_empty(SET_default_cmp);
           SET_insert(moveList, cur_instr); // moveList[n] ← moveList[n] ∪ {I}
-          G_enter(S->moveList, node, moveList);
+          G_enter(S->moveList, node, moveList); // do not delete this:)
         }
         SET_insert(S->worklistMoves,
                    cur_instr); // worklistMoves ← worklistMoves ∪ {I}
@@ -258,6 +261,22 @@ Set NodeMoves(G_node n, Main_struct S) {
   Set moveListN = G_look(S->moveList, n);
   if (!moveListN)
     return SET_empty(SET_default_cmp);
+  fprintf(stderr, "moveListN = \n");
+  SET_FOREACH(moveListN, sptr) {
+    AS_instr cur_instr = *sptr;
+    fprintf(stderr, "\t%s\n", cur_instr->u.OPER.assem);
+  }
+  fprintf(stderr, "activeMoves U worklistMoves =\n");
+  SET_FOREACH(SET_union(S->activeMoves, S->worklistMoves), uptr) {
+    AS_instr cur_instr = *uptr;
+    fprintf(stderr, "\t%s\n", cur_instr->u.OPER.assem);
+  }
+  fprintf(stderr, "intersect = \n");
+  SET_FOREACH(SET_intersect(moveListN, SET_union(S->activeMoves, S->worklistMoves)), uptr) {
+    AS_instr cur_instr = *uptr;
+    fprintf(stderr, "\t%s\n", cur_instr->u.OPER.assem);
+  }
+  fprintf(stderr, "\n");
   return SET_intersect(moveListN, SET_union(S->activeMoves, S->worklistMoves));
 }
 
@@ -312,8 +331,7 @@ void DecrementDegree(G_node m, Main_struct S) {
   int *d = G_look(S->degree, m); // let d = degree[m]
   *d -= 1;
   // *d = MAX(*d, 0);
-  assert(*d >= 0);
-  G_enter(S->degree, m, d);
+  assert(*d >= 0 || Temp_look(F_tempMap, G_nodeInfo(m)));
   if (*d + 1 != S->K)
     return;
   EnableMoves(SET_with(Adjacent(m, S), m), S); // EnableMoves({m} ∪ Adjacent(m))
@@ -359,9 +377,10 @@ procedure MakeWorklist()
       simplifyWorklist ← simplifyWorklist ∪ {n}
 */
 void MakeWorkList(Main_struct S) {
-  SET_FOREACH(S->initial, ptr) { // forall n ∈ initial
-    G_node n = *ptr;
-    if (*(int *) G_look(S->degree, n) >= S->K) { // if degree[n] ≥ K then
+  while (!SET_isEmpty(S->initial)) {
+    G_node n = SET_pop(S->initial);
+    int degree = *(int *) G_look(S->degree, n);
+    if (degree >= S->K) { // if degree[n] ≥ K then
       SET_insert(S->spillWorklist, n); // spillWorklist ← spillWorklist ∪ {n}
     } else if (MoveRelated(n, S)) { // else if MoveRelated(n) then
       SET_insert(S->freezeWorklist, n); // freezeWorklist ← freezeWorklist ∪ {n}
@@ -370,7 +389,6 @@ void MakeWorkList(Main_struct S) {
                  n); // simplifyWorklist ← simplifyWorklist ∪ {n}
     }
   }
-  S->initial = SET_empty(SET_default_cmp); // initial ← initial \ {n}
 }
 
 /*
@@ -399,14 +417,12 @@ void AddEdge(Temp_temp u, Temp_temp v, Main_struct S) {
     SET_insert(adjListU, V);
     int *deg = G_look(S->degree, U);
     *deg += 1;
-    G_enter(S->degree, U, deg);
   }
   if (!Temp_look(S->precolored, v)) {
     Set adjListV = G_look(S->adjList, V);
     SET_insert(adjListV, U);
     int *deg = G_look(S->degree, V);
     *deg += 1;
-    G_enter(S->degree, V, deg);
   }
 }
 
@@ -503,8 +519,8 @@ procedure AddWorkList(u)
     simplifyWorklist ← simplifyWorklist ∪ {u}
 */
 void AddWorkList(G_node u, Main_struct S) {
-  if (Temp_look(S->precolored, G_nodeInfo(u)) || MoveRelated(u, S) ||
-      *(int *) G_look(S->degree, u) >= S->K)
+  if (!(Temp_look(S->precolored, G_nodeInfo(u)) == NULL && !MoveRelated(u, S) &&
+        *(int *) G_look(S->degree, u) < S->K))
     return;
 
   SET_delete(S->freezeWorklist, u);
@@ -647,7 +663,9 @@ void FreezeMoves(G_node u, Main_struct S) {
     SET_delete(S->activeMoves, instr);
     SET_insert(S->frozenMoves, instr);
 
-    if (SET_isEmpty(NodeMoves(v, S)) && *(int *) G_look(S->degree, v) < S->K) {
+    int degree = *(int *) G_look(S->degree, v);
+
+    if (SET_isEmpty(NodeMoves(v, S)) && degree < S->K) {
       SET_delete(S->freezeWorklist, v);
       SET_insert(S->simplifyWorklist, v);
     }
@@ -665,6 +683,7 @@ procedure SelectSpill()
 */
 void SelectSpill(Main_struct S) {
   G_node m = SET_pop(S->spillWorklist); // FIXME
+  assert(Temp_look(F_tempMap, G_nodeInfo(m)) == NULL);
   SET_insert(S->simplifyWorklist, m);
   FreezeMoves(m, S);
 }
@@ -735,7 +754,7 @@ procedure RewriteProgram()
 void RewriteProgram(Main_struct S) {
   Set newTemps = SET_empty(SET_default_cmp);
   SET_FOREACH(S->spilledNodes, vptr) { G_node v = *vptr; }
-  assert(0);
+  assert(0); // TODO
 
   S->spilledNodes = SET_empty(SET_default_cmp);
   S->coloredNodes = SET_empty(SET_default_cmp);
@@ -760,7 +779,7 @@ void print_edges(Main_struct S) {
   }
   fprintf(fp, "}\n");
   fclose(fp);
-  debug("generate %d-edges.dot\n", graph_count);
+  debug2("generate %d-edges.dot\n", graph_count);
   graph_count++;
 }
 
@@ -828,8 +847,8 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
     G_node node = G_Node(S->interference_graph, t);
     int *deg = checked_malloc(sizeof(*deg));
     *deg = 0;
-    G_enter(S->adjList, node, SET_empty(G_node_cmp));
     G_enter(S->degree, node, deg);
+    G_enter(S->adjList, node, SET_empty(G_node_cmp));
     TAB_enter(S->temp2Node, t, node);
   }
 
@@ -843,13 +862,13 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
 
   fprintf(stderr, "\nF_regTemp = ");
   SET_FOREACH(F_regTemp, tptr) {
-  fprintf(stderr, "%d, ", (*(Temp_temp *) tptr)->num);
+    fprintf(stderr, "%d, ", (*(Temp_temp *) tptr)->num);
   }
   fprintf(stderr, "\n");
 
   build(S);
   checkInvariant(S);
-  print_edges(S);
+  // print_edges(S);
   MakeWorkList(S);
   checkInvariant(S);
   while (TRUE) {
@@ -862,13 +881,13 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
     else if (!SET_isEmpty(S->spillWorklist))
       SelectSpill(S);
 
-    print_edges(S);
-    checkInvariant(S);
+    // print_edges(S);
 
     if (SET_isEmpty(S->simplifyWorklist) && SET_isEmpty(S->worklistMoves) &&
         SET_isEmpty(S->freezeWorklist) && SET_isEmpty(S->spillWorklist))
       break;
   }
+  checkInvariant(S);
   AssignColors(S);
   checkInvariant(S);
   if (!SET_isEmpty(S->spilledNodes)) {

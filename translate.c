@@ -31,7 +31,7 @@ Tr_exp Tr_simpleVar(Tr_access access, Tr_level level) {
       e = T_Mem(e);
       l = l->parent;
     }
-    f->u.MEM->u.BINOP.left = e; // TODO to be confirmed
+    f->u.MEM->u.BINOP.left = e;
   }
   return Tr_Ex(f);
 }
@@ -187,6 +187,7 @@ Tr_exp Tr_assignExp(Tr_exp lvalue, Tr_exp exp) {
 }
 
 Tr_exp Tr_ifExp(Tr_exp test, Tr_exp then, Tr_exp elsee) {
+  // FIXME broken when have multiple logic condition
   // TODO optimise
   // if (elsee != NULL) {
   //   debug("if-else-then statement\n");

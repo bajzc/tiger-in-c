@@ -41,11 +41,6 @@ AS_instr AS_Move(string a, Temp_tempList d, Temp_tempList s) {
   p->u.MOVE.assem = a;
   p->u.MOVE.dst = d;
   p->u.MOVE.src = s;
-  // p->kind = I_OPER;
-  // p->u.OPER.assem = a;
-  // p->u.OPER.dst = d;
-  // p->u.OPER.src = s;
-  // p->u.OPER.jumps = NULL;
   return p;
 }
 

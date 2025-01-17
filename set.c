@@ -20,7 +20,7 @@ void SET_foreach(Set a, void (*f)(void *)) {
 void SET_ensure_capacity(Set s, int capacity) {
   int new_capacity = s->capacity;
   while (new_capacity < capacity) {
-    new_capacity = new_capacity * 2 + 1;
+    new_capacity = MAX(new_capacity * 2, 1);
   }
   if (new_capacity == s->capacity)
     return;

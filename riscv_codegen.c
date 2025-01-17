@@ -53,8 +53,7 @@ static Temp_tempList saveCallerRegs(Temp_tempList regs) {
   char buf[80];
   Temp_temp t = Temp_newtemp();
   S("mv `d0, `s0 # save caller reg to T%d", t->num);
-  emit(AS_Move(STRDUP(buf), L(t, NULL),
-               L(regs->head, NULL)));
+  emit(AS_Move(STRDUP(buf), L(t, NULL), L(regs->head, NULL)));
   return L(t, saveCallerRegs(regs->tail));
 }
 
@@ -63,7 +62,7 @@ static void restoreCallerRegs(Temp_tempList regs, Temp_tempList temps) {
     return;
   char buf[80];
   S("mv `d0, `s0 # restore caller reg from T%d", temps->head->num);
-  emit(AS_Move(STRDUP(buf), L(regs->head,NULL),L(temps->head, NULL)));
+  emit(AS_Move(STRDUP(buf), L(regs->head, NULL), L(temps->head, NULL)));
   restoreCallerRegs(regs->tail, temps->tail);
 }
 
@@ -337,19 +336,15 @@ AS_instrList F_codegen(Set stmt2last_instr, F_frame f, T_stmList stmList) {
   T_stmList sl;
   AS_instrList list = NULL;
 
-  // FIXME
-  // single jump instruction was ignored
-
   struct stmt_instr *new = checked_malloc(sizeof(*new));
-  new->stm = NULL;
+  new->last = NULL;
   for (sl = stmList; sl; sl = sl->tail) {
     munchStm(sl->head);
-    if (new->stm && last->head->kind == I_LABEL &&new->last->kind != I_LABEL) {
+    if (new->last && last->head->kind == I_LABEL &&new->last->kind != I_LABEL) {
       SET_insert(stmt2last_instr, new);
       new = checked_malloc(sizeof(*new));
-      new->stm = NULL;
+      new->last = NULL;
     }
-    new->stm = sl->head;
     new->last = last->head;
   }
   list = iList;

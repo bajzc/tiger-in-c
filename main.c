@@ -80,6 +80,14 @@ static void doProc(FILE *out, char *outfile, F_frame frame, T_stm body) {
   /* printStmList(stdout, stmList);*/
   iList = F_codegen(stmt_instr_set, frame, stmList); /* 9 */
   iList = F_procEntryExit2(iList, frame);
+
+  AS_instrList p;
+  for (p = iList; p->tail != NULL; p = p->tail)
+    ;
+  struct stmt_instr *i = checked_malloc(sizeof(*i));
+  i->last = p->head;
+  SET_insert(stmt_instr_set, i);
+
   Temp_map color_map = Color_Main(stmt_instr_set, iList, frame);
   proc = F_procEntryExit3(frame, iList);
 

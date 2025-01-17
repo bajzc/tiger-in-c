@@ -8,12 +8,12 @@
 #include "table.h"
 #include "util.h"
 
-#define L(h, t) Temp_TempList((Temp_temp) h, (Temp_tempList) t)
+#define L(h, t) Temp_TempList(h, t)
 #define S(format, ...) snprintf(buf, 80, format, ##__VA_ARGS__)
 
 #define ARG_IN_REG 7 // a1-a7
 const int F_wordSize = 8; // target machine is RV32
-const int F_numGPR = 26; // General Purpose Registers: 32 - 6
+const int F_numGPR = 29; // General Purpose Registers: 32 - (zero, gp, tp)
 Temp_map F_tempMap;
 // used for generate graphviz graph
 Temp_map F_reg2colorscheme;
@@ -154,7 +154,6 @@ void F_printAccess(F_access access) {
 string F_frameLabel(F_frame f) { return Temp_labelstring(f->frame_label); }
 
 T_exp F_externalCall(string s, T_expList args) {
-  // TODO adjust for underscore label when linking
   return T_Call(T_Name(Temp_namedlabel(s)), args);
 }
 
@@ -241,9 +240,6 @@ static void initRegMap() {
   fprintf(stderr, "SP: %d\n\n", SP->num);
   INIT_REG(FP, fp, x11, goldenrod);
   ZERO = Temp_newtemp();
-  // SP = Temp_newtemp();
-  // FP = Temp_newtemp();
-  // RA = Temp_newtemp();
 
   // Caller saved
   INIT_REG(A0, a0, x11, red);
@@ -304,8 +300,10 @@ T_stm F_procEntryExit1(F_frame frame, T_stm stm) { return stm; }
 
 static Temp_tempList returnSink = NULL;
 AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame) {
-  if (!returnSink)
+  if (returnSink == NULL) {
+    initRegMap();
     returnSink = L(RA, L(SP, calleeSaves));
+  }
   // FIXME
   // save all calleeSaves
   int frameSize = frame->stack_size * F_wordSize;
@@ -315,7 +313,7 @@ AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame) {
   assert(body->head->kind == I_LABEL);
   S("addi sp, `s0, -%d # alloc stack space", frameSize);
   insert_entry = AS_InstrList(
-      AS_Oper("nop # fix liveness", NULL, returnSink, NULL),
+      AS_Oper("nop # save callee regs here", NULL, returnSink, NULL),
       AS_InstrList(AS_Move("mv `d0, `s0 # save frame pointer", L(copyFP, NULL),
                            L(FP, NULL)),
                    AS_InstrList(AS_Oper("mv fp, sp # update frame pointer",
@@ -333,7 +331,7 @@ AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame) {
           AS_Oper(STRDUP(buf), L(a->u.reg, NULL), L(cur->head, NULL), NULL),
           insert_entry);
       cur = cur->tail;
-    }
+    }// TODO arguments spills in reg need to be moved to top of stack
   }
   return AS_splice(
       insert_entry,

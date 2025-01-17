@@ -8,7 +8,7 @@
 AS_instrList F_codegen(Set stmt2last_instr, F_frame f, T_stmList stmList);
 
 struct stmt_instr {
-  T_stm stm;
+  // TODO refactor this
   AS_instr last;
 };
 
