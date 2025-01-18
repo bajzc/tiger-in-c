@@ -47,26 +47,6 @@ static Temp_tempList munchArgs(int n, T_expList args, Tr_accessList formals,
   return L(r, right);
 }
 
-static Temp_tempList saveCallerRegs(Temp_tempList regs) {
-  if (regs == NULL)
-    return NULL;
-  char buf[80];
-  Temp_temp t = Temp_newtemp();
-  S("mv `d0, `s0 # save caller reg to T%d", t->num);
-  emit(AS_Move(STRDUP(buf), L(t, NULL), L(regs->head, NULL)));
-  return L(t, saveCallerRegs(regs->tail));
-}
-
-static void restoreCallerRegs(Temp_tempList regs, Temp_tempList temps) {
-  if (regs == NULL)
-    return;
-  char buf[80];
-  // restore in reverse order, so that the liveness for each will be equal.
-  S("mv `d0, `s0 # restore caller reg from T%d", temps->head->num);
-  emit(AS_Move(STRDUP(buf), L(regs->head, NULL), L(temps->head, NULL)));
-  restoreCallerRegs(regs->tail, temps->tail);
-}
-
 static void munchStm(T_stm s) {
   static char buf[80];
   switch (s->kind) {
@@ -107,10 +87,8 @@ static void munchStm(T_stm s) {
           Temp_tempList l = munchArgs(
               0, src->u.CALL.args,
               Tr_formals_with_static_link(fun->u.fun.level), F_args());
-          // Temp_tempList temps = saveCallerRegs(F_callerSaves());
           S("call %s", Temp_labelstring(src->u.CALL.fun->u.NAME));
-          emit(AS_Oper(STRDUP(buf), L(F_RV(), F_callerSaves()), l, NULL));
-          // restoreCallerRegs(F_callerSaves(), temps);
+          emit(AS_Oper(STRDUP(buf), F_callerSaves(), l, NULL));
           emit(AS_Move("mv `d0, `s0 # copy return value", L(dst->u.TEMP, NULL),
                        L(F_RV(), NULL)));
         } else if (src->kind == T_CONST) {
@@ -318,10 +296,8 @@ static Temp_temp munchExp(T_exp e) {
       Temp_tempList l =
           munchArgs(0, e->u.CALL.args,
                     Tr_formals_with_static_link(fun->u.fun.level), F_args());
-      // Temp_tempList temps = saveCallerRegs(F_callerSaves());
       S("call %s", Temp_labelstring(e->u.CALL.fun->u.NAME));
       emit(AS_Oper(STRDUP(buf), F_callerSaves(), l, NULL));
-      // restoreCallerRegs(F_callerSaves(), temps);
       return r;
     }
     default: assert(0);

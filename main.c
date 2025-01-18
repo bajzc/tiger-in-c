@@ -27,30 +27,6 @@
 
 extern bool anyErrors;
 
-static void printFlowgraph(FILE *out, G_graph graph, Temp_map m, char *name) {
-  G_nodeList nodes = G_nodes(graph);
-  fprintf(out, "strict digraph %s{\n", name);
-  fprintf(out, "splines=false;\n");
-  while (nodes) {
-    AS_instr instr = G_nodeInfo(nodes->head);
-    G_nodeList adj = G_succ(nodes->head);
-    while (adj) {
-      fprintf(out, "\"");
-      AS_print(out, instr, m);
-      fprintf(out, "\"");
-      AS_instr adj_instr = G_nodeInfo(adj->head);
-      fprintf(out, " -> ");
-      fprintf(out, "\"");
-      AS_print(out, adj_instr, m);
-      fprintf(out, "\"");
-      adj = adj->tail;
-      fprintf(out, "\n");
-    }
-    nodes = nodes->tail;
-  }
-  fprintf(out, "}\n");
-}
-
 static void printInterGraph(FILE *out, G_graph graph) {
   fprintf(out, "strict graph {\n");
   G_nodeList nodes = G_nodes(graph);

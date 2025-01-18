@@ -684,26 +684,25 @@ procedure SelectSpill()
 */
 void SelectSpill(Main_struct S) {
   // TODO better heuristic algorithm
-  // G_node choice = NULL;
-  // int maxDegree = 0;
-  // SET_FOREACH(S->spillWorklist, mptr) {
-  //   G_node m = *mptr;
-  //   int degree = *(int *) G_look(S->degree, m);
-  //   if (degree >= maxDegree) {
-  //     maxDegree = degree;
-  //     choice = m;
-  //   }
-  // }
-  // fprintf(stderr, "selectSpill = T%d\n",
-  //         ((Temp_temp) (G_nodeInfo(choice)))->num);
-  // SET_delete(S->spillWorklist, choice);
-  // assert(Temp_look(F_tempMap, G_nodeInfo(choice)) == NULL);
-  // SET_insert(S->simplifyWorklist, choice);
-  // FreezeMoves(choice, S);
-  G_node m = SET_pop(S->spillWorklist);
-  SET_insert(S->simplifyWorklist, m);
-  FreezeMoves(m, S);
-
+  G_node choice = NULL;
+  int maxDegree = 0;
+  SET_FOREACH(S->spillWorklist, mptr) {
+    G_node m = *mptr;
+    int degree = *(int *) G_look(S->degree, m);
+    if (degree >= maxDegree) {
+      maxDegree = degree;
+      choice = m;
+    }
+  }
+  fprintf(stderr, "selectSpill = T%d\n",
+          ((Temp_temp) (G_nodeInfo(choice)))->num);
+  SET_delete(S->spillWorklist, choice);
+  assert(Temp_look(F_tempMap, G_nodeInfo(choice)) == NULL);
+  SET_insert(S->simplifyWorklist, choice);
+  FreezeMoves(choice, S);
+  // G_node m = SET_pop(S->spillWorklist);
+  // SET_insert(S->simplifyWorklist, m);
+  // FreezeMoves(m, S);
 }
 
 /*
@@ -777,18 +776,44 @@ void RewriteProgram(Main_struct S) {
     G_node v = *vptr;
     F_access v_access = F_allocLocal(S->frame, 1);
     T_exp v_exp = F_Exp(v_access, T_Temp(F_FP()));
-    Temp_temp v_i = Temp_newtemp();
-    G_node v_i_node = G_Node(S->interference_graph, v_i);
-    SET_insert(newTemps, v_i_node);
     assert(v_exp->kind == T_MEM && v_exp->u.MEM->kind == T_BINOP);
     assert(v_exp->u.MEM->u.BINOP.right->kind == T_CONST);
     int offset = v_exp->u.MEM->u.BINOP.right->u.CONST;
-    debug("spilledNode T%d stored as T%d at %d(fp)\n", T(v)->num, v_i->num,
-          offset);
     for (G_nodeList instrs = G_nodes(S->flowgraph); instrs;
          instrs = instrs->tail) {
       AS_instr instr = G_nodeInfo(instrs->head);
+      if (SET_contains(FG_use(instrs->head), T(v))) {
+        Temp_temp v_i = Temp_newtemp();
+        G_node v_i_node = G_Node(S->interference_graph, v_i);
+        SET_insert(newTemps, v_i_node);
+        debug("spilledNode T%d stored as T%d at %d(fp)\n", T(v)->num, v_i->num,
+              offset);
+        AS_instrList l = S->iList;
+        AS_instrList prev = NULL;
+        while (l) {
+          if (l->head == instr)
+            break;
+          prev = l;
+          l = l->tail;
+        }
+        assert(l && prev && prev->tail == l); // l can not be head of iList
+        snprintf(buf, 80,
+                 "lw `d0, %d(`s0) # fetch spilled reg T%d from stack to T%d",
+                 offset, T(v)->num, v_i->num);
+        prev->tail = AS_InstrList(
+            AS_Oper(STRDUP(buf), L(v_i, NULL), L(F_FP(), NULL), NULL), l);
+        for (Temp_tempList cur = l->head->u.OPER.src; cur; cur = cur->tail) {
+          if (cur->head == T(v)) {
+            cur->head = v_i;
+          }
+        }
+      }
       if (SET_contains(FG_def(instrs->head), T(v))) {
+        Temp_temp v_i = Temp_newtemp();
+        G_node v_i_node = G_Node(S->interference_graph, v_i);
+        SET_insert(newTemps, v_i_node);
+        debug("spilledNode T%d stored as T%d at %d(fp)\n", T(v)->num, v_i->num,
+              offset);
         AS_instrList l = S->iList;
         while (l) {
           if (l->head == instr)
@@ -800,28 +825,8 @@ void RewriteProgram(Main_struct S) {
         snprintf(buf, 80, "sw `s0, %d(`d0) # store spilled reg T%d to stack",
                  offset, T(v)->num);
         l->tail = AS_InstrList(
-            AS_Move(STRDUP(buf), L(F_FP(), NULL), L(T(v), NULL)), next);
+            AS_Oper(STRDUP(buf), L(F_FP(), NULL), L(v_i, NULL), NULL), next);
         for (Temp_tempList cur = l->head->u.OPER.dst; cur; cur = cur->tail) {
-          if (cur->head == T(v)) {
-            cur->head = v_i;
-          }
-        }
-      }
-      if (SET_contains(FG_use(instrs->head), T(v))) {
-        AS_instrList l = S->iList;
-        AS_instrList prev = NULL;
-        while (l) {
-          if (l->head == instr)
-            break;
-          prev = l;
-          l = l->tail;
-        }
-        assert(l && prev && prev->tail == l); // l can not be head of iList
-        snprintf(buf, 80, "lw `d0, %d(`s0) # fetch spilled reg T%d from stack to T%d",
-                 offset, T(v)->num, v_i->num);
-        prev->tail = AS_InstrList(
-            AS_Move(STRDUP(buf), L(v_i, NULL), L(F_FP(), NULL)), l);
-        for (Temp_tempList cur = l->head->u.OPER.src; cur; cur = cur->tail) {
           if (cur->head == T(v)) {
             cur->head = v_i;
           }
@@ -926,19 +931,29 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
     TAB_enter(S->temp2Node, t, node);
   }
 
-  // fprintf(stderr, "\ninitial = ");
+  fprintf(stderr, "\ninitial = ");
   SET_FOREACH(SET_difference(temps, F_regTemp), tptr) {
     Temp_temp t = *tptr;
     SET_insert(S->initial, TAB_look(S->temp2Node, t));
-    // fprintf(stderr, "%d, ", t->num);
+    fprintf(stderr, "%d, ", t->num);
   }
-  // fprintf(stderr, "\n");
+  fprintf(stderr, "\n");
 
-  // fprintf(stderr, "\nF_regTemp = ");
-  // SET_FOREACH(F_regTemp, tptr) {
-  // fprintf(stderr, "%d, ", (*(Temp_temp *) tptr)->num);
-  // }
-  // fprintf(stderr, "\n");
+  fprintf(stderr, "\nF_regTemp = ");
+  SET_FOREACH(F_regTemp, tptr) {
+    fprintf(stderr, "%d, ", (*(Temp_temp *) tptr)->num);
+  }
+  fprintf(stderr, "\n");
+
+  static int graph_count = 0;
+  char graph_name[80];
+  snprintf(graph_name, 80, "graph-%d.dot", graph_count++);
+  // assert(graph_count < 3);
+  FILE *fp = fopen(graph_name, "w");
+  printFlowgraph(fp, S->flowgraph, Temp_layerMap(F_tempMap, Temp_name()),
+                 Temp_labelstring(F_name(frame)));
+  fclose(fp);
+
 
   build(S);
   checkInvariant(S);
@@ -956,6 +971,7 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
       SelectSpill(S);
 
     // print_edges(S);
+    // checkInvariant(S);
 
     if (SET_isEmpty(S->simplifyWorklist) && SET_isEmpty(S->worklistMoves) &&
         SET_isEmpty(S->freezeWorklist) && SET_isEmpty(S->spillWorklist))

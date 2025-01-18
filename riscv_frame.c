@@ -272,7 +272,7 @@ static void initRegMap() {
   INIT_REG(S10, s10, x11, chartreuse);
   INIT_REG(S11, s11, x11, turquoise);
 
-  specialRegs = L(ZERO, L(SP, L(FP, NULL)));
+  specialRegs = L(ZERO, L(SP, L(FP, L(RA, NULL))));
 
   callerSaves = L(T0, L(T1, L(T2, L(T3, L(T4, L(T5, L(T6, NULL)))))));
 
@@ -327,9 +327,37 @@ static void restoreCalleeRegs(AS_instrList funExit, Temp_tempList regs,
 static Temp_tempList returnSink = NULL;
 AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame) {
   if (!returnSink)
-    returnSink = L(RA, L(SP, L(FP, calleeSaves)));
+    returnSink = L(SP, L(FP, L(RA, calleeSaves)));
+  Temp_tempList cur = argRegs;
+  char buf[80];
+  Temp_temp copyFP = Temp_newtemp();
+
+  AS_instrList insert_entry = AS_InstrList(
+      AS_Move("mv `d0, `s0 # save frame pointer", L(copyFP, NULL), L(FP, NULL)),
+      NULL);
+
+  Temp_tempList temps = saveCalleeRegs(insert_entry, L(RA, calleeSaves));
+
+  for (F_accessList l = reverseList(frame->formals_list); l; l = l->tail) {
+    F_access a = l->head;
+    if (a->kind == inReg) {
+      S("mv `d0, `s0 # T%d <- %s", a->u.reg->num,
+        Temp_look(F_tempMap, cur->head));
+      AS_splice(insert_entry,
+                AS_InstrList(AS_Oper(STRDUP(buf), L(a->u.reg, NULL),
+                                     L(cur->head, NULL), NULL),
+                             NULL));
+      cur = cur->tail;
+    } // TODO arguments spills in reg need to be moved to top of stack
+  }
+
+  restoreCalleeRegs(body, L(RA, calleeSaves), temps);
+
   return AS_splice(
-      body, AS_InstrList(AS_Oper("# return", NULL, returnSink, NULL), NULL));
+      AS_splice(insert_entry, body),
+      AS_InstrList(AS_Move("mv `d0, `s0 # restore frame pointer", L(FP, NULL),
+                           L(copyFP, NULL)),
+                   AS_InstrList(AS_Oper("nop", NULL, returnSink, NULL), NULL)));
 }
 // AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame) {
 //   if (returnSink == NULL) {
@@ -359,18 +387,18 @@ AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame) {
 //                                                      L(SP, NULL), NULL),
 //                                              NULL))));
 //
-//   Temp_tempList cur = argRegs;
-//   for (F_accessList l = reverseList(frame->formals_list); l; l = l->tail) {
-//     F_access a = l->head;
-//     if (a->kind == inReg) {
-//       S("mv `d0, `s0 # T%d <- %s", a->u.reg->num,
-//         Temp_look(F_tempMap, cur->head));
-//       insert_entry = AS_InstrList(
-//           AS_Oper(STRDUP(buf), L(a->u.reg, NULL), L(cur->head, NULL), NULL),
-//           insert_entry);
-//       cur = cur->tail;
-//     } // TODO arguments spills in reg need to be moved to top of stack
-//   }
+// Temp_tempList cur = argRegs;
+// for (F_accessList l = reverseList(frame->formals_list); l; l = l->tail) {
+//   F_access a = l->head;
+//   if (a->kind == inReg) {
+//     S("mv `d0, `s0 # T%d <- %s", a->u.reg->num,
+//       Temp_look(F_tempMap, cur->head));
+//     insert_entry = AS_InstrList(
+//         AS_Oper(STRDUP(buf), L(a->u.reg, NULL), L(cur->head, NULL), NULL),
+//         insert_entry);
+//     cur = cur->tail;
+//   } // TODO arguments spills in reg need to be moved to top of stack
+// }
 //
 //   AS_splice(insert_entry, body);
 //   restoreCalleeRegs(insert_entry, calleeSaves, temps);
@@ -389,7 +417,18 @@ AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame) {
 AS_proc F_procEntryExit3(F_frame frame, AS_instrList body) {
   char buf[80];
   snprintf(buf, 80, "#PROCEDURE %s\n", S_name(frame->frame_label));
-  return AS_Proc(String(buf), body, "#END\n");
+  int frameSize = frame->stack_size * F_wordSize;
+  S("addi sp, sp, -%d # alloc stack space", frameSize);
+  AS_instrList insert_entry = AS_InstrList(
+      AS_Oper("mv fp, sp # update frame pointer", NULL, NULL, NULL),
+      AS_InstrList(AS_Oper(STRDUP(buf), NULL, NULL, NULL), NULL));
+
+  AS_instrList insert_exit = AS_InstrList(
+      AS_Oper("mv sp, fp # restore stack pointer", NULL, NULL, NULL),
+      AS_InstrList(AS_Oper("ret", NULL, NULL, NULL), NULL));
+  return AS_Proc(String(buf),
+                 AS_splice(insert_entry, AS_splice(body, insert_exit)),
+                 "#END\n");
 }
 
 Temp_temp F_FP(void) {
