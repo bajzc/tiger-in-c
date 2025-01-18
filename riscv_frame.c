@@ -329,8 +329,7 @@ AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame) {
   if (!returnSink)
     returnSink = L(RA, L(SP, L(FP, calleeSaves)));
   return AS_splice(
-      AS_InstrList(AS_Oper("nop # ", returnSink, NULL, NULL), body),
-      AS_InstrList(AS_Oper("# return", NULL, returnSink, NULL), NULL));
+      body, AS_InstrList(AS_Oper("# return", NULL, returnSink, NULL), NULL));
 }
 // AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame) {
 //   if (returnSink == NULL) {
