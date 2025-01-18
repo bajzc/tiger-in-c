@@ -6,7 +6,9 @@
 #include "liveness.h"
 #include "set.h"
 
-#define T(n) ((Temp_temp) n->info)
+#define L(h, t) Temp_TempList((Temp_temp) h, (Temp_tempList) t)
+#define T(n) ((Temp_temp) G_nodeInfo(n))
+
 typedef struct Main_struct_ {
   G_table liveOut, liveIn; // G_table<G_Node<AS_instr>, Set<Temp_temp>>
   G_table moveList; // G_table<G_Node<Temp_temp>, Set<AS_instr>>
@@ -95,8 +97,6 @@ void buildupLiveOut(Main_struct S) {
       }
     }
   }
-  // FIXME
-  // Instruction appended is not in `stmt_instr_set`
 }
 
 int isBlockStart(G_node node, Main_struct S) {
@@ -261,22 +261,23 @@ Set NodeMoves(G_node n, Main_struct S) {
   Set moveListN = G_look(S->moveList, n);
   if (!moveListN)
     return SET_empty(SET_default_cmp);
-  fprintf(stderr, "moveListN = \n");
-  SET_FOREACH(moveListN, sptr) {
-    AS_instr cur_instr = *sptr;
-    fprintf(stderr, "\t%s\n", cur_instr->u.OPER.assem);
-  }
-  fprintf(stderr, "activeMoves U worklistMoves =\n");
-  SET_FOREACH(SET_union(S->activeMoves, S->worklistMoves), uptr) {
-    AS_instr cur_instr = *uptr;
-    fprintf(stderr, "\t%s\n", cur_instr->u.OPER.assem);
-  }
-  fprintf(stderr, "intersect = \n");
-  SET_FOREACH(SET_intersect(moveListN, SET_union(S->activeMoves, S->worklistMoves)), uptr) {
-    AS_instr cur_instr = *uptr;
-    fprintf(stderr, "\t%s\n", cur_instr->u.OPER.assem);
-  }
-  fprintf(stderr, "\n");
+  // fprintf(stderr, "moveListN = \n");
+  // SET_FOREACH(moveListN, sptr) {
+  //   AS_instr cur_instr = *sptr;
+  //   fprintf(stderr, "\t%s\n", cur_instr->u.OPER.assem);
+  // }
+  // fprintf(stderr, "activeMoves U worklistMoves =\n");
+  // SET_FOREACH(SET_union(S->activeMoves, S->worklistMoves), uptr) {
+  //   AS_instr cur_instr = *uptr;
+  //   fprintf(stderr, "\t%s\n", cur_instr->u.OPER.assem);
+  // }
+  // fprintf(stderr, "intersect = \n");
+  // SET_FOREACH(SET_intersect(moveListN, SET_union(S->activeMoves,
+  // S->worklistMoves)), uptr) {
+  //   AS_instr cur_instr = *uptr;
+  //   fprintf(stderr, "\t%s\n", cur_instr->u.OPER.assem);
+  // }
+  // fprintf(stderr, "\n");
   return SET_intersect(moveListN, SET_union(S->activeMoves, S->worklistMoves));
 }
 
@@ -682,10 +683,27 @@ procedure SelectSpill()
   FreezeMoves(m)
 */
 void SelectSpill(Main_struct S) {
-  G_node m = SET_pop(S->spillWorklist); // FIXME
-  assert(Temp_look(F_tempMap, G_nodeInfo(m)) == NULL);
+  // TODO better heuristic algorithm
+  // G_node choice = NULL;
+  // int maxDegree = 0;
+  // SET_FOREACH(S->spillWorklist, mptr) {
+  //   G_node m = *mptr;
+  //   int degree = *(int *) G_look(S->degree, m);
+  //   if (degree >= maxDegree) {
+  //     maxDegree = degree;
+  //     choice = m;
+  //   }
+  // }
+  // fprintf(stderr, "selectSpill = T%d\n",
+  //         ((Temp_temp) (G_nodeInfo(choice)))->num);
+  // SET_delete(S->spillWorklist, choice);
+  // assert(Temp_look(F_tempMap, G_nodeInfo(choice)) == NULL);
+  // SET_insert(S->simplifyWorklist, choice);
+  // FreezeMoves(choice, S);
+  G_node m = SET_pop(S->spillWorklist);
   SET_insert(S->simplifyWorklist, m);
   FreezeMoves(m, S);
+
 }
 
 /*
@@ -752,14 +770,70 @@ procedure RewriteProgram()
   coalescedNodes ← {}
 */
 void RewriteProgram(Main_struct S) {
-  Set newTemps = SET_empty(SET_default_cmp);
-  SET_FOREACH(S->spilledNodes, vptr) { G_node v = *vptr; }
-  assert(0); // TODO
+  debug("spilledNodes: %d\n", SET_size(S->spilledNodes));
+  Set newTemps = SET_empty(G_node_cmp);
+  char buf[80];
+  SET_FOREACH(S->spilledNodes, vptr) {
+    G_node v = *vptr;
+    F_access v_access = F_allocLocal(S->frame, 1);
+    T_exp v_exp = F_Exp(v_access, T_Temp(F_FP()));
+    Temp_temp v_i = Temp_newtemp();
+    G_node v_i_node = G_Node(S->interference_graph, v_i);
+    SET_insert(newTemps, v_i_node);
+    assert(v_exp->kind == T_MEM && v_exp->u.MEM->kind == T_BINOP);
+    assert(v_exp->u.MEM->u.BINOP.right->kind == T_CONST);
+    int offset = v_exp->u.MEM->u.BINOP.right->u.CONST;
+    debug("spilledNode T%d stored as T%d at %d(fp)\n", T(v)->num, v_i->num,
+          offset);
+    for (G_nodeList instrs = G_nodes(S->flowgraph); instrs;
+         instrs = instrs->tail) {
+      AS_instr instr = G_nodeInfo(instrs->head);
+      if (SET_contains(FG_def(instrs->head), T(v))) {
+        AS_instrList l = S->iList;
+        while (l) {
+          if (l->head == instr)
+            break;
+          l = l->tail;
+        }
+        assert(l);
+        AS_instrList next = l->tail;
+        snprintf(buf, 80, "sw `s0, %d(`d0) # store spilled reg T%d to stack",
+                 offset, T(v)->num);
+        l->tail = AS_InstrList(
+            AS_Move(STRDUP(buf), L(F_FP(), NULL), L(T(v), NULL)), next);
+        for (Temp_tempList cur = l->head->u.OPER.dst; cur; cur = cur->tail) {
+          if (cur->head == T(v)) {
+            cur->head = v_i;
+          }
+        }
+      }
+      if (SET_contains(FG_use(instrs->head), T(v))) {
+        AS_instrList l = S->iList;
+        AS_instrList prev = NULL;
+        while (l) {
+          if (l->head == instr)
+            break;
+          prev = l;
+          l = l->tail;
+        }
+        assert(l && prev && prev->tail == l); // l can not be head of iList
+        snprintf(buf, 80, "lw `d0, %d(`s0) # fetch spilled reg T%d from stack to T%d",
+                 offset, T(v)->num, v_i->num);
+        prev->tail = AS_InstrList(
+            AS_Move(STRDUP(buf), L(v_i, NULL), L(F_FP(), NULL)), l);
+        for (Temp_tempList cur = l->head->u.OPER.src; cur; cur = cur->tail) {
+          if (cur->head == T(v)) {
+            cur->head = v_i;
+          }
+        }
+      }
+    }
+  }
 
   S->spilledNodes = SET_empty(SET_default_cmp);
-  S->coloredNodes = SET_empty(SET_default_cmp);
-  S->initial =
+  S->initial = // FIXME will the next call of color_Main get the same initials?
       SET_union(S->coloredNodes, SET_union(S->coalescedNodes, newTemps));
+  S->coloredNodes = SET_empty(SET_default_cmp);
   S->coalescedNodes = SET_empty(SET_default_cmp);
 }
 
@@ -852,19 +926,19 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
     TAB_enter(S->temp2Node, t, node);
   }
 
-  fprintf(stderr, "\ninitial = ");
+  // fprintf(stderr, "\ninitial = ");
   SET_FOREACH(SET_difference(temps, F_regTemp), tptr) {
     Temp_temp t = *tptr;
     SET_insert(S->initial, TAB_look(S->temp2Node, t));
-    fprintf(stderr, "%d, ", t->num);
+    // fprintf(stderr, "%d, ", t->num);
   }
-  fprintf(stderr, "\n");
+  // fprintf(stderr, "\n");
 
-  fprintf(stderr, "\nF_regTemp = ");
-  SET_FOREACH(F_regTemp, tptr) {
-    fprintf(stderr, "%d, ", (*(Temp_temp *) tptr)->num);
-  }
-  fprintf(stderr, "\n");
+  // fprintf(stderr, "\nF_regTemp = ");
+  // SET_FOREACH(F_regTemp, tptr) {
+  // fprintf(stderr, "%d, ", (*(Temp_temp *) tptr)->num);
+  // }
+  // fprintf(stderr, "\n");
 
   build(S);
   checkInvariant(S);
@@ -892,7 +966,7 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
   checkInvariant(S);
   if (!SET_isEmpty(S->spilledNodes)) {
     RewriteProgram(S);
-    return Color_Main(stmt_instr_set, iList, frame); // TODO
+    return Color_Main(stmt_instr_set, iList, frame);
   }
   visual_color(temps, S);
   return S->color;

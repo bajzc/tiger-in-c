@@ -12,7 +12,7 @@
 #define S(format, ...) snprintf(buf, 80, format, ##__VA_ARGS__)
 
 #define ARG_IN_REG 7 // a1-a7
-const int F_wordSize = 8; // target machine is RV32
+const int F_wordSize = 4; // target machine is RV32
 const int F_numGPR = 29; // General Purpose Registers: 32 - (zero, gp, tp)
 Temp_map F_tempMap;
 // used for generate graphviz graph
@@ -239,6 +239,7 @@ static void initRegMap() {
   INIT_REG(SP, sp, x11, gold4);
   fprintf(stderr, "SP: %d\n\n", SP->num);
   INIT_REG(FP, fp, x11, goldenrod);
+  fprintf(stderr, "FP: %d\n\n", FP->num);
   ZERO = Temp_newtemp();
 
   // Caller saved
@@ -298,51 +299,93 @@ static F_accessList reverseList(F_accessList list) {
 
 T_stm F_procEntryExit1(F_frame frame, T_stm stm) { return stm; }
 
+static Temp_tempList saveCalleeRegs(AS_instrList funEntry, Temp_tempList regs) {
+  if (regs == NULL)
+    return NULL;
+  char buf[80];
+  Temp_temp t = Temp_newtemp();
+  S("mv `d0, `s0 # save callee reg to T%d", t->num);
+  AS_splice(funEntry,
+            AS_InstrList(AS_Move(STRDUP(buf), L(t, NULL), L(regs->head, NULL)),
+                         NULL));
+  return L(t, saveCalleeRegs(funEntry, regs->tail));
+}
+
+static void restoreCalleeRegs(AS_instrList funExit, Temp_tempList regs,
+                              Temp_tempList temps) {
+  if (regs == NULL)
+    return;
+  char buf[80];
+  // restore in reverse order, so that the liveness for each will be equal.
+  restoreCalleeRegs(funExit, regs->tail, temps->tail);
+  S("mv `d0, `s0 # restore callee reg from T%d", temps->head->num);
+  AS_splice(funExit, AS_InstrList(AS_Move(STRDUP(buf), L(regs->head, NULL),
+                                          L(temps->head, NULL)),
+                                  NULL));
+}
+
 static Temp_tempList returnSink = NULL;
 AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame) {
-  if (returnSink == NULL) {
-    initRegMap();
-    returnSink = L(RA, L(SP, calleeSaves));
-  }
-  // FIXME
-  // save all calleeSaves
-  int frameSize = frame->stack_size * F_wordSize;
-  Temp_temp copyFP = Temp_newtemp();
-  char buf[80];
-  AS_instrList insert_entry = NULL;
-  assert(body->head->kind == I_LABEL);
-  S("addi sp, `s0, -%d # alloc stack space", frameSize);
-  insert_entry = AS_InstrList(
-      AS_Oper("nop # save callee regs here", NULL, returnSink, NULL),
-      AS_InstrList(AS_Move("mv `d0, `s0 # save frame pointer", L(copyFP, NULL),
-                           L(FP, NULL)),
-                   AS_InstrList(AS_Oper("mv fp, sp # update frame pointer",
-                                        NULL, L(SP, NULL), NULL),
-                                AS_InstrList(AS_Oper(STRDUP(buf), NULL,
-                                                     L(SP, NULL), NULL),
-                                             body))));
-  Temp_tempList cur = argRegs;
-  for (F_accessList l = reverseList(frame->formals_list); l; l = l->tail) {
-    F_access a = l->head;
-    if (a->kind == inReg) {
-      S("mv `d0, `s0 # T%d <- %s", a->u.reg->num,
-        Temp_look(F_tempMap, cur->head));
-      insert_entry = AS_InstrList(
-          AS_Oper(STRDUP(buf), L(a->u.reg, NULL), L(cur->head, NULL), NULL),
-          insert_entry);
-      cur = cur->tail;
-    }// TODO arguments spills in reg need to be moved to top of stack
-  }
+  if (!returnSink)
+    returnSink = L(RA, L(SP, L(FP, calleeSaves)));
   return AS_splice(
-      insert_entry,
-      AS_InstrList(
-          AS_Oper("mv sp, `s0 # restore stack pointer", NULL, L(FP, NULL),
-                  NULL),
-          AS_InstrList(
-              AS_Move("mv `d0, `s0 # restore frame pointer", L(FP, NULL),
-                      L(copyFP, NULL)),
-              AS_InstrList(AS_Oper("ret", NULL, returnSink, NULL), NULL))));
+      AS_InstrList(AS_Oper("nop # ", returnSink, NULL, NULL), body),
+      AS_InstrList(AS_Oper("# return", NULL, returnSink, NULL), NULL));
 }
+// AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame) {
+//   if (returnSink == NULL) {
+//     initRegMap();
+//     returnSink = L(RA, L(SP, calleeSaves));
+//   }
+//   int frameSize = frame->stack_size * F_wordSize;
+//   Temp_temp copyFP = Temp_newtemp();
+//   char buf[80];
+//   assert(body->head->kind == I_LABEL);
+//   AS_instrList insert_entry = AS_InstrList(
+//       AS_Oper("nop # save callee regs here", NULL, returnSink, NULL), NULL);
+//
+//   Temp_tempList temps = saveCalleeRegs(insert_entry, calleeSaves);
+//   // FIXME do we need to save the callee regs?
+//   // ie, have they been saved implicitly through coloring?
+//
+//   S("addi sp, `s0, -%d # alloc stack space", frameSize);
+//   insert_entry = AS_InstrList(
+//       AS_Oper("nop # save callee regs here", NULL, returnSink, NULL),
+//       AS_InstrList(AS_Move("mv `d0, `s0 # save frame pointer", L(copyFP,
+//       NULL),
+//                            L(FP, NULL)),
+//                    AS_InstrList(AS_Oper("mv fp, sp # update frame pointer",
+//                                         NULL, L(SP, NULL), NULL),
+//                                 AS_InstrList(AS_Oper(STRDUP(buf), NULL,
+//                                                      L(SP, NULL), NULL),
+//                                              NULL))));
+//
+//   Temp_tempList cur = argRegs;
+//   for (F_accessList l = reverseList(frame->formals_list); l; l = l->tail) {
+//     F_access a = l->head;
+//     if (a->kind == inReg) {
+//       S("mv `d0, `s0 # T%d <- %s", a->u.reg->num,
+//         Temp_look(F_tempMap, cur->head));
+//       insert_entry = AS_InstrList(
+//           AS_Oper(STRDUP(buf), L(a->u.reg, NULL), L(cur->head, NULL), NULL),
+//           insert_entry);
+//       cur = cur->tail;
+//     } // TODO arguments spills in reg need to be moved to top of stack
+//   }
+//
+//   AS_splice(insert_entry, body);
+//   restoreCalleeRegs(insert_entry, calleeSaves, temps);
+//
+//   return AS_splice(
+//       insert_entry,
+//       AS_InstrList(
+//           AS_Oper("mv sp, `s0 # restore stack pointer", NULL, L(FP, NULL),
+//                   NULL),
+//           AS_InstrList(
+//               AS_Move("mv `d0, `s0 # restore frame pointer", L(FP, NULL),
+//                       L(copyFP, NULL)),
+//               AS_InstrList(AS_Oper("ret", NULL, returnSink, NULL), NULL))));
+// }
 
 AS_proc F_procEntryExit3(F_frame frame, AS_instrList body) {
   char buf[80];
@@ -368,13 +411,12 @@ Temp_temp F_SP(void) {
   return SP;
 }
 
-Temp_tempList F_calldefs(void) { return L(A0, L(RA, callerSaves)); }
-
 int F_isInReg(F_access a) { return a->kind == inReg; }
 
 Temp_tempList F_args(void) { return argRegs; }
 
 Temp_tempList F_callerSaves(void) {
+  initRegMap();
   return L(
       T0,
       L(T1,
@@ -385,5 +427,7 @@ Temp_tempList F_callerSaves(void) {
                 L(T6,
                   L(A0,
                     L(A1,
-                      L(A2, L(A3, L(A4, L(A5, L(A6, L(A7, NULL)))))))))))))));
+                      L(A2,
+                        L(A3,
+                          L(A4, L(A5, L(A6, L(A7, L(RA, NULL))))))))))))))));
 }

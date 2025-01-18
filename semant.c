@@ -219,6 +219,12 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
                      "only integer, record, string and array can be compared "
                      "(%s <> %s)",
                      str_ty[l], str_ty[r]);
+          // FIXME evaluation of conditional exp not in if/while/for cause
+          // multiple edge toward done label
+          // eg: row[N-1] = N
+          // both branch will points to next instruction, causes a
+          // non-block-start
+          // instruction has multiple predecessors
           return expTy(Tr_opExp(left.exp, oper, right.exp), Ty_Int());
         default: assert(0);
       } // end switch(oper)
