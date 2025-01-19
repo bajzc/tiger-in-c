@@ -47,6 +47,22 @@ static Temp_tempList munchArgs(int n, T_expList args, Tr_accessList formals,
   return L(r, right);
 }
 
+static void popStack(Tr_accessList formals) {
+  static int counter = 0;
+  char buf[80];
+  if (formals == NULL) {
+    if (counter == 0) return;
+    S("addi `s0, `d0, %d # pop stack", counter * F_wordSize);
+    emit(AS_Oper(STRDUP(buf), L(F_SP(), NULL), L(F_SP(), NULL), NULL));
+    counter = 0;
+    return;
+  }
+  if (!F_isInReg(formals->head->access)) {
+    counter++;
+  }
+  popStack(formals->tail);
+}
+
 static void munchStm(T_stm s) {
   static char buf[80];
   switch (s->kind) {
@@ -91,6 +107,7 @@ static void munchStm(T_stm s) {
           emit(AS_Oper(STRDUP(buf), F_callerSaves(), l, NULL));
           emit(AS_Move("mv `d0, `s0 # copy return value", L(dst->u.TEMP, NULL),
                        L(F_RV(), NULL)));
+          popStack(Tr_formals_with_static_link(fun->u.fun.level));
         } else if (src->kind == T_CONST) {
           /* MOVE(TEMP(i),CONST(c)) */
           S("li `d0, %d # MOVE(TEMP(i),CONST(c)) T%d <- %d", src->u.CONST,
@@ -112,8 +129,8 @@ static void munchStm(T_stm s) {
     case T_JUMP: {
       if (s->u.JUMP.exp->kind == T_NAME) {
         /* JUMP(LABEL(t)) */
-        emit(AS_Oper("j `j0 # JUMP(LABEL(t))", NULL, NULL,
-                     AS_Targets(s->u.JUMP.jumps)));
+        S("j `j0 # JUMP(LABEL(t)) %s", Temp_labelstring(s->u.JUMP.jumps->head));
+        emit(AS_Oper(STRDUP(buf), NULL, NULL, AS_Targets(s->u.JUMP.jumps)));
       } else {
         /* JUMP(e) */
         emit(AS_Oper("j `s0 # JUMP(e)", NULL, L(munchExp(s->u.JUMP.exp), NULL),
@@ -298,6 +315,7 @@ static Temp_temp munchExp(T_exp e) {
                     Tr_formals_with_static_link(fun->u.fun.level), F_args());
       S("call %s", Temp_labelstring(e->u.CALL.fun->u.NAME));
       emit(AS_Oper(STRDUP(buf), F_callerSaves(), l, NULL));
+      popStack(Tr_formals_with_static_link(fun->u.fun.level));
       return r;
     }
     default: assert(0);

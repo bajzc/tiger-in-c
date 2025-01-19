@@ -90,7 +90,13 @@ S_table E_base_venv(void) {
                    Ty_Void(), "exit"));
   S_enter(venv, S_Symbol("initArray"),
           E_libFun(Tr_libFunLevel(T("initArray"), U(0, U(0, NULL))),
-                                  L(Ty_Int(), L(Ty_Int(), NULL)), Ty_Int(),
-                                  "initArray"));
+                   L(Ty_Int(), L(Ty_Int(), NULL)), Ty_Int(), "initArray"));
+  S_enter(venv, S_Symbol("initRecord"),
+          E_libFun(Tr_libFunLevel(T("initRecord"), U(0, NULL)),
+                   L(Ty_Int(), NULL), Ty_Int(), "initRecord"));
+  S_enter(venv, S_Symbol("stringEqual"),
+          E_libFun(Tr_libFunLevel(T("stringEqual"), U(0, U(0, NULL))),
+                   L(Ty_String(), L(Ty_String(), NULL)), Ty_Int(), "stringEqual"));
+
   return venv;
 }
