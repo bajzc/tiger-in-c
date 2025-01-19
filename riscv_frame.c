@@ -328,6 +328,7 @@ static void restoreCalleeRegs(AS_instrList funExit, Temp_tempList regs,
 
 static Temp_tempList returnSink = NULL;
 AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame) {
+  initRegMap();
   if (!returnSink)
     returnSink = L(SP, L(FP, L(RA, calleeSaves)));
   Temp_tempList cur = argRegs;
@@ -341,8 +342,8 @@ AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame) {
             AS_InstrList(AS_Move("mv `d0, `s0 # save frame pointer",
                                  L(copyFP, NULL), L(T6, NULL)),
                          NULL));
-  Temp_tempList temps = saveCalleeRegs(insert_entry, L(RA, calleeSaves));
 
+  Temp_tempList temps = saveCalleeRegs(insert_entry, L(RA, calleeSaves));
 
   for (F_accessList l = reverseList(frame->formals_list); l; l = l->tail) {
     F_access a = l->head;

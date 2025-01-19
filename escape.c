@@ -42,7 +42,6 @@ static void traverseDec(S_table env, int depth, A_dec d);
 static void traverseVar(S_table env, int depth, A_var v);
 
 U_boolList genEscapeList(A_fieldList formals) {
-  // FIXME assumed all escape
   U_boolList l = NULL, l_head = NULL;
   if (formals) {
     l = U_BoolList(formals->head->escape, NULL);
@@ -134,7 +133,7 @@ static void traverseExp(S_table env, int depth, A_exp a) {
       A_expList e = a->u.call.args;
       while (e) {
         traverseExp(env, depth,
-                    e->head); // TODO do we need to escape?
+                    e->head);
         e = e->tail;
       }
       break;

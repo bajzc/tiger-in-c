@@ -153,8 +153,8 @@ Tr_exp Tr_recordExp(Tr_exp *l, int size) {
 }
 
 Tr_exp Tr_arrayExp(Tr_exp init, Tr_exp size) {
-  return Tr_Ex(F_externalCall("initArray",
-              T_ExpList(unEx(size), T_ExpList(unEx(init), NULL))));
+  return Tr_Ex(F_externalCall(
+      "initArray", T_ExpList(unEx(size), T_ExpList(unEx(init), NULL))));
   // T_exp a = T_Temp(Temp_newtemp());
   // return Tr_Ex(T_Eseq(
   //     T_Move(a, F_externalCall(
@@ -229,6 +229,19 @@ Tr_exp Tr_ifExp(Tr_exp test, Tr_exp then, Tr_exp elsee) {
   if (elsee != NULL) {
     T_exp then_t = unEx(then);
     T_exp elsee_t = unEx(elsee);
+    // return Tr_Ex(T_Eseq(
+    //     cx.stm,
+    //     T_Eseq(T_Label(t),
+    //            T_Eseq(T_Move(T_Temp(r), then_t),
+    //                   T_Eseq(T_Jump(T_Name(merge), Temp_LabelList(merge,
+    //                   NULL)),
+    //                          T_Eseq(T_Label(f),
+    //                                 T_Eseq(T_Move(T_Temp(r), elsee_t),
+    //                                        T_Eseq(T_Jump(T_Name(merge),
+    //                                                      Temp_LabelList(merge,
+    //                                                                     NULL)),
+    //                                               T_Eseq(T_Label(merge),
+    //                                                      T_Temp(r))))))))));
     return Tr_Ex(T_Eseq(
         T_Seq(cx.stm,
               T_Seq(T_Seq(T_Seq(T_Label(t),
@@ -366,13 +379,18 @@ static T_exp unEx(Tr_exp e) {
     case Tr_cx: {
       Temp_temp r = Temp_newtemp();
       Temp_label t = Temp_newlabel(), f = Temp_newlabel();
+      // FIXME need a merge here
       doPatch(e->u.cx.trues, t);
       doPatch(e->u.cx.falses, f);
       return T_Eseq(
           T_Move(T_Temp(r), T_Const(1)),
-          T_Eseq(e->u.cx.stm,
-                 T_Eseq(T_Label(f), T_Eseq(T_Move(T_Temp(r), T_Const(0)),
-                                           T_Eseq(T_Label(t), T_Temp(r))))));
+          T_Eseq(
+              e->u.cx.stm,
+              T_Eseq(T_Label(f),
+                     T_Eseq(T_Move(T_Temp(r), T_Const(0)),
+                            T_Eseq(T_Jump(T_Name(t), Temp_LabelList(t,
+                            NULL)),
+                                   T_Eseq(T_Label(t), T_Temp(r)))))));
     }
     case Tr_nx: return T_Eseq(e->u.nx, T_Const(0));
   }

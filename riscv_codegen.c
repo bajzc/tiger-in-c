@@ -324,23 +324,21 @@ static Temp_temp munchExp(T_exp e) {
 
 /**
  * @brief
- * @param stmt2last_instr  Set<stmt_instr<stmt, AS_instr>>
+ * @param last_instr  Set<AS_instr>
  * @return
  */
-AS_instrList F_codegen(Set stmt2last_instr, F_frame f, T_stmList stmList) {
-  T_stmList sl;
+AS_instrList F_codegen(Set last_instr, F_frame f, T_stmList stmList) {
   AS_instrList list = NULL;
+  AS_instr prev = NULL;
 
-  struct stmt_instr *new = checked_malloc(sizeof(*new));
-  new->last = NULL;
-  for (sl = stmList; sl; sl = sl->tail) {
+  for (T_stmList sl = stmList; sl; sl = sl->tail) {
     munchStm(sl->head);
-    if (new->last && last->head->kind == I_LABEL &&new->last->kind != I_LABEL) {
-      SET_insert(stmt2last_instr, new);
-      new = checked_malloc(sizeof(*new));
-      new->last = NULL;
+  }
+  for (AS_instrList il = iList; il; il = il->tail) {
+    if (prev && (il->head->kind == I_LABEL || prev->kind == I_OPER && prev->u.OPER.jumps != NULL && prev->u.OPER.jumps->labels->tail != NULL)) {
+      SET_insert(last_instr, prev);
     }
-    new->last = last->head;
+    prev = il->head;
   }
   list = iList;
   iList = last = NULL;

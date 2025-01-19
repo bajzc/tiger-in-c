@@ -13,7 +13,7 @@ typedef struct Main_struct_ {
   G_table liveOut, liveIn; // G_table<G_Node<AS_instr>, Set<Temp_temp>>
   G_table moveList; // G_table<G_Node<Temp_temp>, Set<AS_instr>>
   G_table alias; // G_table<G_Node, G_Node>
-  Set stmt_instr_set; // Set<stmt_instr<stmt, AS_instr>>
+  Set last_instr; // Set<AS_instr>
   G_nodeList block_end_list; // List<G_node<AS_instr>>
   Set simplifyWorklist; // Set<G_Node<Temp_temp>>
   Set freezeWorklist; // Set<G_node<Temp_temp>>
@@ -87,22 +87,33 @@ Adj makeAdj(G_node u, G_node v) {
  */
 void buildupLiveOut(Main_struct S) {
   S->block_end_list = NULL;
-  SET_FOREACH(S->stmt_instr_set, instrptr) {
-    struct stmt_instr *instr = *instrptr;
-    AS_instr last = instr->last;
+  SET_FOREACH(S->last_instr, instrptr) {
+    G_nodeList temp = S->block_end_list;
+    AS_instr last = *instrptr;
     for (G_nodeList node = G_nodes(S->flowgraph); node; node = node->tail) {
       if (G_nodeInfo(node->head) == last) {
         S->block_end_list = G_NodeList(node->head, S->block_end_list);
         break;
       }
     }
+    assert(temp != S->block_end_list);
   }
 }
 
 int isBlockStart(G_node node, Main_struct S) {
   G_nodeList preds = G_pred(node);
-  return preds == NULL || preds->head == NULL ||
-         G_inNodeList(preds->head, S->block_end_list);
+  return preds == NULL || preds->head == NULL || G_inNodeList(preds->head, S->block_end_list);
+  // bool flag = FALSE;
+  // for (; preds; preds = preds->tail) {
+  //   if (G_inNodeList(node, S->block_end_list))
+  //     flag = TRUE;
+  //   // if (flag) {
+  //   //   // must be T_CJUMP
+  //   //   AS_instr instr = G_nodeInfo(preds->head);
+  //   //   assert(instr->kind == I_OPER &&
+  //   //          instr->u.OPER.jumps->labels->tail != NULL);
+  //   // }
+  // }
 }
 
 /*
@@ -209,8 +220,7 @@ void build(Main_struct S) {
   while (cur_block_end_list) { // forall b ∈ blocks in program
     G_node cur_node = cur_block_end_list->head; // G_node<AS_instr>
     Set live = G_look(S->liveOut, cur_node); // let live = liveOut(b)
-    while (cur_node &&
-           !isBlockStart(cur_node, S)) { // forall I ∈ instructions(b)
+    while (cur_node) { // forall I ∈ instructions(b)
       AS_instr cur_instr = G_nodeInfo(cur_node);
 #if DEBUG
       debug2("liveout = ");
@@ -246,6 +256,8 @@ void build(Main_struct S) {
       }
       live = // live ← use(I) ∪ (live \ def(I))
           SET_union(FG_use(cur_node), SET_difference(live, FG_def(cur_node)));
+      if (isBlockStart(cur_node, S))
+        break;
       assert(G_pred(cur_node)->tail == NULL);
       // Traverse backwards
       cur_node = G_pred(cur_node)->head;
@@ -835,11 +847,11 @@ void RewriteProgram(Main_struct S) {
     }
   }
 
-  S->spilledNodes = SET_empty(SET_default_cmp);
-  S->initial = // FIXME will the next call of color_Main get the same initials?
-      SET_union(S->coloredNodes, SET_union(S->coalescedNodes, newTemps));
-  S->coloredNodes = SET_empty(SET_default_cmp);
-  S->coalescedNodes = SET_empty(SET_default_cmp);
+  // S->spilledNodes = SET_empty(SET_default_cmp);
+  // S->initial =
+  //     SET_union(S->coloredNodes, SET_union(S->coalescedNodes, newTemps));
+  // S->coloredNodes = SET_empty(SET_default_cmp);
+  // S->coalescedNodes = SET_empty(SET_default_cmp);
 }
 
 void print_edges(Main_struct S) {
@@ -883,7 +895,7 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
   Main_struct S = checked_malloc(sizeof(*S));
   S->iList = iList;
   S->frame = frame;
-  S->stmt_instr_set = stmt_instr_set;
+  S->last_instr = stmt_instr_set;
   S->K = F_numGPR;
   S->flowgraph = FG_AssemFlowGraph(iList);
   S->live_graph = Live_Liveness(S->flowgraph);
@@ -953,7 +965,6 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
   printFlowgraph(fp, S->flowgraph, Temp_layerMap(F_tempMap, Temp_name()),
                  Temp_labelstring(F_name(frame)));
   fclose(fp);
-
 
   build(S);
   checkInvariant(S);

@@ -52,23 +52,23 @@ static void doProc(FILE *out, char *outfile, F_frame frame, T_stm body) {
 
   stmList = C_linearize(body);
   stmList = C_traceSchedule(C_basicBlocks(stmList));
-  Set stmt_instr_set = SET_empty(SET_default_cmp);
+  Set last_instr = SET_empty(SET_default_cmp);
   /* printStmList(stdout, stmList);*/
-  iList = F_codegen(stmt_instr_set, frame, stmList); /* 9 */
+  iList = F_codegen(last_instr, frame, stmList); /* 9 */
   iList = F_procEntryExit2(iList, frame);
   //
   AS_instrList p;
   for (p = iList; p->tail != NULL; p = p->tail)
     ;
-  struct stmt_instr *i = checked_malloc(sizeof(*i));
-  i->last = p->head;
-  SET_insert(stmt_instr_set, i);
+  SET_insert(last_instr, p->head);
 
   // G_graph graph = FG_AssemFlowGraph(iList);
   // printFlowgraph(stderr, graph, Temp_layerMap(F_tempMap, Temp_name()),
   //                Temp_labelstring(F_name(frame)));
 
-  Temp_map color_map = Color_Main(stmt_instr_set, iList, frame);
+  // AS_printInstrList(out, iList, Temp_layerMap(F_tempMap, Temp_name()));
+
+  Temp_map color_map = Color_Main(last_instr, iList, frame);
   proc = F_procEntryExit3(frame, iList);
 
 
