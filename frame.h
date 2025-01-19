@@ -73,7 +73,7 @@ Temp_tempList F_callerSaves(void);
 T_exp F_externalCall(string s, T_expList args);
 
 T_stm F_procEntryExit1(F_frame frame, T_stm stm);
-AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame);
+AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame, Set last_instr);
 AS_proc F_procEntryExit3(F_frame frame, AS_instrList body);
 
 #endif

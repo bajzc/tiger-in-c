@@ -51,7 +51,8 @@ static void popStack(Tr_accessList formals) {
   static int counter = 0;
   char buf[80];
   if (formals == NULL) {
-    if (counter == 0) return;
+    if (counter == 0)
+      return;
     S("addi `s0, `d0, %d # pop stack", counter * F_wordSize);
     emit(AS_Oper(STRDUP(buf), L(F_SP(), NULL), L(F_SP(), NULL), NULL));
     counter = 0;
@@ -335,7 +336,10 @@ AS_instrList F_codegen(Set last_instr, F_frame f, T_stmList stmList) {
     munchStm(sl->head);
   }
   for (AS_instrList il = iList; il; il = il->tail) {
-    if (prev && (il->head->kind == I_LABEL || prev->kind == I_OPER && prev->u.OPER.jumps != NULL && prev->u.OPER.jumps->labels->tail != NULL)) {
+    if (prev && prev->kind != I_LABEL &&
+        ((il->head->kind == I_LABEL) ||
+         prev->kind == I_OPER && prev->u.OPER.jumps != NULL &&
+             prev->u.OPER.jumps->labels->tail != NULL)) {
       SET_insert(last_instr, prev);
     }
     prev = il->head;

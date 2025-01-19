@@ -222,7 +222,7 @@ void build(Main_struct S) {
     Set live = G_look(S->liveOut, cur_node); // let live = liveOut(b)
     while (cur_node) { // forall I ∈ instructions(b)
       AS_instr cur_instr = G_nodeInfo(cur_node);
-#if DEBUG
+#if DEBUG2
       debug2("liveout = ");
       SET_FOREACH(live, sptr) {
         Temp_temp s = (*sptr);

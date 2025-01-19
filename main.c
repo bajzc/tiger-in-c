@@ -55,9 +55,10 @@ static void doProc(FILE *out, char *outfile, F_frame frame, T_stm body) {
   Set last_instr = SET_empty(SET_default_cmp);
   /* printStmList(stdout, stmList);*/
   iList = F_codegen(last_instr, frame, stmList); /* 9 */
-  iList = F_procEntryExit2(iList, frame);
-  //
-  AS_instrList p;
+  iList = F_procEntryExit2(iList, frame, last_instr);
+
+  // add the last instruction appended in F_procEntryExit2 to last_instr
+   AS_instrList p;
   for (p = iList; p->tail != NULL; p = p->tail)
     ;
   SET_insert(last_instr, p->head);
@@ -72,7 +73,7 @@ static void doProc(FILE *out, char *outfile, F_frame frame, T_stm body) {
   proc = F_procEntryExit3(frame, iList);
 
 
-  fprintf(out, "%s:\n", Temp_labelstring(F_name(frame)));
+  fprintf(out, ".text\n%s:\n", Temp_labelstring(F_name(frame)));
   AS_printInstrList(out, proc->body, color_map);
   // fprintf(out, "END %s\n\n", Temp_labelstring(F_name(frame)));
   //
