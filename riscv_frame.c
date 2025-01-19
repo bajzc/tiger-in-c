@@ -237,9 +237,9 @@ static void initRegMap() {
   // INIT_REG(ZERO, zero, x11, gold);
   INIT_REG(RA, ra, x11, gold3);
   INIT_REG(SP, sp, x11, gold4);
-  fprintf(stderr, "SP: %d\n\n", SP->num);
+  debug("SP: %d\n\n", SP->num);
   INIT_REG(FP, fp, x11, goldenrod);
-  fprintf(stderr, "FP: %d\n\n", FP->num);
+  debug("FP: %d\n\n", FP->num);
   ZERO = Temp_newtemp();
 
   // Caller saved

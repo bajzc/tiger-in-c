@@ -706,7 +706,7 @@ void SelectSpill(Main_struct S) {
       choice = m;
     }
   }
-  fprintf(stderr, "selectSpill = T%d\n",
+  debug("selectSpill = T%d\n",
           ((Temp_temp) (G_nodeInfo(choice)))->num);
   SET_delete(S->spillWorklist, choice);
   assert(Temp_look(F_tempMap, G_nodeInfo(choice)) == NULL);
@@ -943,19 +943,19 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
     TAB_enter(S->temp2Node, t, node);
   }
 
-  fprintf(stderr, "\ninitial = ");
+  // fprintf(stderr, "\ninitial = ");
   SET_FOREACH(SET_difference(temps, F_regTemp), tptr) {
     Temp_temp t = *tptr;
     SET_insert(S->initial, TAB_look(S->temp2Node, t));
-    fprintf(stderr, "%d, ", t->num);
+    // fprintf(stderr, "%d, ", t->num);
   }
-  fprintf(stderr, "\n");
+  // fprintf(stderr, "\n");
 
-  fprintf(stderr, "\nF_regTemp = ");
-  SET_FOREACH(F_regTemp, tptr) {
-    fprintf(stderr, "%d, ", (*(Temp_temp *) tptr)->num);
-  }
-  fprintf(stderr, "\n");
+  // fprintf(stderr, "\nF_regTemp = ");
+  // SET_FOREACH(F_regTemp, tptr) {
+    // fprintf(stderr, "%d, ", (*(Temp_temp *) tptr)->num);
+  // }
+  // fprintf(stderr, "\n");
 
   static int graph_count = 0;
   char graph_name[80];
