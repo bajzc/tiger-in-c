@@ -1,7 +1,5 @@
 #ifndef UTIL_H
 #define UTIL_H
-#include <assert.h>
-#include <stdio.h>
 
 #define debug(fmt, ...)                                                        \
   do {                                                                         \
@@ -30,15 +28,22 @@
     _a < _b ? _a : _b;                                                         \
   })
 
-#ifndef __STDC__
+#ifdef XV6
 // port to XV6
-#include "user.h"
+#include "kernel/types.h"
+#include "user/user.h"
 #define STRCPY strcpy
 #define STRLEN strlen
 #define STRCMP strcmp
 #define MEMCPY memcpy
 #define ATOI atoi
-
+extern int errno;
+#define errno errno
+typedef uint64 size_t;
+#define stdout 1
+#define stderr 2
+#define EOF -1
+#define NULL (void *) 0
 #define STRDUP(s)                                                              \
   ({                                                                           \
     const char *_src = (s);                                                    \
@@ -48,16 +53,29 @@
       memcpy(_dest, _src, _len);                                               \
     _dest;                                                                     \
   })
+
+#define assert(e) (e)
+#define OUT_TYPE int
+#define FOPEN_WRITE(path) open(path,O_WRONLY|O_CREATE) 
+#define FCLOSE(fd) close(fd)
 #else
+#include <assert.h>
+#include <errno.h>
 #include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #define STRCPY strcpy
 #define STRDUP strdup
 #define STRLEN strlen
 #define STRCMP strcmp
 #define MEMCPY memcpy
 #define ATOI atoi
+#define OUT_TYPE FILE*
+#define FOPEN_WRITE(path) fopen(path,"w")
+#define FCLOSE(fd) fclose(fd)
 #endif
 
 typedef char *string;

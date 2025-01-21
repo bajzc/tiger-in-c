@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include "symbol.h"
 #include "temp.h"
 #include "tree.h"

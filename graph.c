@@ -2,9 +2,6 @@
  * graph.c - Functions to manipulate and create control flow and
  *           interference graphs.
  */
-
-#include <stdio.h>
-
 #include "absyn.h"
 #include "assem.h"
 #include "errormsg.h"
@@ -109,7 +106,7 @@ void G_rmEdge(G_node from, G_node to) {
 /**
  * Print a human-readable dump for debugging.
  */
-void G_show(FILE *out, G_nodeList p, void showInfo(void *)) {
+void G_show(OUT_TYPE out, G_nodeList p, void showInfo(void *)) {
   for (; p != NULL; p = p->tail) {
     G_node n = p->head;
     G_nodeList q;

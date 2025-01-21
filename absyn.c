@@ -3,9 +3,9 @@
  *           abstract syntax rule.
  */
 
+#include "util.h"
 #include "absyn.h" /* abstract syntax data structures */
 #include "symbol.h" /* symbol table data structures */
-#include "util.h"
 
 A_var A_SimpleVar(A_pos pos, S_symbol sym) {
   A_var p = checked_malloc(sizeof(*p));

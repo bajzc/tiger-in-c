@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include "codegen.h"
 #include "env.h"
 #include "frame.h"

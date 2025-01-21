@@ -3,10 +3,8 @@
  *             the Jouette assembly language using Maximal Munch.
  */
 
-#include <stdio.h>
-
-#include "absyn.h"
 #include "assem.h"
+#include "absyn.h"
 #include "symbol.h"
 #include "temp.h"
 #include "util.h"
@@ -148,7 +146,7 @@ static void format_graph(char *result, string assem, Temp_tempList dst,
   }
 }
 
-void AS_print_graph(FILE *out, AS_instr i, Temp_map m) {
+void AS_print_graph(OUT_TYPE out, AS_instr i, Temp_map m) {
   char r[200]; /* result */
   switch (i->kind) {
     case I_OPER:
@@ -168,7 +166,7 @@ void AS_print_graph(FILE *out, AS_instr i, Temp_map m) {
   }
 }
 
-void AS_print(FILE *out, AS_instr i, Temp_map m) {
+void AS_print(OUT_TYPE out, AS_instr i, Temp_map m) {
   char r[200]; /* result */
   switch (i->kind) {
     case I_OPER:
@@ -194,7 +192,7 @@ void AS_print(FILE *out, AS_instr i, Temp_map m) {
 }
 
 /* c should be COL_color; temporarily it is not */
-void AS_printInstrList(FILE *out, AS_instrList iList, Temp_map m) {
+void AS_printInstrList(OUT_TYPE out, AS_instrList iList, Temp_map m) {
   for (; iList; iList = iList->tail) {
     AS_print(out, iList->head, m);
   }

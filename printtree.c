@@ -2,17 +2,15 @@
  * printtree.c - functions to print out intermediate representation (IR) trees.
  *
  */
-#include <stdio.h>
-
 #include "printtree.h"
 #include "symbol.h"
 #include "temp.h"
 #include "tree.h"
 
 /* local function prototype */
-static void pr_tree_exp(FILE *out, T_exp exp, int d);
+static void pr_tree_exp(OUT_TYPE out, T_exp exp, int d);
 
-static void indent(FILE *out, int d) {
+static void indent(OUT_TYPE out, int d) {
   int i;
   for (i = 0; i <= d; i++)
     fprintf(out, " ");
@@ -24,7 +22,7 @@ static char bin_oper[][12] = {"PLUS", "MINUS",  "TIMES",  "DIVIDE",  "AND",
 static char rel_oper[][12] = {"EQ", "NE",  "LT",  "GT",  "LE",
                               "GE", "ULT", "ULE", "UGT", "UGE"};
 
-static void pr_stm(FILE *out, T_stm stm, int d) {
+static void pr_stm(OUT_TYPE out, T_stm stm, int d) {
   if (stm == NULL)
     return;
   switch (stm->kind) {
@@ -77,7 +75,7 @@ static void pr_stm(FILE *out, T_stm stm, int d) {
   }
 }
 
-static void pr_tree_exp(FILE *out, T_exp exp, int d) {
+static void pr_tree_exp(OUT_TYPE out, T_exp exp, int d) {
   if (exp == NULL)
     return;
   switch (exp->kind) {
@@ -131,7 +129,7 @@ static void pr_tree_exp(FILE *out, T_exp exp, int d) {
   } /* end of switch */
 }
 
-void printStmList(FILE *out, T_stmList stmList) {
+void printStmList(OUT_TYPE out, T_stmList stmList) {
   for (; stmList; stmList = stmList->tail) {
     pr_stm(out, stmList->head, 0);
     fprintf(out, "\n");

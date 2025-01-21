@@ -4,7 +4,6 @@
  * All types and functions declared in this header file begin with "Ty_"
  * Linked list types end with "..list"
  */
-#include <stdio.h>
 
 #include "symbol.h"
 #include "types.h"
@@ -72,25 +71,23 @@ static char str_ty[][12] = {"ty_record", "ty_nil",  "ty_int", "ty_string",
 /* This will infinite loop on mutually recursive types */
 void Ty_print(Ty_ty t) {
   if (t == NULL)
-    printf("null");
+    fprintf(stderr, "null");
   else {
-    printf("%s", str_ty[t->kind]);
+    fprintf(stderr, "%s", str_ty[t->kind]);
     if (t->kind == Ty_name) {
-      printf(", %s", S_name(t->u.name.sym));
+      fprintf(stderr, ", %s", S_name(t->u.name.sym));
     }
   }
 }
 
 void TyList_print(Ty_tyList list) {
-  fflush(stderr);
   if (list == NULL)
-    printf("null");
+    fprintf(stderr, "null");
   else {
-    printf("TyList( ");
+    fprintf(stderr, "TyList( ");
     Ty_print(list->head);
-    printf(", ");
+    fprintf(stderr, ", ");
     TyList_print(list->tail);
-    printf(")");
+    fprintf(stderr, ")");
   }
-  fflush(stdout);
 }

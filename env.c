@@ -1,7 +1,4 @@
 /* env.c */
-
-#include <stdio.h>
-
 #include "env.h"
 #include "symbol.h"
 #include "table.h"

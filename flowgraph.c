@@ -42,7 +42,7 @@ Set FG_use(G_node n) {
  */
 bool FG_isMove(G_node n) { return ((AS_instr) G_nodeInfo(n))->kind == I_MOVE; }
 
-void printFlowgraph(FILE *out, G_graph graph, Temp_map m, char *name) {
+void printFlowgraph(OUT_TYPE out, G_graph graph, Temp_map m, char *name) {
   G_nodeList nodes = G_nodes(graph);
   fprintf(out, "strict digraph %s{\n", name);
   fprintf(out, "splines=false;\n");

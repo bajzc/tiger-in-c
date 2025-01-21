@@ -3,11 +3,6 @@
  *              error messages about the Tiger program.
  *
  */
-
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "absyn.h"
 #include "errormsg.h"
 #include "util.h"
@@ -16,8 +11,9 @@ bool anyErrors = FALSE;
 
 static string fileName = "";
 
-extern FILE *yyin;
+extern OUT_TYPE yyin;
 
+#ifndef XV6
 /**
  * @brief print error message and quit
  * @param pos position of current token(s), updated by Bison
@@ -43,6 +39,11 @@ _Noreturn void EM_error(A_pos pos, char *message, ...) {
   fprintf(stderr, "\n");
   exit(-1);
 }
+#else
+void EM_error(A_pos pos, char *message, ...) {
+  fprintf(stderr, "%s", message);
+}
+#endif
 
 /**
  * @brief redirect file descriptor of parser

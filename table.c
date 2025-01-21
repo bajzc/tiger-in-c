@@ -2,9 +2,6 @@
  * table.c - Functions to manipulate generic tables.
  * Copyright (c) 1997 Andrew W. Appel.
  */
-
-#include <stdio.h>
-
 #include "table.h"
 #include "util.h"
 

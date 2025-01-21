@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -O2 -Wall -D DEBUG=0 -D DEBUG2=0
+CFLAGS ?= -g -O2 -Wall -D DEBUG=0 -D DEBUG2=0
 #CFLAGS += -fsanitize=address
 #CFLAGS += -fanalyzer
 
@@ -10,6 +10,8 @@ SRC_FILES := $(sort $(SRC_FILES))
 OBJ_FILES = $(patsubst ./%.c, $(BUILD_DIR)/%.o, $(SRC_FILES))
 
 all: create_dir tiger.tab.c lex.yy.c a.out
+
+objs: create_dir tiger.tab.c lex.yy.c $(OBJ_FILES)
 
 create_dir:
 	mkdir -p $(BUILD_DIR)
@@ -25,6 +27,8 @@ tiger.tab.c: tiger.y
 
 lex.yy.c: tiger.lex
 	flex tiger.lex
+	gsed -i "/^#include </d" lex.yy.c
+	gsed -i '1 i\#include "util.h"' lex.yy.c
 
 clean: 
 	rm -fr $(BUILD_DIR) lex.yy.c tiger.tab.c tiger.tab.h a.out *.dot *.s

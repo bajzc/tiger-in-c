@@ -2,6 +2,5 @@
 #ifndef PRINTTREE_H
 #define PRINTTREE_H
 #include "tree.h"
-#include <stdio.h>
-void printStmList(FILE *out, T_stmList stmList);
+void printStmList(OUT_TYPE out, T_stmList stmList);
 #endif

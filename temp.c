@@ -4,9 +4,6 @@
  *          which variables are to go into registers.
  *
  */
-
-#include <stdio.h>
-
 #include "symbol.h"
 #include "table.h"
 #include "temp.h"
@@ -99,12 +96,12 @@ Temp_labelList Temp_LabelList(Temp_label h, Temp_labelList t) {
   return p;
 }
 
-static FILE *outfile;
+static OUT_TYPE outfile;
 void showit(Temp_temp t, string r) {
   fprintf(outfile, "t%d -> %s\n", t->num, r);
 }
 
-void Temp_dumpMap(FILE *out, Temp_map m) {
+void Temp_dumpMap(OUT_TYPE out, Temp_map m) {
   outfile = out;
   TAB_dump(m->tab, (void (*)(void *, void *)) showit);
   if (m->under) {

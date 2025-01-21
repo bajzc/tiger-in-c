@@ -1,6 +1,5 @@
 %{
-#include <string.h>
-#include <stdio.h>
+#define YY_NO_UNISTD_H
 #include "util.h"
 #include "symbol.h"
 #include "absyn.h"

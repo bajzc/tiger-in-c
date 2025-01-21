@@ -1,9 +1,6 @@
 /*
  * main.c
  */
-
-#include <stdio.h>
-
 #include "absyn.h"
 #include "assem.h"
 #include "canon.h"
@@ -27,7 +24,7 @@
 
 extern bool anyErrors;
 
-static void printInterGraph(FILE *out, G_graph graph) {
+static void printInterGraph(OUT_TYPE out, G_graph graph) {
   fprintf(out, "strict graph {\n");
   G_nodeList nodes = G_nodes(graph);
   while (nodes) {
@@ -44,7 +41,7 @@ static void printInterGraph(FILE *out, G_graph graph) {
 }
 
 /* print the assembly language instructions to filename.s */
-static void doProc(FILE *out, char *outfile, F_frame frame, T_stm body) {
+static void doProc(OUT_TYPE out, char *outfile, F_frame frame, T_stm body) {
   AS_proc proc;
   // struct RA_result allocation;
   T_stmList stmList = NULL;
@@ -152,7 +149,7 @@ char *escape(const char *input) {
   return output;
 }
 
-static void doString(FILE *out, Temp_label lab, char *str) {
+static void doString(OUT_TYPE out, Temp_label lab, char *str) {
   fprintf(out, ".data\n");
   fprintf(out, "  %s:\n", Temp_labelstring(lab));
   fprintf(out, "    .word %lu\n", STRLEN(str));
@@ -163,7 +160,7 @@ int main(int argc, string *argv) {
   A_exp absyn_root;
   F_fragList frags;
   char outfile[100];
-  FILE *out = stdout;
+  OUT_TYPE out = stdout;
 
   if (argc == 2) {
     absyn_root = parse(argv[1]);

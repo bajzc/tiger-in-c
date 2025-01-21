@@ -5,6 +5,7 @@
 #include "graph.h"
 #include "liveness.h"
 #include "set.h"
+#include "util.h"
 
 #define L(h, t) Temp_TempList((Temp_temp) h, (Temp_tempList) t)
 #define T(n) ((Temp_temp) G_nodeInfo(n))
@@ -102,7 +103,8 @@ void buildupLiveOut(Main_struct S) {
 
 int isBlockStart(G_node node, Main_struct S) {
   G_nodeList preds = G_pred(node);
-  return preds == NULL || preds->head == NULL || G_inNodeList(preds->head, S->block_end_list);
+  return preds == NULL || preds->head == NULL ||
+         G_inNodeList(preds->head, S->block_end_list);
   // bool flag = FALSE;
   // for (; preds; preds = preds->tail) {
   //   if (G_inNodeList(node, S->block_end_list))
@@ -706,8 +708,7 @@ void SelectSpill(Main_struct S) {
       choice = m;
     }
   }
-  debug("selectSpill = T%d\n",
-          ((Temp_temp) (G_nodeInfo(choice)))->num);
+  debug("selectSpill = T%d\n", ((Temp_temp) (G_nodeInfo(choice)))->num);
   SET_delete(S->spillWorklist, choice);
   assert(Temp_look(F_tempMap, G_nodeInfo(choice)) == NULL);
   SET_insert(S->simplifyWorklist, choice);
@@ -858,7 +859,7 @@ void print_edges(Main_struct S) {
   static int graph_count = 0;
   char out_file[80];
   snprintf(out_file, 80, "%d-edges.dot", graph_count);
-  FILE *fp = fopen(out_file, "w");
+  OUT_TYPE fp = fopen(out_file, "w");
   fprintf(fp, "strict graph{\n");
   SET_FOREACH(S->adjSet, tptr) {
     Adj t = *tptr;
@@ -953,18 +954,12 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
 
   // fprintf(stderr, "\nF_regTemp = ");
   // SET_FOREACH(F_regTemp, tptr) {
-    // fprintf(stderr, "%d, ", (*(Temp_temp *) tptr)->num);
+  // fprintf(stderr, "%d, ", (*(Temp_temp *) tptr)->num);
   // }
   // fprintf(stderr, "\n");
 
   static int graph_count = 0;
   char graph_name[80];
-  snprintf(graph_name, 80, "graph-%d.dot", graph_count++);
-  // assert(graph_count < 3);
-  FILE *fp = fopen(graph_name, "w");
-  printFlowgraph(fp, S->flowgraph, Temp_layerMap(F_tempMap, Temp_name()),
-                 Temp_labelstring(F_name(frame)));
-  fclose(fp);
 
   build(S);
   checkInvariant(S);
@@ -995,14 +990,14 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
     RewriteProgram(S);
     return Color_Main(stmt_instr_set, iList, frame);
   }
-  visual_color(temps, S);
+  // visual_color(temps, S);
   return S->color;
 }
 
 void visual_color(Set temps, Main_struct S) {
   char out_file[80];
   snprintf(out_file, 80, "%s.dot", Temp_labelstring(F_name(S->frame)));
-  FILE *out = fopen(out_file, "w");
+  OUT_TYPE out = fopen(out_file, "w");
   fprintf(out, "strict graph{\n");
   fprintf(out, "\tsplines=false;\n");
   fprintf(out, "\tnode [style=filled, shape=circle];\n");

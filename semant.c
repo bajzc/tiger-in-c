@@ -1,7 +1,4 @@
 /* semant.c */
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "absyn.h"
 #include "canon.h"
 #include "env.h"

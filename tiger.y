@@ -1,5 +1,7 @@
 %{
-#include <stdio.h>
+#define YY_NO_UNISTD_H
+#define YY_NO_STDIO_H
+#define YY_NO_STDLIB_H
 #include "util.h"
 #include "symbol.h"
 #include "absyn.h"

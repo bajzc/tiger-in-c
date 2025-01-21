@@ -36,8 +36,8 @@ AS_instr AS_Oper(string a, Temp_tempList d, Temp_tempList s, AS_targets j);
 AS_instr AS_Label(string a, Temp_label label);
 AS_instr AS_Move(string a, Temp_tempList d, Temp_tempList s);
 
-void AS_print(FILE *out, AS_instr i, Temp_map m);
-void AS_print_graph(FILE *out, AS_instr i, Temp_map m);
+void AS_print(OUT_TYPE out, AS_instr i, Temp_map m);
+void AS_print_graph(OUT_TYPE out, AS_instr i, Temp_map m);
 
 typedef struct AS_instrList_ *AS_instrList;
 struct AS_instrList_ {
@@ -47,7 +47,7 @@ struct AS_instrList_ {
 AS_instrList AS_InstrList(AS_instr head, AS_instrList tail);
 
 AS_instrList AS_splice(AS_instrList a, AS_instrList b);
-void AS_printInstrList(FILE *out, AS_instrList iList, Temp_map m);
+void AS_printInstrList(OUT_TYPE out, AS_instrList iList, Temp_map m);
 
 typedef struct AS_proc_ *AS_proc;
 struct AS_proc_ {

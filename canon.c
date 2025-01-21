@@ -2,8 +2,6 @@
  * canon.c - Functions to convert the IR trees into basic blocks and traces.
  *
  */
-#include <stdio.h>
-
 #include "canon.h"
 #include "symbol.h"
 #include "temp.h"
