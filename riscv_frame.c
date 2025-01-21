@@ -9,7 +9,7 @@
 #include "util.h"
 
 #define L(h, t) Temp_TempList(h, t)
-#define S(format, ...) snprintf(buf, 80, format, ##__VA_ARGS__)
+#define S(format, ...) sprintf(buf, format, ##__VA_ARGS__)
 
 #define ARG_IN_REG 7 // a1-a7
 const int F_wordSize = 4; // target machine is RV32
@@ -122,7 +122,6 @@ F_frame F_newFrame(Temp_label name, U_boolList formals) {
     escape = formals->head;
     F_allocFormals(frame, escape);
     // assert(frame->formals_list->head->kind == inFrame);
-    debug2("%s: installed static links\n", Temp_labelstring(name));
     formals = formals->tail;
   }
 
@@ -376,7 +375,7 @@ AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame,
 
 AS_proc F_procEntryExit3(F_frame frame, AS_instrList body) {
   char buf[80];
-  snprintf(buf, 80, "#PROCEDURE %s\n", S_name(frame->frame_label));
+  sprintf(buf, "#PROCEDURE %s\n", S_name(frame->frame_label));
   int frameSize = frame->stack_size * F_wordSize;
   S("addi sp, sp, -%d", frameSize);
   AS_instrList insert_entry =

@@ -4,8 +4,8 @@
 test*
 vgcore*
 .idea
-/lex.yy.c
+/xv6_lex.yy.c
 a.out
 tiger.tab.c
-tiger.tab.h
+xv6_tiger.tab.h
 *.dot

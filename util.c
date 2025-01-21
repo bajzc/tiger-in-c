@@ -4,6 +4,8 @@
 
 #include "util.h"
 
+int errno;
+
 void *checked_malloc(int len) {
   void *p = malloc(len);
   if (!p) {

@@ -5,7 +5,7 @@
 #include "set.h"
 
 #define L(h, t) Temp_TempList((Temp_temp) h, (Temp_tempList) t)
-#define S(format, ...) snprintf(buf, 80, format, ##__VA_ARGS__)
+#define S(format, ...) sprintf(buf, format, ##__VA_ARGS__)
 
 static AS_instrList iList = NULL, last = NULL;
 

@@ -42,6 +42,7 @@ _Noreturn void EM_error(A_pos pos, char *message, ...) {
 #else
 void EM_error(A_pos pos, char *message, ...) {
   fprintf(stderr, "%s", message);
+  exit(1);
 }
 #endif
 
@@ -52,7 +53,7 @@ void EM_error(A_pos pos, char *message, ...) {
 void EM_reset(string fname) {
   anyErrors = FALSE;
   fileName = fname;
-  yyin = fopen(fname, "r");
+  yyin = FOPEN_READ(fname);
   if (!yyin) {
     EM_error((A_pos) {0}, "cannot open");
     exit(1);

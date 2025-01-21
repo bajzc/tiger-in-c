@@ -671,7 +671,7 @@ F_fragList SEM_transProg(A_exp exp) {
 #if DEBUG2
   debug("call Tr_printFormals on outermost evn(%s)\n",
         Temp_labelstring(Tr_outermost()->name));
-  Tr_printFormals(Tr_formals(Tr_outermost()));
+  Tr_printFormals(Tr_formals_with_static_link(Tr_outermost()));
   printf("\nOriginal:\n");
   printStmList(stderr, T_StmList(unNx(res.exp), NULL));
   printf("\nLinearized:\n");

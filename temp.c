@@ -31,6 +31,7 @@ Temp_temp Temp_newtemp(void) {
   {
     char r[16];
     sprintf(r, "%d", p->num);
+    debug("%s\n", r);
     Temp_enter(Temp_name(), p, String(r));
   }
   return p;

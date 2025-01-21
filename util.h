@@ -30,6 +30,7 @@
 
 #ifdef XV6
 // port to XV6
+#include "kernel/fcntl.h"
 #include "kernel/types.h"
 #include "user/user.h"
 #define STRCPY strcpy
@@ -40,10 +41,11 @@
 extern int errno;
 #define errno errno
 typedef uint64 size_t;
+#define stdin 0
 #define stdout 1
 #define stderr 2
 #define EOF -1
-#define NULL (void *) 0
+#define NULL ((void *) 0)
 #define STRDUP(s)                                                              \
   ({                                                                           \
     const char *_src = (s);                                                    \
@@ -53,10 +55,39 @@ typedef uint64 size_t;
       memcpy(_dest, _src, _len);                                               \
     _dest;                                                                     \
   })
+#define getc(fd)                                                               \
+  ({                                                                           \
+    char c;                                                                    \
+    read(fd, &c, 1);                                                           \
+    c;                                                                         \
+  })
+#define sprintf(buf, fmt, ...)                                                 \
+  ({                                                                           \
+    int fd[2];                                                                 \
+    int len;                                                                   \
+    pipe(fd);                                                                  \
+    fprintf(fd[1], fmt, ##__VA_ARGS__);                                        \
+    len = read(fd[0], buf, 80);                                                \
+    buf[len] = '\0';                                                           \
+    close(fd[0]);                                                              \
+    close(fd[1]);                                                              \
+    buf;                                                                       \
+  })
+#define fread(ptr, size, count, fd) read(fd, ptr, size *count)
+#define ferror(fd) 0
 
-#define assert(e) (e)
+#define assert(e)                                                              \
+  ({                                                                           \
+    if (!(e)) {                                                                \
+      fprintf(stderr, "assert failed at line %d in file %s\n", __LINE__,       \
+              __FILE__);                                                       \
+      exit(1);                                                                 \
+    }                                                                          \
+  })
+
 #define OUT_TYPE int
-#define FOPEN_WRITE(path) open(path,O_WRONLY|O_CREATE) 
+#define FOPEN_WRITE(path) open(path, O_WRONLY | O_CREATE)
+#define FOPEN_READ(path) open(path, O_RDONLY)
 #define FCLOSE(fd) close(fd)
 #else
 #include <assert.h>
@@ -73,8 +104,9 @@ typedef uint64 size_t;
 #define STRCMP strcmp
 #define MEMCPY memcpy
 #define ATOI atoi
-#define OUT_TYPE FILE*
-#define FOPEN_WRITE(path) fopen(path,"w")
+#define OUT_TYPE FILE *
+#define FOPEN_WRITE(path) fopen(path, "w")
+#define FOPEN_READ(path) fopen(path, "r")
 #define FCLOSE(fd) fclose(fd)
 #endif
 

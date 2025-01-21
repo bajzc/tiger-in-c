@@ -180,7 +180,7 @@ int main(int argc, string *argv) {
 
     /* convert the filename */
     sprintf(outfile, "%s.s", argv[1]);
-    out = fopen(outfile, "w");
+    out = FOPEN_WRITE(outfile);
     fprintf(out, ".global\t_start\n");
     /* Chapter 8, 9, 10, 11 & 12 */
     for (; frags; frags = frags->tail) {
@@ -191,7 +191,8 @@ int main(int argc, string *argv) {
         doString(out, frags->head->u.stringg.label, frags->head->u.stringg.str);
     }
 
-    fclose(out);
+    FCLOSE(out);
+    debug("done\n");
     return 0;
   }
   EM_error((A_pos) {0}, "usage: tiger file.tig");

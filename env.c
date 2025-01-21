@@ -94,6 +94,6 @@ S_table E_base_venv(void) {
   S_enter(venv, S_Symbol("stringEqual"),
           E_libFun(Tr_libFunLevel(T("stringEqual"), U(0, U(0, NULL))),
                    L(Ty_String(), L(Ty_String(), NULL)), Ty_Int(), "stringEqual"));
-
+  debug("finished base_venv\n");
   return venv;
 }

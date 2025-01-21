@@ -529,7 +529,6 @@ void Tr_printFormals(Tr_accessList formals) {
     F_printAccess(p->access);
     formals = formals->tail;
   }
-  fflush(stdout);
   debug("^^^^^^^^^^\n");
 }
 

@@ -810,7 +810,7 @@ void RewriteProgram(Main_struct S) {
           l = l->tail;
         }
         assert(l && prev && prev->tail == l); // l can not be head of iList
-        snprintf(buf, 80,
+        sprintf(buf,
                  "lw `d0, %d(`s0) # fetch spilled reg T%d from stack to T%d",
                  offset, T(v)->num, v_i->num);
         prev->tail = AS_InstrList(
@@ -835,7 +835,7 @@ void RewriteProgram(Main_struct S) {
         }
         assert(l);
         AS_instrList next = l->tail;
-        snprintf(buf, 80, "sw `s0, %d(`d0) # store spilled reg T%d to stack",
+        sprintf(buf, "sw `s0, %d(`d0) # store spilled reg T%d to stack",
                  offset, T(v)->num);
         l->tail = AS_InstrList(
             AS_Oper(STRDUP(buf), L(F_FP(), NULL), L(v_i, NULL), NULL), next);
@@ -858,8 +858,8 @@ void RewriteProgram(Main_struct S) {
 void print_edges(Main_struct S) {
   static int graph_count = 0;
   char out_file[80];
-  snprintf(out_file, 80, "%d-edges.dot", graph_count);
-  OUT_TYPE fp = fopen(out_file, "w");
+  sprintf(out_file, "%d-edges.dot", graph_count);
+  OUT_TYPE fp = FOPEN_WRITE(out_file);
   fprintf(fp, "strict graph{\n");
   SET_FOREACH(S->adjSet, tptr) {
     Adj t = *tptr;
@@ -870,7 +870,7 @@ void print_edges(Main_struct S) {
     fprintf(fp, "\tT%d -- T%d\n", u->num, v->num);
   }
   fprintf(fp, "}\n");
-  fclose(fp);
+  FCLOSE(fp);
   debug2("generate %d-edges.dot\n", graph_count);
   graph_count++;
 }
@@ -963,7 +963,7 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
 
   build(S);
   checkInvariant(S);
-  // print_edges(S);
+  print_edges(S);
   MakeWorkList(S);
   checkInvariant(S);
   while (TRUE) {
@@ -976,7 +976,7 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
     else if (!SET_isEmpty(S->spillWorklist))
       SelectSpill(S);
 
-    // print_edges(S);
+    print_edges(S);
     // checkInvariant(S);
 
     if (SET_isEmpty(S->simplifyWorklist) && SET_isEmpty(S->worklistMoves) &&
@@ -991,13 +991,14 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
     return Color_Main(stmt_instr_set, iList, frame);
   }
   // visual_color(temps, S);
+  debug2("finished coloring for %s", Temp_labelstring(F_name(frame)));
   return S->color;
 }
 
 void visual_color(Set temps, Main_struct S) {
   char out_file[80];
-  snprintf(out_file, 80, "%s.dot", Temp_labelstring(F_name(S->frame)));
-  OUT_TYPE out = fopen(out_file, "w");
+  sprintf(out_file, "%s.dot", Temp_labelstring(F_name(S->frame)));
+  OUT_TYPE out = FOPEN_WRITE(out_file);
   fprintf(out, "strict graph{\n");
   fprintf(out, "\tsplines=false;\n");
   fprintf(out, "\tnode [style=filled, shape=circle];\n");
