@@ -976,7 +976,7 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
     else if (!SET_isEmpty(S->spillWorklist))
       SelectSpill(S);
 
-    print_edges(S);
+    // print_edges(S);
     // checkInvariant(S);
 
     if (SET_isEmpty(S->simplifyWorklist) && SET_isEmpty(S->worklistMoves) &&
