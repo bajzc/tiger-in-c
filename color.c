@@ -991,7 +991,7 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
     return Color_Main(stmt_instr_set, iList, frame);
   }
   // visual_color(temps, S);
-  debug2("finished coloring for %s", Temp_labelstring(F_name(frame)));
+  debug2("finished coloring for %s\n", Temp_labelstring(F_name(frame)));
   return S->color;
 }
 

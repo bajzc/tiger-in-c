@@ -668,15 +668,6 @@ F_fragList SEM_transProg(A_exp exp) {
   if (!SEM_funLabel2funEntry)
     SEM_funLabel2funEntry = TAB_empty();
   struct expty res = transExp(E_venv, E_tenv, exp, Tr_outermost(), NULL);
-#if DEBUG2
-  debug("call Tr_printFormals on outermost evn(%s)\n",
-        Temp_labelstring(Tr_outermost()->name));
-  Tr_printFormals(Tr_formals_with_static_link(Tr_outermost()));
-  printf("\nOriginal:\n");
-  printStmList(stderr, T_StmList(unNx(res.exp), NULL));
-  printf("\nLinearized:\n");
-  printStmList(stdout, C_linearize(unNx(res.exp)));
-#endif
   if (res.ty->kind != Ty_void) {
     fprintf(
         stderr,

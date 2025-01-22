@@ -153,14 +153,14 @@ Tr_exp Tr_recordExp(Tr_exp *l, int size) {
 }
 
 Tr_exp Tr_arrayExp(Tr_exp init, Tr_exp size) {
-  return Tr_Ex(F_externalCall(
-      "initArray", T_ExpList(unEx(size), T_ExpList(unEx(init), NULL))));
-  // T_exp a = T_Temp(Temp_newtemp());
-  // return Tr_Ex(T_Eseq(
-  //     T_Move(a, F_externalCall(
-  //                   "initArray",
-  //                   T_ExpList(unEx(size), T_ExpList(unEx(init), NULL)))),
-  //     a));
+  // return Tr_Ex(F_externalCall(
+      // "initArray", T_ExpList(unEx(size), T_ExpList(unEx(init), NULL))));
+  T_exp a = T_Temp(Temp_newtemp());
+  return Tr_Ex(T_Eseq(
+      T_Move(a, F_externalCall(
+                    "initArray",
+                    T_ExpList(unEx(size), T_ExpList(unEx(init), NULL)))),
+      a));
 }
 
 Tr_exp Tr_seqExp(Tr_exp *seqs, int size) {

@@ -49,8 +49,12 @@ static void doProc(OUT_TYPE out, char *outfile, F_frame frame, T_stm body) {
 
   stmList = C_linearize(body);
   stmList = C_traceSchedule(C_basicBlocks(stmList));
+#if DEBUG2
+  fprintf(stderr, "\nLinearized:\n");
+  printStmList(stdout, stmList);
+#endif
   Set last_instr = SET_empty(SET_default_cmp);
-  /* printStmList(stdout, stmList);*/
+
   iList = F_codegen(last_instr, frame, stmList); /* 9 */
   iList = F_procEntryExit2(iList, frame, last_instr);
 
