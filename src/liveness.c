@@ -60,14 +60,11 @@ struct Live_graph Live_Liveness(G_graph flow) {
     fprintf(stderr, "%s\n\tin = ",
             instr->u.LABEL.assem); // the string will always be there
     SET_FOREACH(in, tptr) {
-      Temp_temp t = *tptr;
-      // if (!Temp_look(F_tempMap, t))
         fprintf(stderr, "%d, ", ((Temp_temp) *tptr)->num);
     }
     fprintf(stderr, "\n\tout = ");
     SET_FOREACH(out, tptr) {
       Temp_temp t = *tptr;
-      // if (!Temp_look(F_tempMap, t))
         fprintf(stderr, "%d, ", ((Temp_temp) *tptr)->num);
     }
     fprintf(stderr, "\n");

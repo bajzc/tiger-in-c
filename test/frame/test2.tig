@@ -1,0 +1,10 @@
+let
+  function test_arg(a: int, b: int, c: int, d: int, e: int, f: int, g: int) =
+    let
+      var ret1 := a + b + c + d
+      var ret2 := e + f + g
+    in ret1 + ret2
+    end
+in
+  ()
+end

@@ -2,6 +2,10 @@
 #define UTIL_H
 #include <assert.h>
 #include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
 
 #ifndef DEBUG
 #define DEBUG 0
@@ -37,18 +41,7 @@
     _a < _b ? _a : _b;                                                         \
   })
 
-#include <stdarg.h>
-#include <stdlib.h>
-#include <string.h>
-#define STRCPY strcpy
-#define STRDUP strdup
-#define STRLEN strlen
-#define STRCMP strcmp
-#define MEMCPY memcpy
-#define ATOI atoi
-
 typedef char *string;
-typedef char bool;
 
 #define TRUE 1
 #define FALSE 0

@@ -100,24 +100,24 @@ static void format(char *result, string assem, Temp_tempList dst,
     } else if (*p == '`')
       switch (*(++p)) {
         case 's': {
-          int n = ATOI(++p);
+          int n = atoi(++p);
           string s = Temp_look(m, nthTemp(src, n));
-          STRCPY(result + i, s);
-          i += STRLEN(s);
+          strcpy(result + i, s);
+          i += strlen(s);
         } break;
         case 'd': {
-          int n = ATOI(++p);
+          int n = atoi(++p);
           string s = Temp_look(m, nthTemp(dst, n));
-          STRCPY(result + i, s);
-          i += STRLEN(s);
+          strcpy(result + i, s);
+          i += strlen(s);
         } break;
         case 'j':
           assert(jumps);
           {
-            int n = ATOI(++p);
+            int n = atoi(++p);
             string s = Temp_labelstring(nthLabel(jumps->labels, n));
-            STRCPY(result + i, s);
-            i += STRLEN(s);
+            strcpy(result + i, s);
+            i += strlen(s);
           }
           break;
         case '`':

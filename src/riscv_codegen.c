@@ -54,7 +54,7 @@ static void popStack(Tr_accessList formals) {
     if (counter == 0)
       return;
     S("addi `s0, `d0, %d # pop stack", counter * F_wordSize);
-    emit(AS_Oper(STRDUP(buf), L(F_SP(), NULL), L(F_SP(), NULL), NULL));
+    emit(AS_Oper(strdup(buf), L(F_SP(), NULL), L(F_SP(), NULL), NULL));
     counter = 0;
     return;
   }
@@ -76,7 +76,7 @@ static void munchStm(T_stm s) {
           T_exp e1 = dst->u.MEM->u.BINOP.left, e2 = src;
           S("sw `s1, %d(`s0) # MOVE(MEM(BINOP(PLUS,e1,CONST(i))),e2)",
             dst->u.MEM->u.BINOP.right->u.CONST);
-          emit(AS_Oper(STRDUP(buf), NULL,
+          emit(AS_Oper(strdup(buf), NULL,
                        L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
         } else if (dst->u.MEM->kind == T_BINOP &&
                    dst->u.MEM->u.BINOP.op == T_plus &&
@@ -85,7 +85,7 @@ static void munchStm(T_stm s) {
           T_exp e1 = dst->u.MEM->u.BINOP.right, e2 = src;
           S("sw `s1, %d(`s0) # MOVE(MEM(BINOP(PLUS, CONST(i),e1)),e2)",
             dst->u.MEM->u.BINOP.left->u.CONST);
-          emit(AS_Oper(STRDUP(buf), NULL,
+          emit(AS_Oper(strdup(buf), NULL,
                        L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
         } else {
           /* MOVE(MEM(e1),e2) */
@@ -105,7 +105,7 @@ static void munchStm(T_stm s) {
               0, src->u.CALL.args,
               Tr_formals_with_static_link(fun->u.fun.level), F_args());
           S("call %s", Temp_labelstring(src->u.CALL.fun->u.NAME));
-          emit(AS_Oper(STRDUP(buf), F_callerSaves(), l, NULL));
+          emit(AS_Oper(strdup(buf), F_callerSaves(), l, NULL));
           emit(AS_Move("mv `d0, `s0 # copy return value", L(dst->u.TEMP, NULL),
                        L(F_RV(), NULL)));
           popStack(Tr_formals_with_static_link(fun->u.fun.level));
@@ -113,14 +113,14 @@ static void munchStm(T_stm s) {
           /* MOVE(TEMP(i),CONST(c)) */
           S("li `d0, %d # MOVE(TEMP(i),CONST(c)) T%d <- %d", src->u.CONST,
             dst->u.TEMP->num, src->u.CONST);
-          emit(AS_Oper(STRDUP(buf), L(dst->u.TEMP, NULL), NULL, NULL));
+          emit(AS_Oper(strdup(buf), L(dst->u.TEMP, NULL), NULL, NULL));
         } else {
           /* MOVE(TEMP(i),e2) */
           T_exp e2 = src;
           Temp_temp i = dst->u.TEMP;
           Temp_temp j = munchExp(e2);
           S("mv `d0, `s0 # MOVE(TEMP(i),e2) T%d <- T%d", i->num, j->num);
-          emit(AS_Move(STRDUP(buf), L(i, NULL), L(j, NULL)));
+          emit(AS_Move(strdup(buf), L(i, NULL), L(j, NULL)));
         }
       } else {
         assert(0);
@@ -131,7 +131,7 @@ static void munchStm(T_stm s) {
       if (s->u.JUMP.exp->kind == T_NAME) {
         /* JUMP(LABEL(t)) */
         S("j `j0 # JUMP(LABEL(t)) %s", Temp_labelstring(s->u.JUMP.jumps->head));
-        emit(AS_Oper(STRDUP(buf), NULL, NULL, AS_Targets(s->u.JUMP.jumps)));
+        emit(AS_Oper(strdup(buf), NULL, NULL, AS_Targets(s->u.JUMP.jumps)));
       } else {
         /* JUMP(e) */
         emit(AS_Oper("j `s0 # JUMP(e)", NULL, L(munchExp(s->u.JUMP.exp), NULL),
@@ -154,9 +154,9 @@ static void munchStm(T_stm s) {
       Temp_temp r1 = Temp_newtemp();
       Temp_temp r2 = Temp_newtemp();
       S("mv `d0, `s0 # safe copy of T%d", e1->num);
-      emit(AS_Move(STRDUP(buf), L(r1, NULL), L(e1, NULL)));
+      emit(AS_Move(strdup(buf), L(r1, NULL), L(e1, NULL)));
       S("mv `d0, `s0 # safe copy of T%d", e2->num);
-      emit(AS_Move(STRDUP(buf), L(r2, NULL), L(e2, NULL)));
+      emit(AS_Move(strdup(buf), L(r2, NULL), L(e2, NULL)));
 
       char *op_code;
       switch (s->u.CJUMP.op) {
@@ -169,19 +169,19 @@ static void munchStm(T_stm s) {
         default: assert(0);
       }
       S("%s `s0, `s1, `j0 # compare e1 e2, true '%s', false '%s'", op_code,
-        Temp_labelstring(s->u.CJUMP.true), Temp_labelstring(s->u.CJUMP.false));
+        Temp_labelstring(s->u.CJUMP.truee), Temp_labelstring(s->u.CJUMP.falsee));
       emit(AS_Oper(
-          STRDUP(buf), NULL, L(r1, L(r2, NULL)),
-          AS_Targets(Temp_LabelList(s->u.CJUMP.true,
-                                    Temp_LabelList(s->u.CJUMP.false, NULL)))));
+          strdup(buf), NULL, L(r1, L(r2, NULL)),
+          AS_Targets(Temp_LabelList(s->u.CJUMP.truee,
+                                    Temp_LabelList(s->u.CJUMP.falsee, NULL)))));
       S("j `j0 # jump to false");
-      emit(AS_Oper(STRDUP(buf), NULL, NULL,
-                   AS_Targets(Temp_LabelList(s->u.CJUMP.false, NULL))));
+      emit(AS_Oper(strdup(buf), NULL, NULL,
+                   AS_Targets(Temp_LabelList(s->u.CJUMP.falsee, NULL))));
       break;
     }
     case T_LABEL: {
       S("%s:", Temp_labelstring(s->u.LABEL));
-      emit(AS_Label(STRDUP(buf), s->u.LABEL));
+      emit(AS_Label(strdup(buf), s->u.LABEL));
       break;
     }
     case T_EXP: {
@@ -212,7 +212,7 @@ static Temp_temp munchExp(T_exp e) {
           default: assert(0);
         }
         S("li `d0, %d # result of constexpr", result);
-        emit(AS_Oper(STRDUP(buf), L(r, NULL), NULL, NULL));
+        emit(AS_Oper(strdup(buf), L(r, NULL), NULL, NULL));
         return r;
       } else if ((e1->kind == T_CONST || e2->kind == T_CONST) &&
                  (op == T_plus || op == T_minus)) {
@@ -227,7 +227,7 @@ static Temp_temp munchExp(T_exp e) {
           case T_minus: S("addi `d0, `s0, -%d", constt); break;
           default: assert(0);
         }
-        emit(AS_Oper(STRDUP(buf), L(r, NULL), L(munchExp(var), NULL), NULL));
+        emit(AS_Oper(strdup(buf), L(r, NULL), L(munchExp(var), NULL), NULL));
         return r;
       } else {
         /* BINOP(*,e1,e2) */
@@ -252,7 +252,7 @@ static Temp_temp munchExp(T_exp e) {
             break;
           default: assert(0);
         }
-        emit(AS_Oper(STRDUP(buf), L(r, NULL), L(e1r, L(e2r, NULL)), NULL));
+        emit(AS_Oper(strdup(buf), L(r, NULL), L(e1r, L(e2r, NULL)), NULL));
         return r;
       }
     }
@@ -264,12 +264,12 @@ static Temp_temp munchExp(T_exp e) {
         if (op == T_plus && e2->kind == T_CONST) {
           /* MEM(BINOP(PLUS,e1,CONST(i))) */
           S("lw `d0, %d(`s0) # MEM(BINOP(PLUS,e1,CONST(i)))", e2->u.CONST);
-          emit(AS_Oper(STRDUP(buf), L(r, NULL), L(munchExp(e1), NULL), NULL));
+          emit(AS_Oper(strdup(buf), L(r, NULL), L(munchExp(e1), NULL), NULL));
           return r;
         } else if (op == T_plus && e1->kind == T_CONST) {
           /* MEM(BINOP(PLUS,CONST(i),e2)) */
           S("lw `d0, %d(`s0) # MEM(BINOP(PLUS,CONST(i),e2))", e1->u.CONST);
-          emit(AS_Oper(STRDUP(buf), L(r, NULL), L(munchExp(e2), NULL), NULL));
+          emit(AS_Oper(strdup(buf), L(r, NULL), L(munchExp(e2), NULL), NULL));
           return r;
         } else {
           /* MEM(e) */
@@ -280,7 +280,7 @@ static Temp_temp munchExp(T_exp e) {
       } else if (e->u.MEM->kind == T_CONST) {
         /* MEM(CONST(i)) */
         S("lw `d0, %d(zero) # MEM(CONST(i))", e->u.MEM->u.CONST);
-        emit(AS_Oper(STRDUP(buf), L(r, NULL), NULL, NULL));
+        emit(AS_Oper(strdup(buf), L(r, NULL), NULL, NULL));
         return r;
       } else {
         /* MEM(e) */
@@ -296,13 +296,13 @@ static Temp_temp munchExp(T_exp e) {
     case T_CONST: {
       /* CONST(i) */
       S("li `d0, %d # load CONST(i) to T%d", e->u.CONST, r->num);
-      emit(AS_Oper(STRDUP(buf), L(r, NULL), NULL, NULL));
+      emit(AS_Oper(strdup(buf), L(r, NULL), NULL, NULL));
       return r;
     }
     case T_NAME: {
       /* NAME(lab) */
       S("la `d0, %s # NAME(lab)", Temp_labelstring(e->u.NAME));
-      emit(AS_Oper(STRDUP(buf), L(r, NULL), NULL, NULL));
+      emit(AS_Oper(strdup(buf), L(r, NULL), NULL, NULL));
       return r;
     }
     case T_CALL: {
@@ -315,7 +315,7 @@ static Temp_temp munchExp(T_exp e) {
           munchArgs(0, e->u.CALL.args,
                     Tr_formals_with_static_link(fun->u.fun.level), F_args());
       S("call %s", Temp_labelstring(e->u.CALL.fun->u.NAME));
-      emit(AS_Oper(STRDUP(buf), F_callerSaves(), l, NULL));
+      emit(AS_Oper(strdup(buf), F_callerSaves(), l, NULL));
       popStack(Tr_formals_with_static_link(fun->u.fun.level));
       return r;
     }
@@ -338,8 +338,8 @@ AS_instrList F_codegen(Set last_instr, F_frame f, T_stmList stmList) {
   for (AS_instrList il = iList; il; il = il->tail) {
     if (prev && prev->kind != I_LABEL &&
         ((il->head->kind == I_LABEL) ||
-         prev->kind == I_OPER && prev->u.OPER.jumps != NULL &&
-             prev->u.OPER.jumps->labels->tail != NULL)) {
+         (prev->kind == I_OPER && prev->u.OPER.jumps != NULL &&
+             prev->u.OPER.jumps->labels->tail != NULL))) {
       SET_insert(last_instr, prev);
     }
     prev = il->head;

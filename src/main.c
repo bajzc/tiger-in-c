@@ -155,7 +155,7 @@ char *escape(const char *input) {
 static void doString(FILE *out, Temp_label lab, char *str) {
   fprintf(out, ".data\n");
   fprintf(out, "  %s:\n", Temp_labelstring(lab));
-  fprintf(out, "    .word %lu\n", STRLEN(str));
+  fprintf(out, "    .word %lu\n", strlen(str));
   fprintf(out, "    .asciz \"%s\"\n", escape(str));
 }
 

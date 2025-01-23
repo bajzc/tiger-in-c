@@ -244,22 +244,22 @@ static void trace(T_stmList list) {
   }
   /* we want false label to follow CJUMP */
   else if (s->kind == T_CJUMP) {
-    T_stmList true = (T_stmList) S_look(block_env, s->u.CJUMP.true);
-    T_stmList false = (T_stmList) S_look(block_env, s->u.CJUMP.false);
-    if (false) {
-      last->tail->tail = false;
-      trace(false);
-    } else if (true) { /* convert so that existing label is a false label */
+    T_stmList truee = (T_stmList) S_look(block_env, s->u.CJUMP.truee);
+    T_stmList falsee = (T_stmList) S_look(block_env, s->u.CJUMP.falsee);
+    if (falsee) {
+      last->tail->tail = falsee;
+      trace(falsee);
+    } else if (truee) { /* convert so that existing label is a false label */
       last->tail->head =
           T_Cjump(T_notRel(s->u.CJUMP.op), s->u.CJUMP.left, s->u.CJUMP.right,
-                  s->u.CJUMP.false, s->u.CJUMP.true);
-      last->tail->tail = true;
-      trace(true);
+                  s->u.CJUMP.falsee, s->u.CJUMP.truee);
+      last->tail->tail = truee;
+      trace(truee);
     } else {
-      Temp_label false = Temp_newlabel();
+      Temp_label falsee = Temp_newlabel();
       last->tail->head = T_Cjump(s->u.CJUMP.op, s->u.CJUMP.left,
-                                 s->u.CJUMP.right, s->u.CJUMP.true, false);
-      last->tail->tail = T_StmList(T_Label(false), getNext());
+                                 s->u.CJUMP.right, s->u.CJUMP.truee, falsee);
+      last->tail->tail = T_StmList(T_Label(falsee), getNext());
     }
   } else
     assert(0);

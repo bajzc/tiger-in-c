@@ -55,15 +55,15 @@ T_stm T_Jump(T_exp exp, Temp_labelList labels) {
   return p;
 }
 
-T_stm T_Cjump(T_relOp op, T_exp left, T_exp right, Temp_label true,
-              Temp_label false) {
+T_stm T_Cjump(T_relOp op, T_exp left, T_exp right, Temp_label truee,
+              Temp_label falsee) {
   T_stm p = (T_stm) checked_malloc(sizeof *p);
   p->kind = T_CJUMP;
   p->u.CJUMP.op = op;
   p->u.CJUMP.left = left;
   p->u.CJUMP.right = right;
-  p->u.CJUMP.true = true;
-  p->u.CJUMP.false = false;
+  p->u.CJUMP.truee = truee;
+  p->u.CJUMP.falsee = falsee;
   return p;
 }
 

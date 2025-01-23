@@ -25,7 +25,7 @@ void SET_ensure_capacity(Set s, int capacity) {
   if (new_capacity == s->capacity)
     return;
   void **new = checked_malloc(new_capacity * sizeof(void *));
-  MEMCPY(new, s->elements, s->capacity * sizeof(void *));
+  memcpy(new, s->elements, s->capacity * sizeof(void *));
   s->elements = new;
   s->capacity = new_capacity;
 }

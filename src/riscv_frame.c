@@ -2,9 +2,9 @@
 
 // https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc
 
-#include "set.h"
 #include "assem.h"
 #include "frame.h"
+#include "set.h"
 #include "table.h"
 #include "util.h"
 
@@ -33,6 +33,7 @@ struct F_access_ {
 struct F_frame_ {
   Temp_label frame_label;
   int stack_size; // the number of locals allocated so far
+  int arg_reg_count;
   F_accessList formals_list; // the locations of all the formals
   F_accessList locals_list;
 };
@@ -83,8 +84,11 @@ F_access F_allocFormals(F_frame f, bool escape) {
           f->stack_size * F_wordSize * -1);
     ret = InFrame(f->stack_size * F_wordSize * -1);
     f->stack_size += 1;
-  } else
+  } else {
+    assert(f->arg_reg_count < ARG_IN_REG);
     ret = InReg(Temp_newtemp());
+    f->arg_reg_count++;
+  }
   F_accessList l = checked_malloc(sizeof(*l));
   l->head = ret;
   l->tail = f->formals_list;
@@ -141,6 +145,7 @@ F_frame F_newFrame(Temp_label name, U_boolList formals) {
 Temp_label F_name(F_frame f) { return f->frame_label; }
 
 F_accessList F_formals(F_frame f) { return f->formals_list; }
+F_accessList F_locals(F_frame f) { return f->locals_list; }
 
 void F_printAccess(F_access access) {
   assert(access);
@@ -307,7 +312,7 @@ static Temp_tempList saveCalleeRegs(AS_instrList funEntry, Temp_tempList regs) {
   S("mv `d0, `s0 # save callee reg %s to T%d", Temp_look(F_tempMap, regs->head),
     t->num);
   AS_splice(funEntry,
-            AS_InstrList(AS_Move(STRDUP(buf), L(t, NULL), L(regs->head, NULL)),
+            AS_InstrList(AS_Move(strdup(buf), L(t, NULL), L(regs->head, NULL)),
                          NULL));
   return L(t, saveCalleeRegs(funEntry, regs->tail));
 }
@@ -321,7 +326,7 @@ static void restoreCalleeRegs(AS_instrList funExit, Temp_tempList regs,
   restoreCalleeRegs(funExit, regs->tail, temps->tail);
   S("mv `d0, `s0 # restore callee reg %s from T%d",
     Temp_look(F_tempMap, regs->head), temps->head->num);
-  AS_splice(funExit, AS_InstrList(AS_Move(STRDUP(buf), L(regs->head, NULL),
+  AS_splice(funExit, AS_InstrList(AS_Move(strdup(buf), L(regs->head, NULL),
                                           L(temps->head, NULL)),
                                   NULL));
 }
@@ -358,7 +363,7 @@ AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame,
         Temp_look(F_tempMap, cur->head));
       AS_splice(insert_entry,
                 AS_InstrList(
-                    AS_Move(STRDUP(buf), L(a->u.reg, NULL), L(cur->head, NULL)),
+                    AS_Move(strdup(buf), L(a->u.reg, NULL), L(cur->head, NULL)),
                     NULL));
       cur = cur->tail;
     } else {
@@ -382,14 +387,14 @@ AS_proc F_procEntryExit3(F_frame frame, AS_instrList body) {
   AS_instrList insert_entry =
       AS_InstrList(AS_Oper("mv t6, fp # save frame pointer", NULL, NULL, NULL),
                    AS_InstrList(AS_Oper("mv fp, sp", NULL, NULL, NULL),
-                                AS_InstrList(AS_Oper(STRDUP(buf), L(SP, NULL),
+                                AS_InstrList(AS_Oper(strdup(buf), L(SP, NULL),
                                                      L(SP, NULL), NULL),
                                              NULL)));
 
 
   S("addi sp, sp, %d # restore stack pointer", frameSize);
   AS_instrList insert_exit =
-      AS_InstrList(AS_Oper(STRDUP(buf), NULL, NULL, NULL),
+      AS_InstrList(AS_Oper(strdup(buf), NULL, NULL, NULL),
                    AS_InstrList(AS_Oper("ret", NULL, NULL, NULL), NULL));
   return AS_Proc(String(buf),
                  AS_splice(insert_entry, AS_splice(body, insert_exit)),

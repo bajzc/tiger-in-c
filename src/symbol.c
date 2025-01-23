@@ -30,7 +30,7 @@ static unsigned int hash(char *s0) {
   return h;
 }
 
-static int streq(string a, string b) { return !STRCMP(a, b); }
+static int streq(string a, string b) { return !strcmp(a, b); }
 
 S_symbol S_Symbol(string name) {
   debug2("%s\n", name);

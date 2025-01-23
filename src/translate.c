@@ -110,8 +110,8 @@ Tr_exp Tr_opExp(Tr_exp l, A_oper op, Tr_exp r) {
     case A_geOp:
       s = T_Cjump(T_ge, L, R, NULL, NULL);
     patch:
-      return Tr_Cx(PatchList(&(s->u.CJUMP.true), NULL),
-                   PatchList(&(s->u.CJUMP.false), NULL), s);
+      return Tr_Cx(PatchList(&(s->u.CJUMP.truee), NULL),
+                   PatchList(&(s->u.CJUMP.falsee), NULL), s);
   }
   assert(0);
 }
@@ -435,8 +435,8 @@ static struct Cx unCx(Tr_exp e) {
         return cx;
       }
       T_stm s = T_Cjump(T_ne, unEx(e), T_Const(0), NULL, NULL);
-      patchList t = PatchList(&s->u.CJUMP.true, NULL);
-      patchList f = PatchList(&s->u.CJUMP.false, NULL);
+      patchList t = PatchList(&s->u.CJUMP.truee, NULL);
+      patchList f = PatchList(&s->u.CJUMP.falsee, NULL);
       return Tr_Cx(t, f, s)->u.cx;
     }
     case Tr_cx: return e->u.cx;

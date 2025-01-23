@@ -9,40 +9,6 @@
 #define L(h, t) Temp_TempList((Temp_temp) h, (Temp_tempList) t)
 #define T(n) ((Temp_temp) G_nodeInfo(n))
 
-typedef struct Main_struct_ {
-  G_table liveOut, liveIn; // G_table<G_Node<AS_instr>, Set<Temp_temp>>
-  G_table moveList; // G_table<G_Node<Temp_temp>, Set<AS_instr>>
-  G_table alias; // G_table<G_Node, G_Node>
-  Set last_instr; // Set<AS_instr>
-  G_nodeList block_end_list; // List<G_node<AS_instr>>
-  Set simplifyWorklist; // Set<G_Node<Temp_temp>>
-  Set freezeWorklist; // Set<G_node<Temp_temp>>
-  Set spillWorklist; // Set<G_node<Temp_temp>>
-  Set spilledNodes; // Set<G_node>
-  Set coalescedNodes; // Set<G_node>
-  Set coalescedMoves; // Set<AS_instr>
-  Set constrainedMoves; // Set<AS_instr>
-  Set frozenMoves; // Set<AS_instr>
-  Set worklistMoves; // Set<AS_instr>
-  Set activeMoves; // Set<AS_instr>
-  Set initial; // Set<G_node<Temp_temp>>
-  Set coloredNodes; // Set<G_node<Temp_temp>>
-  Set adjSet; // Set<Adj>
-  G_nodeList selectStack; // List<G_node<Temp_temp>>
-  G_graph flowgraph; // G_graph<AS_instr>
-  Temp_map precolored; // Temp_map<Temp_temp, String>
-  Temp_map color; // Temp_map<Temp_temp, String>
-  struct Live_graph
-      live_graph; // Live_graph<G_graph<Temp_temp>,Live_moveList<>>
-  G_graph interference_graph;
-  TAB_table temp2Node; // Map<Temp_temp, G_node<Temp_temp>>
-  G_table adjList; // G_table<G_node<Temp_temp>, Set<G_node<Temp_temp>>>
-  G_table degree; // G_table<G_node<Temp_temp>, int>
-  int K;
-  F_frame frame;
-  AS_instrList iList;
-} *Main_struct;
-
 void build(Main_struct S);
 void AddEdge(Temp_temp u, Temp_temp v, Main_struct S);
 void MakeWorkList(Main_struct S);
@@ -79,7 +45,6 @@ Adj makeAdj(G_node u, G_node v) {
   adj->v = v;
   return adj;
 }
-
 
 /*
  * generate block_end_list for every instr in stmt_instr_set, find the node in
@@ -466,7 +431,6 @@ procedure Coalesce()
     activeMoves ← activeMoves ∪ {m}
 */
 void Coalesce(Main_struct S) {
-  debug2("\n");
   AS_instr m = NULL;
   SET_FOREACH(S->worklistMoves, mptr) {
     m = *mptr;
@@ -813,7 +777,7 @@ void RewriteProgram(Main_struct S) {
                  "lw `d0, %d(`s0) # fetch spilled reg T%d from stack to T%d",
                  offset, T(v)->num, v_i->num);
         prev->tail = AS_InstrList(
-            AS_Oper(STRDUP(buf), L(v_i, NULL), L(F_FP(), NULL), NULL), l);
+            AS_Oper(strdup(buf), L(v_i, NULL), L(F_FP(), NULL), NULL), l);
         for (Temp_tempList cur = l->head->u.OPER.src; cur; cur = cur->tail) {
           if (cur->head == T(v)) {
             cur->head = v_i;
@@ -837,7 +801,7 @@ void RewriteProgram(Main_struct S) {
         snprintf(buf, 80, "sw `s0, %d(`d0) # store spilled reg T%d to stack",
                  offset, T(v)->num);
         l->tail = AS_InstrList(
-            AS_Oper(STRDUP(buf), L(F_FP(), NULL), L(v_i, NULL), NULL), next);
+            AS_Oper(strdup(buf), L(F_FP(), NULL), L(v_i, NULL), NULL), next);
         for (Temp_tempList cur = l->head->u.OPER.dst; cur; cur = cur->tail) {
           if (cur->head == T(v)) {
             cur->head = v_i;
@@ -891,11 +855,11 @@ procedure Main()
     RewriteProgram(spilledNodes)
     Main()
 */
-Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
+Temp_map Color_Main(Set last_instr, AS_instrList iList, F_frame frame) {
   Main_struct S = checked_malloc(sizeof(*S));
   S->iList = iList;
   S->frame = frame;
-  S->last_instr = stmt_instr_set;
+  S->last_instr = last_instr;
   S->K = F_numGPR;
   S->flowgraph = FG_AssemFlowGraph(iList);
   S->live_graph = Live_Liveness(S->flowgraph);
@@ -943,28 +907,10 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
     TAB_enter(S->temp2Node, t, node);
   }
 
-  // fprintf(stderr, "\ninitial = ");
   SET_FOREACH(SET_difference(temps, F_regTemp), tptr) {
     Temp_temp t = *tptr;
     SET_insert(S->initial, TAB_look(S->temp2Node, t));
-    // fprintf(stderr, "%d, ", t->num);
   }
-  // fprintf(stderr, "\n");
-
-  // fprintf(stderr, "\nF_regTemp = ");
-  // SET_FOREACH(F_regTemp, tptr) {
-    // fprintf(stderr, "%d, ", (*(Temp_temp *) tptr)->num);
-  // }
-  // fprintf(stderr, "\n");
-
-  static int graph_count = 0;
-  char graph_name[80];
-  snprintf(graph_name, 80, "graph-%d.dot", graph_count++);
-  // assert(graph_count < 3);
-  FILE *fp = fopen(graph_name, "w");
-  printFlowgraph(fp, S->flowgraph, Temp_layerMap(F_tempMap, Temp_name()),
-                 Temp_labelstring(F_name(frame)));
-  fclose(fp);
 
   build(S);
   checkInvariant(S);
@@ -993,9 +939,9 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
   checkInvariant(S);
   if (!SET_isEmpty(S->spilledNodes)) {
     RewriteProgram(S);
-    return Color_Main(stmt_instr_set, iList, frame);
+    return Color_Main(last_instr, iList, frame);
   }
-  visual_color(temps, S);
+  // visual_color(temps, S);
   return S->color;
 }
 

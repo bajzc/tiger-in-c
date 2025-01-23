@@ -56,8 +56,8 @@ static void pr_stm(FILE *out, T_stm stm, int d) {
       pr_tree_exp(out, stm->u.CJUMP.right, d + 1);
       fprintf(out, ",\n");
       indent(out, d + 1);
-      fprintf(out, "%s,", S_name(stm->u.CJUMP.true));
-      fprintf(out, "%s", S_name(stm->u.CJUMP.false));
+      fprintf(out, "%s,", S_name(stm->u.CJUMP.truee));
+      fprintf(out, "%s", S_name(stm->u.CJUMP.falsee));
       fprintf(out, ")");
       break;
     case T_MOVE:

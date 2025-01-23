@@ -58,7 +58,7 @@ struct T_stm_ {
     struct {
       T_relOp op;
       T_exp left, right;
-      Temp_label true, false;
+      Temp_label truee, falsee;
     } CJUMP;
     struct {
       T_exp dst, src;
@@ -94,8 +94,8 @@ T_stmList T_StmList(T_stm head, T_stmList tail);
 T_stm T_Seq(T_stm, T_stm);
 T_stm T_Label(Temp_label label);
 T_stm T_Jump(T_exp exp, Temp_labelList labels);
-T_stm T_Cjump(T_relOp op, T_exp left, T_exp right, Temp_label true,
-              Temp_label false);
+T_stm T_Cjump(T_relOp op, T_exp left, T_exp right, Temp_label truee,
+              Temp_label falsee);
 T_stm T_Move(T_exp dst, T_exp src);
 T_stm T_Exp(T_exp exp);
 T_exp T_Binop(T_binOp op, T_exp left, T_exp right);
