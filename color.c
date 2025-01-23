@@ -963,7 +963,7 @@ Temp_map Color_Main(Set stmt_instr_set, AS_instrList iList, F_frame frame) {
 
   build(S);
   checkInvariant(S);
-  print_edges(S);
+  // print_edges(S);
   MakeWorkList(S);
   checkInvariant(S);
   while (TRUE) {
