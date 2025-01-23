@@ -5,9 +5,9 @@
 
 #include <stdio.h>
 
+#include "prabsyn.h"
 #include "absyn.h" /* abstract syntax data structures */
-#include "prabsyn.h" /* function prototype */
-#include "symbol.h" /* symbol table data structures */
+#include "symbol.h"
 #include "util.h"
 
 /* local function prototypes */

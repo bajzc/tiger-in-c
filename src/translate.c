@@ -1,12 +1,12 @@
 /* translate.c */
 #include "translate.h"
+#include "util.h"
 #include "absyn.h"
 #include "errormsg.h"
 #include "frame.h"
 #include "printtree.h"
 #include "temp.h"
 #include "tree.h"
-#include "util.h"
 
 static Tr_level OUTER_MOST = NULL;
 static F_fragList F_fragments = NULL;

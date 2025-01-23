@@ -3,11 +3,11 @@
 #ifndef FRAME_H
 #define FRAME_H
 
+#include "types.h"
 #include "assem.h"
 #include "table.h"
 #include "temp.h"
 #include "tree.h"
-#include "types.h"
 
 typedef struct F_frame_ *F_frame;
 typedef struct F_access_ *F_access;

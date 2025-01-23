@@ -2,9 +2,9 @@
 
 // https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc
 
+#include "set.h"
 #include "assem.h"
 #include "frame.h"
-#include "set.h"
 #include "table.h"
 #include "util.h"
 

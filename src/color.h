@@ -5,8 +5,8 @@
 #ifndef COLOR_H
 #define COLOR_H
 
-#include "assem.h"
 #include "frame.h"
+#include "assem.h"
 #include "graph.h"
 #include "temp.h"
 

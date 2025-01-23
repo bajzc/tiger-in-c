@@ -5,13 +5,13 @@
 
 #include <stdio.h>
 
+#include "graph.h"
+#include "table.h"
 #include "absyn.h"
 #include "assem.h"
 #include "errormsg.h"
 #include "frame.h"
-#include "graph.h"
 #include "symbol.h"
-#include "table.h"
 #include "temp.h"
 #include "tree.h"
 #include "util.h"

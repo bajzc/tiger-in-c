@@ -1,9 +1,9 @@
 #ifndef LIVENESS_H
 #define LIVENESS_H
 
+#include "temp.h"
 #include "graph.h"
 #include "table.h"
-#include "temp.h"
 
 typedef struct Live_moveList_ *Live_moveList;
 

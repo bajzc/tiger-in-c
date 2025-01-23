@@ -5,9 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "errormsg.h"
 #include "parse.h"
 #include "prabsyn.h"
+#include "errormsg.h"
 #include "util.h"
 
 extern int yyparse(void);

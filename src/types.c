@@ -6,9 +6,9 @@
  */
 #include <stdio.h>
 
-#include "symbol.h"
 #include "types.h"
 #include "util.h"
+#include "symbol.h"
 
 static struct Ty_ty_ tynil = {Ty_nil};
 Ty_ty Ty_Nil(void) { return &tynil; }

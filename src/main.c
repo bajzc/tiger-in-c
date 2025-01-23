@@ -4,6 +4,11 @@
 
 #include <stdio.h>
 
+#include "prabsyn.h"
+#include "printtree.h"
+#include "set.h"
+#include "symbol.h"
+#include "util.h"
 #include "absyn.h"
 #include "assem.h"
 #include "canon.h"
@@ -16,14 +21,9 @@
 #include "graph.h"
 #include "liveness.h"
 #include "parse.h"
-#include "prabsyn.h"
-#include "printtree.h"
-#include "semant.h" /* function prototype for transProg */
-#include "set.h"
-#include "symbol.h"
-#include "temp.h" /* needed by translate.h */
-#include "tree.h" /* needed by frame.h */
-#include "util.h"
+#include "semant.h"
+#include "temp.h"
+#include "tree.h"
 
 extern bool anyErrors;
 

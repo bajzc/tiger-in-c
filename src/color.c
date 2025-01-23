@@ -1,9 +1,9 @@
 #include "color.h"
+#include "frame.h"
+#include "liveness.h"
 #include "codegen.h"
 #include "flowgraph.h"
-#include "frame.h"
 #include "graph.h"
-#include "liveness.h"
 #include "set.h"
 
 #define L(h, t) Temp_TempList((Temp_temp) h, (Temp_tempList) t)

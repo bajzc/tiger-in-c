@@ -1,10 +1,10 @@
 #include <stdio.h>
 
+#include "semant.h"
+#include "set.h"
 #include "codegen.h"
 #include "env.h"
 #include "frame.h"
-#include "semant.h"
-#include "set.h"
 
 #define L(h, t) Temp_TempList((Temp_temp) h, (Temp_tempList) t)
 #define S(format, ...) snprintf(buf, 80, format, ##__VA_ARGS__)

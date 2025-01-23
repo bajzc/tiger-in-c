@@ -3,10 +3,10 @@
 #include <stdio.h>
 
 #include "env.h"
-#include "symbol.h"
 #include "table.h"
-#include "types.h"
 #include "util.h"
+#include "symbol.h"
+#include "types.h"
 
 TAB_table E_funLabel2funEntry = NULL;
 

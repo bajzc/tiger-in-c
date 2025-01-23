@@ -3,6 +3,13 @@
 #include <assert.h>
 #include <stdio.h>
 
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+#ifndef DEBUG2
+#define DEBUG2 0
+#endif
+
 #define debug(fmt, ...)                                                        \
   do {                                                                         \
     if (DEBUG)                                                                 \
@@ -30,25 +37,6 @@
     _a < _b ? _a : _b;                                                         \
   })
 
-#ifndef __STDC__
-// port to XV6
-#include "user.h"
-#define STRCPY strcpy
-#define STRLEN strlen
-#define STRCMP strcmp
-#define MEMCPY memcpy
-#define ATOI atoi
-
-#define STRDUP(s)                                                              \
-  ({                                                                           \
-    const char *_src = (s);                                                    \
-    size_t _len = strlen(_src) + 1;                                            \
-    char *_dest = (char *) malloc(_len);                                       \
-    if (_dest)                                                                 \
-      memcpy(_dest, _src, _len);                                               \
-    _dest;                                                                     \
-  })
-#else
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,7 +46,6 @@
 #define STRCMP strcmp
 #define MEMCPY memcpy
 #define ATOI atoi
-#endif
 
 typedef char *string;
 typedef char bool;

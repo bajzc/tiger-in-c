@@ -8,8 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "absyn.h"
 #include "errormsg.h"
+#include "absyn.h"
 #include "util.h"
 
 bool anyErrors = FALSE;
