@@ -9,6 +9,8 @@ extern "C"{
 }
 
 static inline F_fragList prog2frag(char *path_name) {
+  S_reset_symbols();
+  Temp_resetAll();
   A_exp absyn_root;
   F_fragList frags;
   absyn_root = parse(path_name);

@@ -16,7 +16,7 @@ TEST(frame, allocFormals) {
   EXPECT_EQ(frags->tail->tail, nullptr);
 
   std::vector<F_access> formals;
-  for (F_accessList l = F_reverseList(F_formals(frags->tail->head->u.proc.frame)); l;
+  for (F_accessList l = (F_formals(frags->tail->head->u.proc.frame)); l;
        l = l->tail) {
     formals.push_back(l->head);
   }
@@ -32,12 +32,14 @@ TEST(frame, allocFormals) {
 TEST(frame, allocLocals) {
   F_fragList frags = prog2frag("frame/test1.tig");
   F_frame frame = frags->tail->head->u.proc.frame;
+  EXPECT_STREQ(Temp_labelstring(F_name(frame)), "L0");
+  // add locals manually
   EXPECT_EQ(F_isInReg(F_allocLocal(frame, true)), false);
   EXPECT_EQ(F_isInReg(F_allocLocal(frame, false)), true);
   EXPECT_EQ(F_isInReg(F_allocLocal(frame, true)), false);
   EXPECT_EQ(F_isInReg(F_allocLocal(frame, true)), false);
   std::vector<F_access> locals;
-  for (auto i = F_reverseList(F_locals(frame)); i; i = i->tail) {
+  for (auto i = (F_locals(frame)); i; i = i->tail) {
     locals.push_back(i->head);
   }
   for (auto i = locals.begin(); i != locals.end(); ++i) {

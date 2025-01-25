@@ -492,19 +492,6 @@ Tr_level Tr_libFunLevel(Temp_label name, U_boolList formals) {
   return level;
 }
 
-Tr_accessList Tr_reverseList(Tr_accessList list) {
-  Tr_accessList temp = NULL;
-  Tr_accessList prev = NULL;
-  Tr_accessList curr = list;
-  while (curr != NULL) {
-    temp = curr->tail;
-    curr->tail = prev;
-    prev = curr;
-    curr = temp;
-  }
-  return prev;
-}
-
 Tr_accessList Tr_formals_with_static_link(Tr_level level) {
   F_accessList f = F_formals(level->frame);
   if (!f) // library function
@@ -518,7 +505,7 @@ Tr_accessList Tr_formals_with_static_link(Tr_level level) {
     Tr_accessList p = Tr_AccessList(Tr_Access(level, f->head), NULL);
     l->tail = p;
   }
-  return Tr_reverseList(l_head);
+  return l_head;
 }
 
 void Tr_printFormals(Tr_accessList formals) {

@@ -89,10 +89,14 @@ F_access F_allocFormals(F_frame f, bool escape) {
     ret = InReg(Temp_newtemp());
     f->arg_reg_count++;
   }
-  F_accessList l = checked_malloc(sizeof(*l));
-  l->head = ret;
-  l->tail = f->formals_list;
-  f->formals_list = l;
+  F_accessList *l = &f->formals_list;
+  while (*l) {
+    l = &(*l)->tail;
+  }
+  F_accessList l_ = checked_malloc(sizeof(*l_));
+  l_->head = ret;
+  l_->tail = NULL;
+  *l = l_;
   return ret;
 }
 
@@ -106,10 +110,14 @@ F_access F_allocLocal(F_frame f, bool escape) {
     f->stack_size += 1;
   } else
     ret = InReg(Temp_newtemp());
-  F_accessList l = checked_malloc(sizeof(*l));
-  l->head = ret;
-  l->tail = f->locals_list;
-  f->locals_list = l;
+  F_accessList *l = &f->locals_list;
+  while (*l) {
+    l = &(*l)->tail;
+  }
+  F_accessList l_ = checked_malloc(sizeof(*l_));
+  l_->head = ret;
+  l_->tail = NULL;
+  *l = l_;
   return ret;
 }
 
@@ -289,19 +297,6 @@ static void initRegMap() {
         L(S3, L(S4, L(S5, L(S6, L(S7, L(S8, L(S9, L(S10, L(S11, NULL)))))))))));
 }
 
-F_accessList F_reverseList(F_accessList list) {
-  F_accessList temp = NULL;
-  F_accessList prev = NULL;
-  F_accessList curr = list;
-  while (curr != NULL) {
-    temp = curr->tail;
-    curr->tail = prev;
-    prev = curr;
-    curr = temp;
-  }
-  return prev;
-}
-
 T_stm F_procEntryExit1(F_frame frame, T_stm stm) { return stm; }
 
 static Temp_tempList saveCalleeRegs(AS_instrList funEntry, Temp_tempList regs) {
@@ -356,7 +351,7 @@ AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame,
     ;
   SET_insert(last_instr, il->head);
 
-  for (F_accessList l = F_reverseList(frame->formals_list); l; l = l->tail) {
+  for (F_accessList l = frame->formals_list; l; l = l->tail) {
     F_access a = l->head;
     if (a->kind == inReg) {
       S("mv `d0, `s0 # T%d <- %s", a->u.reg->num,
