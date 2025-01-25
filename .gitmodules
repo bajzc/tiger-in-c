@@ -1,0 +1,4 @@
+[submodule "test/xv6"]
+	path = test/xv6
+	url = git@github.com:bajzc/tiger-in-xv6.git
+	branch = tiger_test

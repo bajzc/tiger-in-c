@@ -8,3 +8,7 @@ TEST(xv6, queen) {
 TEST(xv6, merge) {
   EXPECT_EQ(system("./run_xv6.sh merge"), 0);
 }
+
+TEST(xv6, qsort) {
+  EXPECT_EQ(system("./run_xv6.sh qsort"), 0);
+}
