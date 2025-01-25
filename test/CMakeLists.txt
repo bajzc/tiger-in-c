@@ -34,6 +34,8 @@ endmacro()
 add_test(env_test env_test.cpp)
 add_test(color_test color_test.cpp)
 add_test(frame_test frame/frame_test.cpp)
+add_test(translate_test translate/translate_test.cpp)
+add_test(xv6_test test_in_xv6.cpp)
 
 add_executable(
         all_test
@@ -47,4 +49,5 @@ target_link_libraries(
 )
 
 include(GoogleTest)
+include_directories(.)
 include_directories(${CMAKE_SOURCE_DIR}/src)

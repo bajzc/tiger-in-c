@@ -1,0 +1,5 @@
+let
+  function foo(a: int, b: string, c: int): int = a + c + size(b)
+in
+  foo(2, "hello ", 3)
+end

@@ -22,6 +22,10 @@ static S_symbol mksymbol(string name, S_symbol next) {
 
 static S_symbol hashtable[SIZE];
 
+void S_reset_symbols() {
+  memset(hashtable, 0, sizeof(hashtable));
+}
+
 static unsigned int hash(char *s0) {
   unsigned int h = 0;
   char *s;

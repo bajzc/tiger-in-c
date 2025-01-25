@@ -43,4 +43,7 @@ string Temp_look(Temp_map m, Temp_temp t);
 void Temp_dumpMap(FILE *out, Temp_map m);
 
 Temp_map Temp_name(void);
+
+/* only for test usage*/
+void Temp_resetAll();
 #endif

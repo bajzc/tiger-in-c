@@ -289,7 +289,7 @@ static void initRegMap() {
         L(S3, L(S4, L(S5, L(S6, L(S7, L(S8, L(S9, L(S10, L(S11, NULL)))))))))));
 }
 
-static F_accessList reverseList(F_accessList list) {
+F_accessList F_reverseList(F_accessList list) {
   F_accessList temp = NULL;
   F_accessList prev = NULL;
   F_accessList curr = list;
@@ -356,7 +356,7 @@ AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame,
     ;
   SET_insert(last_instr, il->head);
 
-  for (F_accessList l = reverseList(frame->formals_list); l; l = l->tail) {
+  for (F_accessList l = F_reverseList(frame->formals_list); l; l = l->tail) {
     F_access a = l->head;
     if (a->kind == inReg) {
       S("mv `d0, `s0 # T%d <- %s", a->u.reg->num,

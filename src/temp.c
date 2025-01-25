@@ -28,6 +28,11 @@ Temp_label Temp_namedlabel(string s) { return S_Symbol(s); }
 
 static int temps = 100;
 
+void Temp_resetAll() {
+  labels = 0;
+  temps = 100;
+}
+
 Temp_temp Temp_newtemp(void) {
   Temp_temp p = (Temp_temp) checked_malloc(sizeof(*p));
   p->num = temps++;
