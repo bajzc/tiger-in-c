@@ -1,12 +1,12 @@
 /* translate.c */
 #include "translate.h"
-#include "util.h"
 #include "absyn.h"
 #include "errormsg.h"
 #include "frame.h"
 #include "printtree.h"
 #include "temp.h"
 #include "tree.h"
+#include "util.h"
 
 static Tr_level OUTER_MOST = NULL;
 static F_fragList F_fragments = NULL;
@@ -125,28 +125,42 @@ Tr_exp Tr_eqExpString(Tr_exp l, A_oper op, Tr_exp r) {
 
 /**
  * @brief use runtime function to init record on heap
- * @param l list of field expr
+ * @param exps list of field expr
  * @param size number of fields in record
+ * @param types
  */
-Tr_exp Tr_recordExp(Tr_exp *l, int size) {
+Tr_exp Tr_recordExp(Tr_exp *exps, int size, Ty_ty *types) {
   assert(size > 0);
   T_exp r = T_Temp(Temp_newtemp());
+
+  char *descriptor = checked_malloc(size);
+  char *p = descriptor;
+  for (int i = 1; i < size; i++) {
+    if (types[i] == NULL)
+      assert(0);
+    if (types[i]->kind == Ty_string || types[i]->kind == Ty_record ||
+        types[i]->kind == Ty_array)
+      *p++ = 'p';
+    else
+      *p++ = 'n';
+  }
+  *p = '\0';
+
+  Tr_exp str = Tr_stringExp(descriptor);
+  assert(str->kind == Tr_ex);
+
   // initRecord(size_t size_in_byte);
   T_exp res_head = T_Eseq(
-      T_Seq(T_Move(r,
-                   F_externalCall("initRecord",
-                                  T_ExpList(T_Const(size * F_wordSize), NULL))),
+      T_Seq(T_Move(r, F_externalCall("initRecord", T_ExpList(str->u.ex, NULL))),
             NULL),
       r);
   T_stm *rightmost = &(res_head->u.ESEQ.stm);
-  for (int i = 0; i < size; i++) {
-    if (l[i] != NULL) {
-      rightmost = &((*rightmost)->u.SEQ.right);
-      *rightmost =
-          T_Seq(T_Move(T_Mem(T_Binop(T_plus, r, T_Const(i * F_wordSize))),
-                       l[i]->u.ex),
-                NULL);
-    }
+  for (int i = 1; i < size; i++) {
+    rightmost = &((*rightmost)->u.SEQ.right);
+    *rightmost =
+        T_Seq(T_Move(T_Mem(T_Binop(T_plus, r, T_Const(i * F_wordSize))),
+                     exps[i]->u.ex),
+              NULL);
   }
   *rightmost = ((*rightmost)->u.SEQ.left);
   return Tr_Ex(res_head);
@@ -388,8 +402,7 @@ static T_exp unEx(Tr_exp e) {
               e->u.cx.stm,
               T_Eseq(T_Label(f),
                      T_Eseq(T_Move(T_Temp(r), T_Const(0)),
-                            T_Eseq(T_Jump(T_Name(t), Temp_LabelList(t,
-                            NULL)),
+                            T_Eseq(T_Jump(T_Name(t), Temp_LabelList(t, NULL)),
                                    T_Eseq(T_Label(t), T_Temp(r)))))));
     }
     case Tr_nx: return T_Eseq(e->u.nx, T_Const(0));

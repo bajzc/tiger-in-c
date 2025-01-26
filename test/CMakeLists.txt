@@ -35,6 +35,7 @@ add_test(env_test env_test.cpp)
 add_test(color_test color_test.cpp)
 add_test(frame_test frame/frame_test.cpp)
 add_test(translate_test translate/translate_test.cpp)
+add_test(semant_test semant/semant_test.cpp)
 add_test(xv6_test test_in_xv6.cpp)
 
 add_executable(

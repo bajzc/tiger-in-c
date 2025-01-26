@@ -1,0 +1,6 @@
+let
+  type any = { foo : int, bar: string , z: int }
+  var a := any{ bar = "hello", z = 21 , foo = 12 }
+in
+  a
+end

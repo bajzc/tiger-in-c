@@ -62,7 +62,7 @@ Tr_level Tr_libFunLevel(Temp_label name, U_boolList formals);
 Tr_access Tr_allocLocal(Tr_level level, bool escape);
 void Tr_printFormals(Tr_accessList formals);
 Tr_exp Tr_eqExpString(Tr_exp l, A_oper op, Tr_exp r);
-Tr_exp Tr_recordExp(Tr_exp *l, int size);
+Tr_exp Tr_recordExp(Tr_exp *exps, int size, Ty_ty *types);
 Tr_exp Tr_arrayExp(Tr_exp init, Tr_exp size);
 Tr_exp Tr_whileExp(Tr_exp cond, Tr_exp body, Temp_label done);
 Tr_exp Tr_breakExp(Temp_label done);

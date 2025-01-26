@@ -1,10 +1,10 @@
 #include <stdio.h>
 
-#include "semant.h"
-#include "set.h"
 #include "codegen.h"
 #include "env.h"
 #include "frame.h"
+#include "semant.h"
+#include "set.h"
 
 #define L(h, t) Temp_TempList((Temp_temp) h, (Temp_tempList) t)
 #define S(format, ...) snprintf(buf, 80, format, ##__VA_ARGS__)
@@ -169,7 +169,8 @@ static void munchStm(T_stm s) {
         default: assert(0);
       }
       S("%s `s0, `s1, `j0 # compare e1 e2, true '%s', false '%s'", op_code,
-        Temp_labelstring(s->u.CJUMP.truee), Temp_labelstring(s->u.CJUMP.falsee));
+        Temp_labelstring(s->u.CJUMP.truee),
+        Temp_labelstring(s->u.CJUMP.falsee));
       emit(AS_Oper(
           strdup(buf), NULL, L(r1, L(r2, NULL)),
           AS_Targets(Temp_LabelList(s->u.CJUMP.truee,
@@ -336,10 +337,15 @@ AS_instrList F_codegen(Set last_instr, F_frame f, T_stmList stmList) {
     munchStm(sl->head);
   }
   for (AS_instrList il = iList; il; il = il->tail) {
+    // evaluation of conditional exp not in if/while/for cause
+    // multiple edge toward done label
+    // eg: row[N-1] = N
+    // both branch will points to next instruction, causes a
+    // non-block-start instruction has multiple predecessors
     if (prev && prev->kind != I_LABEL &&
         ((il->head->kind == I_LABEL) ||
          (prev->kind == I_OPER && prev->u.OPER.jumps != NULL &&
-             prev->u.OPER.jumps->labels->tail != NULL))) {
+          prev->u.OPER.jumps->labels->tail != NULL))) {
       SET_insert(last_instr, prev);
     }
     prev = il->head;

@@ -2,17 +2,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "semant.h"
-#include "symbol.h"
-#include "util.h"
 #include "absyn.h"
 #include "canon.h"
 #include "env.h"
 #include "errormsg.h"
 #include "escape.h"
 #include "printtree.h"
+#include "semant.h"
+#include "symbol.h"
 #include "translate.h"
 #include "types.h"
+#include "util.h"
 
 static int breakLevel = 0;
 TAB_table SEM_funLabel2funEntry = NULL;
@@ -83,10 +83,11 @@ static Ty_ty findFieldInRecord(Ty_fieldList record, S_symbol sym) {
 
 // record.sym -> record[offset(sym)]
 static int fieldOffset(Ty_fieldList record, S_symbol sym) {
-  int i = 0;
+  // [0] is reserved for record descriptor string pointer
+  int i = 1;
   for (; record; record = record->tail) {
     if (record->head->name == sym) {
-      debug("find field '%s' at [%d]\n", S_name(sym), i);
+      debug("find field '%s' at [%d-1]\n", S_name(sym), i);
       return i;
     }
     i++;
@@ -95,7 +96,8 @@ static int fieldOffset(Ty_fieldList record, S_symbol sym) {
 }
 
 static int fieldNumber(Ty_fieldList record) {
-  int i = 0;
+  // [0] is reserved for record descriptor string pointer
+  int i = 1;
   for (; record; record = record->tail) {
     i++;
   }
@@ -219,12 +221,6 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
                      "only integer, record, string and array can be compared "
                      "(%s <> %s)",
                      str_ty[l], str_ty[r]);
-          // FIXME evaluation of conditional exp not in if/while/for cause
-          // multiple edge toward done label
-          // eg: row[N-1] = N
-          // both branch will points to next instruction, causes a
-          // non-block-start
-          // instruction has multiple predecessors
           return expTy(Tr_opExp(left.exp, oper, right.exp), Ty_Int());
         default: assert(0);
       } // end switch(oper)
@@ -238,8 +234,10 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
 
       int fieldCount = fieldNumber(ty->u.record);
       Tr_exp *offsets = checked_malloc(sizeof(Tr_exp) * fieldCount);
+      Ty_ty *fieldTypes = checked_malloc(sizeof(Ty_ty) * fieldCount);
 
       for (A_efieldList l = a->u.record.fields; l; l = l->tail) {
+        // all init record not in the same order as defined
         Ty_ty fieldTy = findFieldInRecord(ty->u.record, l->head->name);
         if (fieldTy == NULL)
           EM_error(a->pos, "no member named '%s' in the record '%s'",
@@ -253,8 +251,9 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
                    str_ty[eTy.ty->kind], str_ty[fieldTy->kind],
                    S_name(l->head->name));
         offsets[fieldOffset(ty->u.record, l->head->name)] = eTy.exp;
+        fieldTypes[fieldOffset(ty->u.record, l->head->name)] = fieldTy;
       }
-      return expTy(Tr_recordExp(offsets, fieldCount),
+      return expTy(Tr_recordExp(offsets, fieldCount, fieldTypes),
                    actual_ty(S_look(tenv, a->u.record.typ)));
     }
     case A_seqExp: {
