@@ -750,7 +750,7 @@ void RewriteProgram(Main_struct S) {
   char buf[80];
   SET_FOREACH(S->spilledNodes, vptr) {
     G_node v = *vptr;
-    F_access v_access = F_allocLocal(S->frame, 1);
+    F_access v_access = F_allocLocal(S->frame, 1, TODO);
     T_exp v_exp = F_Exp(v_access, T_Temp(F_FP()));
     assert(v_exp->kind == T_MEM && v_exp->u.MEM->kind == T_BINOP);
     assert(v_exp->u.MEM->u.BINOP.right->kind == T_CONST);

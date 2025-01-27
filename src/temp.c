@@ -12,7 +12,6 @@
 #include "table.h"
 #include "util.h"
 
-
 string Temp_labelstring(Temp_label s) { return S_name(s); }
 
 static int labels = 0;
@@ -39,6 +38,7 @@ Temp_temp Temp_newtemp(void) {
   {
     char r[16];
     sprintf(r, "%d", p->num);
+    p->isPointer = false;
     Temp_enter(Temp_name(), p, String(r));
   }
   return p;

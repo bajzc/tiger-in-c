@@ -1,0 +1,14 @@
+let
+  var str1 := "Hello, "
+  var str2 := "world!\n"
+  var str := concat(str1, str2)
+  type strArray = array of string
+  var strs := strArray [5] of str
+in
+  print(str);
+  printInt(size(str));print("\n");
+  print(substring(str, ord("l"), 2));print("\n");
+  printInt(str <> str1);print("\n");
+  (for i:= 0 to 4 do (printInt(i+1);print(strs[i])));
+  print(substring(str, ord("d"), 4));print("\n") /* error */
+end

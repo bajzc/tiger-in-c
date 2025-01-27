@@ -104,7 +104,7 @@ Output from running ``queen.tig.s``:
 
 ### Note
 
-This project is still under development for advanced topics (Garbage Collection, SSA, OOP and FP...)
+This project is still under development for advanced topics (Garbage Collector, SSA, OOP and FP...)
 
 ## License
 GPL-3

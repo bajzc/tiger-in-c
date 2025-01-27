@@ -87,6 +87,7 @@ struct T_exp_ {
       T_expList args;
     } CALL;
   } u;
+  bool isPointer;
 };
 
 T_expList T_ExpList(T_exp head, T_expList tail);

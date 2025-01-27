@@ -36,6 +36,7 @@ struct F_frame_ {
   int arg_reg_count;
   F_accessList formals_list; // the locations of all the formals
   F_accessList locals_list;
+  bool stack_marker[1]; // indict whether a stack slot is a pointer
 };
 
 /* |  ..       ..  |                  */
@@ -76,7 +77,7 @@ static F_access InReg(Temp_temp reg) {
   return r;
 }
 
-F_access F_allocFormals(F_frame f, bool escape) {
+F_access F_allocFormals(F_frame f, bool escape, bool isPointer) {
   F_access ret = NULL;
   assert(f);
   if (escape) {
@@ -100,7 +101,7 @@ F_access F_allocFormals(F_frame f, bool escape) {
   return ret;
 }
 
-F_access F_allocLocal(F_frame f, bool escape) {
+F_access F_allocLocal(F_frame f, bool escape, bool isPointer) {
   F_access ret = NULL;
   assert(f);
   if (escape) {
@@ -108,8 +109,11 @@ F_access F_allocLocal(F_frame f, bool escape) {
           f->stack_size * F_wordSize * -1);
     ret = InFrame(f->stack_size * F_wordSize * -1);
     f->stack_size += 1;
-  } else
-    ret = InReg(Temp_newtemp());
+  } else {
+    Temp_temp t = Temp_newtemp();
+    t->isPointer = isPointer;
+    ret = InReg(t);
+  }
   F_accessList *l = &f->locals_list;
   while (*l) {
     l = &(*l)->tail;
@@ -132,7 +136,7 @@ F_frame F_newFrame(Temp_label name, U_boolList formals) {
 
   if (formals) { // the static links
     escape = formals->head;
-    F_allocFormals(frame, escape);
+    F_allocFormals(frame, escape, TODO);
     // assert(frame->formals_list->head->kind == inFrame);
     debug2("%s: installed static links\n", Temp_labelstring(name));
     formals = formals->tail;
@@ -140,7 +144,7 @@ F_frame F_newFrame(Temp_label name, U_boolList formals) {
 
   while (formals) {
     escape = formals->head;
-    F_allocFormals(frame, escape);
+    F_allocFormals(frame, escape, TODO);
     debug2("%s: install new param (escape=%d)\n", Temp_labelstring(name),
            escape);
     formals = formals->tail;

@@ -23,7 +23,6 @@ static struct Cx unCx(Tr_exp e);
 Tr_exp Tr_simpleVar(Tr_access access, Tr_level level) {
   T_exp f = F_Exp(access->access, T_Temp(F_FP()));
   if (access->level != level) {
-    // TODO different `level` mean it's in different frame?
     debug("%p : %p access via static links\n", access->level, level);
     Tr_level l = level->parent;
     T_exp e = T_Mem(T_Temp(F_FP()));
@@ -45,13 +44,16 @@ Tr_exp Tr_fieldVar(Tr_exp record, int offset) {
       T_Mem(T_Binop(T_plus, unEx(record), T_Const(F_wordSize * offset))));
 }
 
-// a[i] -> MEM(+(MEM(a)), BINOP(MUL, i, CONST WordSize))
+// a[i] -> MEM(+(MEM(a)), BINOP(MUL, i + 1, CONST WordSize))
 Tr_exp Tr_subscriptVar(Tr_exp arr, Tr_exp index) {
   // TODO add index range checker and NULL checker
   if (arr->kind != Tr_ex || index->kind != Tr_ex)
     assert(0);
-  return Tr_Ex(T_Mem(T_Binop(
-      T_plus, unEx(arr), T_Binop(T_mul, unEx(index), T_Const(F_wordSize)))));
+  // NOTE: a[0] is used to store the array discriptor
+  return Tr_Ex(
+      T_Mem(T_Binop(T_plus, unEx(arr),
+                    T_Binop(T_mul, T_Binop(T_plus, unEx(index), T_Const(1)),
+                            T_Const(F_wordSize)))));
 }
 
 Tr_exp Tr_nilExp(void) { return Tr_Ex(T_Const(0)); }
@@ -118,9 +120,16 @@ Tr_exp Tr_opExp(Tr_exp l, A_oper op, Tr_exp r) {
 
 Tr_exp Tr_eqExpString(Tr_exp l, A_oper op, Tr_exp r) {
   // int stringEqual(char* l, char* r);
-  assert(op == A_eqOp || op == A_neqOp);
-  return Tr_Ex(F_externalCall("stringEqual",
-                              T_ExpList(unEx(l), T_ExpList(unEx(r), NULL))));
+  if (op == A_eqOp)
+    return Tr_Ex(F_externalCall("stringEqual",
+                                T_ExpList(unEx(l), T_ExpList(unEx(r), NULL))));
+  if (op == A_neqOp)
+    return Tr_Ex(F_externalCall(
+        "not",
+        T_ExpList(F_externalCall("stringEqual",
+                                 T_ExpList(unEx(l), T_ExpList(unEx(r), NULL))),
+                  NULL)));
+  assert(0);
 }
 
 /**
@@ -132,14 +141,14 @@ Tr_exp Tr_eqExpString(Tr_exp l, A_oper op, Tr_exp r) {
 Tr_exp Tr_recordExp(Tr_exp *exps, int size, Ty_ty *types) {
   assert(size > 0);
   T_exp r = T_Temp(Temp_newtemp());
+  r->isPointer = true;
 
   char *descriptor = checked_malloc(size);
   char *p = descriptor;
   for (int i = 1; i < size; i++) {
     if (types[i] == NULL)
       assert(0);
-    if (types[i]->kind == Ty_string || types[i]->kind == Ty_record ||
-        types[i]->kind == Ty_array)
+    if (IS_POINTER(types[i]))
       *p++ = 'p';
     else
       *p++ = 'n';
@@ -166,15 +175,11 @@ Tr_exp Tr_recordExp(Tr_exp *exps, int size, Ty_ty *types) {
   return Tr_Ex(res_head);
 }
 
-Tr_exp Tr_arrayExp(Tr_exp init, Tr_exp size) {
+Tr_exp Tr_arrayExp(Tr_exp init, Tr_exp size, bool isPointer) {
   return Tr_Ex(F_externalCall(
-      "initArray", T_ExpList(unEx(size), T_ExpList(unEx(init), NULL))));
-  // T_exp a = T_Temp(Temp_newtemp());
-  // return Tr_Ex(T_Eseq(
-  //     T_Move(a, F_externalCall(
-  //                   "initArray",
-  //                   T_ExpList(unEx(size), T_ExpList(unEx(init), NULL)))),
-  //     a));
+      "initArray",
+      T_ExpList(unEx(size),
+                T_ExpList(unEx(init), T_ExpList(T_Const(isPointer), NULL)))));
 }
 
 Tr_exp Tr_seqExp(Tr_exp *seqs, int size) {
@@ -201,41 +206,9 @@ Tr_exp Tr_assignExp(Tr_exp lvalue, Tr_exp exp) {
 }
 
 Tr_exp Tr_ifExp(Tr_exp test, Tr_exp then, Tr_exp elsee) {
-  // FIXME broken when have multiple logic condition
-  // TODO optimise
-  // if (elsee != NULL) {
-  //   debug("if-else-then statement\n");
-  //   if (then->kind == Tr_nx && elsee->kind == Tr_nx) {
-  //     debug("'then' and 'elsee' are statements\n");
-  //     T_stm st = NULL, sf = NULL;
-  //     Temp_label t = Temp_newlabel(), f = Temp_newlabel();
-  //     st = T_Seq(T_Label(t), then->u.nx);
-  //     sf = T_Seq(T_Label(f), elsee->u.nx);
-  //     doPatch(test->u.cx.trues, t);
-  //     doPatch(test->u.cx.falses, f);
-  //     return Tr_Nx((T_Seq(unCx(test).stm, T_Seq(st, sf))));
-  //   } else if (then->kind == Tr_cx || elsee->kind == Tr_cx) {
-  //     debug("'then' or 'elsee' is conditional statement\n");
-  //     T_stm st = NULL, sf = NULL;
-  //     Temp_label t= Temp_newlabel(), f=Temp_newlabel();
-  //     if(then->kind==Tr_cx){
-  //
-  //     }
-  //  } else {
-  //     debug("tradt 'then' and 'elsee' as expressions\n");
-  //   }
-  // } else {
-  //   debug("if-else statement\n");
-  //   if (then->kind == Tr_nx) {
-  //     debug("'then' is a statement\n");
-  //  } else if (then->kind == Tr_cx) {
-  //     debug("'then' is a conditional statement\n");
-  //   } else {
-  //     debug("treat 'then' as expression\n");
-  //   }
-  // }
   struct Cx cx = unCx(test);
   Temp_temp r = Temp_newtemp(); // result
+  r->isPointer = false;
   Temp_label t = Temp_newlabel(), f = Temp_newlabel();
   Temp_label merge = Temp_newlabel();
   doPatch(cx.trues, t);
@@ -243,19 +216,6 @@ Tr_exp Tr_ifExp(Tr_exp test, Tr_exp then, Tr_exp elsee) {
   if (elsee != NULL) {
     T_exp then_t = unEx(then);
     T_exp elsee_t = unEx(elsee);
-    // return Tr_Ex(T_Eseq(
-    //     cx.stm,
-    //     T_Eseq(T_Label(t),
-    //            T_Eseq(T_Move(T_Temp(r), then_t),
-    //                   T_Eseq(T_Jump(T_Name(merge), Temp_LabelList(merge,
-    //                   NULL)),
-    //                          T_Eseq(T_Label(f),
-    //                                 T_Eseq(T_Move(T_Temp(r), elsee_t),
-    //                                        T_Eseq(T_Jump(T_Name(merge),
-    //                                                      Temp_LabelList(merge,
-    //                                                                     NULL)),
-    //                                               T_Eseq(T_Label(merge),
-    //                                                      T_Temp(r))))))))));
     return Tr_Ex(T_Eseq(
         T_Seq(cx.stm,
               T_Seq(T_Seq(T_Seq(T_Label(t),
@@ -474,14 +434,14 @@ Tr_level Tr_outermost(void) {
   return OUTER_MOST;
 }
 
-Tr_access Tr_allocLocal(Tr_level level, bool escape) {
+Tr_access Tr_allocLocal(Tr_level level, bool escape, bool isPointer) {
   Tr_access t = checked_malloc(sizeof(*t));
 #if DEBUG
   if (level == OUTER_MOST)
     debug("alloc to global scape\n");
 #endif
   t->level = level;
-  t->access = F_allocLocal(level->frame, escape);
+  t->access = F_allocLocal(level->frame, escape, TODO);
   return t;
 }
 

@@ -87,7 +87,7 @@ static void doProc(FILE *out, char *outfile, F_frame frame, T_stm body) {
   // fclose(graph_out);
 }
 
-char *escape(const char *input) {
+static char *escape(const char *input) {
   if (!input)
     return NULL;
 

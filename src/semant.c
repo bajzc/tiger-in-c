@@ -361,7 +361,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
       Tr_exp var;
       beginBreakScope();
       {
-        Tr_access var_acc = Tr_allocLocal(level, a->u.forr.escape);
+        Tr_access var_acc = Tr_allocLocal(level, a->u.forr.escape, TODO);
         S_enter(venv, a->u.forr.var, E_VarEntry(lo.ty, var_acc));
         body = transExp(venv, tenv, a->u.forr.body, level, new_break);
         var = Tr_simpleVar(var_acc, level);
@@ -411,11 +411,11 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
                  str_ty[size.ty->kind]);
       struct expty init =
           transExp(venv, tenv, a->u.array.init, level, break_label);
-      debug2("arrayExp: init.ty: %p->%s\n", init.ty, str_ty[init.ty->kind]);
+      debug("arrayExp: init.ty: %p->%s\n", init.ty, str_ty[init.ty->kind]);
       if (init.ty != array->u.array)
         EM_error(a->pos, "different array type (%p<-%p)", init.ty,
                  array->u.array);
-      return expTy(Tr_arrayExp(init.exp, size.exp), array);
+      return expTy(Tr_arrayExp(init.exp, size.exp, IS_POINTER(init.ty)), array);
     }
     default: assert(0);
   } // end switch(a->kind)
@@ -443,9 +443,9 @@ struct expty transVar(S_table venv, S_table tenv, A_var v, Tr_level level) {
                  str_ty[var.ty->kind]);
       Ty_ty field_ty;
       if ((field_ty = findFieldInRecord(var.ty->u.record, v->u.field.sym))) {
+#if DEBUG
         // print debug info
         debug("record info of record(%p):\n", actual_ty(var.ty));
-#if DEBUG
         for (Ty_fieldList l = var.ty->u.record; l; l = l->tail) {
           fprintf(stderr, ".%s :: %s->%p; ", S_name(l->head->name),
                   str_ty[actual_ty(l->head->ty)->kind], actual_ty(l->head->ty));
@@ -568,7 +568,7 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
         debug("varDec: ty: %p e.ty: %p\n", ty, e.ty);
         if (ty->kind == Ty_record && e.ty->kind == Ty_nil) {
           E_enventry var =
-              E_VarEntry(ty, Tr_allocLocal(level, d->u.var.escape));
+              E_VarEntry(ty, Tr_allocLocal(level, d->u.var.escape, TODO));
           // NULL
           S_enter(venv, d->u.var.var, var);
           return Tr_assignExp(Tr_simpleVar(var->u.var.access, level), e.exp);
@@ -589,7 +589,7 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
           EM_error(d->pos,
                    "nil can only be used where the type can be determine");
       }
-      E_enventry var = E_VarEntry(e.ty, Tr_allocLocal(level, d->u.var.escape));
+      E_enventry var = E_VarEntry(e.ty, Tr_allocLocal(level, d->u.var.escape, TODO));
       S_enter(venv, d->u.var.var, var);
       return Tr_assignExp(Tr_simpleVar(var->u.var.access, level), e.exp);
     }
@@ -667,6 +667,7 @@ Ty_ty transTy(S_table tenv, A_ty a) {
 F_fragList SEM_transProg(A_exp exp) {
   E_venv = E_base_venv();
   E_tenv = E_base_tenv();
+  breakLevel = 0;
   if (!SEM_funLabel2funEntry)
     SEM_funLabel2funEntry = TAB_empty();
   struct expty res = transExp(E_venv, E_tenv, exp, Tr_outermost(), NULL);

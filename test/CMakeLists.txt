@@ -18,7 +18,7 @@ include(${CMAKE_SOURCE_DIR}/src/CMakeLists.txt)
 
 add_library(tigerc_lib ${SRC_FILES})
 
-macro(add_test name src)
+macro(reg_test name src)
     add_executable(
             ${name}
             ${src}
@@ -29,14 +29,22 @@ macro(add_test name src)
             tigerc_lib
     )
     set(tests_src ${tests_src} ${src})
+    gtest_discover_tests(
+            ${name}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    set_target_properties(${name} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}
+            RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}
+    )
 endmacro()
 
-add_test(env_test env_test.cpp)
-add_test(color_test color_test.cpp)
-add_test(frame_test frame/frame_test.cpp)
-add_test(translate_test translate/translate_test.cpp)
-add_test(semant_test semant/semant_test.cpp)
-add_test(xv6_test test_in_xv6.cpp)
+reg_test(env_test env_test.cpp)
+reg_test(color_test color_test.cpp)
+reg_test(frame_test frame/frame_test.cpp)
+reg_test(translate_test translate/translate_test.cpp)
+reg_test(semant_test semant/semant_test.cpp)
+reg_test(xv6_test test_in_xv6.cpp)
 
 add_executable(
         all_test
@@ -45,9 +53,18 @@ add_executable(
 )
 target_link_libraries(
         all_test
-        GTest::gtest_main
+        GTest::gtest
         tigerc_lib
 )
+gtest_discover_tests(
+        all_test
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+set_target_properties(all_test PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}
+        RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}
+)
+add_dependencies(all_test tigerc)
 
 include(GoogleTest)
 include_directories(.)
