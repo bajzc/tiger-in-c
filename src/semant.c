@@ -33,6 +33,8 @@ struct expty expTy(Tr_exp exp, Ty_ty ty) {
   struct expty e;
   e.exp = exp;
   e.ty = ty;
+  if (exp->kind == Tr_ex)
+    e.exp->u.ex->isCallInit = IS_POINTER(ty);
   return e;
 }
 
@@ -68,6 +70,16 @@ static Ty_tyList makeFormalTyList(S_table tenv, A_fieldList params) {
   debug("\n");
 #endif
   return l_head;
+}
+
+static U_boolList makeIsPointerList(Ty_tyList ty_list) {
+  U_boolList l = NULL;
+  for (; ty_list; ty_list = ty_list->tail) {
+    if (l == NULL)
+      l = U_BoolList(ty_list->head, NULL);
+    U_BoolListAppend(l, IS_POINTER(ty_list->head));
+  }
+  return l;
 }
 
 static Ty_ty findFieldInRecord(Ty_fieldList record, S_symbol sym) {
@@ -361,10 +373,10 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
       Tr_exp var;
       beginBreakScope();
       {
-        Tr_access var_acc = Tr_allocLocal(level, a->u.forr.escape, TODO);
+        Tr_access var_acc = Tr_allocLocal(level, a->u.forr.escape, 0);
         S_enter(venv, a->u.forr.var, E_VarEntry(lo.ty, var_acc));
         body = transExp(venv, tenv, a->u.forr.body, level, new_break);
-        var = Tr_simpleVar(var_acc, level);
+        var = Tr_simpleVar(var_acc, level, 0);
         if (body.ty->kind != Ty_void)
           EM_error(a->u.forr.body->pos,
                    "for-loop's body must produce no value (%s)",
@@ -413,9 +425,9 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
           transExp(venv, tenv, a->u.array.init, level, break_label);
       debug("arrayExp: init.ty: %p->%s\n", init.ty, str_ty[init.ty->kind]);
       if (init.ty != array->u.array)
-        EM_error(a->pos, "different array type (%p<-%p)", init.ty,
-                 array->u.array);
-      return expTy(Tr_arrayExp(init.exp, size.exp, IS_POINTER(init.ty)), array);
+        EM_error(a->pos, "different array type (%s : %s)\n", str_ty[init.ty->kind],
+                 str_ty[array->u.array->kind]);
+      return expTy(Tr_arrayExp(init.exp, size.exp, init.ty), array);
     }
     default: assert(0);
   } // end switch(a->kind)
@@ -429,7 +441,8 @@ struct expty transVar(S_table venv, S_table tenv, A_var v, Tr_level level) {
       E_enventry x = S_look(venv, v->u.simple);
       debug2("transVar: simple variable %s\n", S_name(v->u.simple));
       if (x && x->kind == E_varEntry)
-        return expTy(Tr_simpleVar(x->u.var.access, level),
+        return expTy(Tr_simpleVar(x->u.var.access, level,
+                                  IS_POINTER(actual_ty(x->u.var.ty))),
                      actual_ty(x->u.var.ty));
       EM_error(v->pos, "undefined variable %s", S_name(v->u.simple));
     }
@@ -501,12 +514,14 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
         // push the formal list into env instead of pushing individually
         Temp_label label = Temp_newlabel();
         S_enter(venv, f->name,
-                E_FunEntry(Tr_newLevel(level, label, genEscapeList(f->params)),
+                E_FunEntry(Tr_newLevel(level, label, genEscapeList(f->params),
+                                       makeIsPointerList(formalTys)),
                            label, formalTys, resultTy));
       }
       // Second, translate function body
       for (A_fundecList l = d->u.function; l; l = l->tail) {
         E_enventry funEntry = S_look(venv, l->head->name);
+        assert(TAB_look(SEM_funLabel2funEntry, funEntry->u.fun.label) == NULL);
         TAB_enter(SEM_funLabel2funEntry, funEntry->u.fun.label, funEntry);
         A_fundec f = l->head;
         debug2("functionDec: translating %s\n", S_name(f->name));
@@ -567,17 +582,17 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
               S_name(d->u.var.typ), str_ty[ty->kind]);
         debug("varDec: ty: %p e.ty: %p\n", ty, e.ty);
         if (ty->kind == Ty_record && e.ty->kind == Ty_nil) {
-          E_enventry var =
-              E_VarEntry(ty, Tr_allocLocal(level, d->u.var.escape, TODO));
+          E_enventry var = E_VarEntry(
+              ty, Tr_allocLocal(level, d->u.var.escape, IS_POINTER(ty)));
           // NULL
           S_enter(venv, d->u.var.var, var);
-          return Tr_assignExp(Tr_simpleVar(var->u.var.access, level), e.exp);
+          return Tr_assignExp(
+              Tr_simpleVar(var->u.var.access, level, IS_POINTER(e.ty)), e.exp);
         } else if (ty->kind != Ty_record && e.ty->kind == Ty_nil)
           EM_error(d->pos, "only record type can be assigned a nil value (%s)",
                    str_ty[ty->kind]);
         else if ((ty->kind == Ty_record || ty->kind == Ty_array) &&
                  ty != actual_ty(e.ty))
-          /* fprintf(stderr, "\nvarDec: NOT SURE\n\n"); */
           EM_error(d->pos, "different array/record types (%p<-%p)", ty,
                    actual_ty(e.ty));
         else if (ty->kind != e.ty->kind)
@@ -589,9 +604,12 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
           EM_error(d->pos,
                    "nil can only be used where the type can be determine");
       }
-      E_enventry var = E_VarEntry(e.ty, Tr_allocLocal(level, d->u.var.escape, TODO));
+      E_enventry var = E_VarEntry(
+          e.ty, Tr_allocLocal(level, d->u.var.escape, IS_POINTER(e.ty)));
       S_enter(venv, d->u.var.var, var);
-      return Tr_assignExp(Tr_simpleVar(var->u.var.access, level), e.exp);
+      // FIXME isPointer update
+      return Tr_assignExp(
+          Tr_simpleVar(var->u.var.access, level, IS_POINTER(e.ty)), e.exp);
     }
     case A_typeDec: {
       A_nametyList l;

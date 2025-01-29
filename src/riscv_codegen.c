@@ -10,6 +10,7 @@
 #define S(format, ...) snprintf(buf, 80, format, ##__VA_ARGS__)
 
 static AS_instrList iList = NULL, last = NULL;
+TAB_table AS_ptrMapTable = NULL; // Map<Temp_label, AS_ptrMap>
 
 static void munchStm(T_stm s);
 static Temp_temp munchExp(T_exp e);
@@ -33,10 +34,14 @@ static Temp_tempList munchArgs(int n, T_expList args, Tr_accessList formals,
 
   if (F_isInReg(formals->head->access)) { // not escape
     right = munchArgs(n + 1, args->tail, formals->tail, argRegs->tail);
+    r->isPointer = args->head->isCallInit;
     emit(AS_Oper("mv `d0, `s0 # copy arg to reg", L(argRegs->head, NULL),
                  L(r, NULL), NULL));
   } else {
     right = munchArgs(n + 1, args->tail, formals->tail, argRegs);
+    /* TODO:
+     * Do we need to record pointers passed by stack?
+     */
     emit(AS_Oper("addi `d0, `s0, -4 # grow up stack", L(F_SP(), NULL),
                  L(F_SP(), NULL), NULL));
     // not sure if we need to use AS_Move here. If this instruction is
@@ -104,10 +109,40 @@ static void munchStm(T_stm s) {
           Temp_tempList l = munchArgs(
               0, src->u.CALL.args,
               Tr_formals_with_static_link(fun->u.fun.level), F_args());
-          S("call %s", Temp_labelstring(src->u.CALL.fun->u.NAME));
+
+          char *funName = Temp_labelstring(fun->u.fun.label);
+
+          if (strcmp(funName, "initRecord") == 0 ||
+              strcmp(funName, "initArray") == 0) {
+            Temp_label ptrMapLabel = NULL;
+            ptrMapLabel = Temp_newlabel();
+
+            emit(AS_GC(ptrMapLabel));
+
+            if (strcmp(funName, "initArray") == 0) {
+              S("la `d0, %s # load ptrMap", Temp_labelstring(ptrMapLabel));
+              emit(AS_Oper(strdup(buf), L(F_A3(), NULL), NULL, NULL));
+            } else {
+              S("la `d0, %s # load ptrMap", Temp_labelstring(ptrMapLabel));
+              emit(AS_Oper(strdup(buf), L(F_A1(), NULL), NULL, NULL));
+            }
+
+            S("call %s", Temp_labelstring(src->u.CALL.fun->u.NAME));
+            emit(AS_Oper(strdup(buf), F_callerSaves(), l, NULL));
+
+            F_ptrMap ptrMap = F_newPtrMap(ptrMapLabel);
+            TAB_enter(AS_ptrMapTable, ptrMapLabel, ptrMap);
+            S("# ptrMap Label %s", Temp_labelstring(ptrMapLabel));
+            emit(AS_Oper(strdup(buf), NULL, NULL, NULL));
+          } else {
+            S("call %s", Temp_labelstring(src->u.CALL.fun->u.NAME));
+          }
+
           emit(AS_Oper(strdup(buf), F_callerSaves(), l, NULL));
           emit(AS_Move("mv `d0, `s0 # copy return value", L(dst->u.TEMP, NULL),
                        L(F_RV(), NULL)));
+
+
           popStack(Tr_formals_with_static_link(fun->u.fun.level));
         } else if (src->kind == T_CONST) {
           /* MOVE(TEMP(i),CONST(c)) */
@@ -119,6 +154,7 @@ static void munchStm(T_stm s) {
           T_exp e2 = src;
           Temp_temp i = dst->u.TEMP;
           Temp_temp j = munchExp(e2);
+          i->isPointer = j->isPointer || dst->isCallInit || e2->isCallInit;
           S("mv `d0, `s0 # MOVE(TEMP(i),e2) T%d <- T%d", i->num, j->num);
           emit(AS_Move(strdup(buf), L(i, NULL), L(j, NULL)));
         }
@@ -141,18 +177,15 @@ static void munchStm(T_stm s) {
     }
     case T_CJUMP: {
       // note that in chap8, we have manipulated all the CJUMP blocks so that
-      // the instructions follows are false branch
-      if (s->u.CJUMP.left->kind == T_CONST &&
-          s->u.CJUMP.right->kind == T_CONST) {
-        debug("CJUMP: is comparing two constants\n");
-        // TODO constexpr
-      }
+      // the instructions immediately after are false branch
 
       // TODO: pseudo instruction for compare to 0
       Temp_temp e1 = munchExp(s->u.CJUMP.left);
       Temp_temp e2 = munchExp(s->u.CJUMP.right);
       Temp_temp r1 = Temp_newtemp();
+      r1->isPointer = e1->isPointer;
       Temp_temp r2 = Temp_newtemp();
+      r2->isPointer = e2->isPointer;
       S("mv `d0, `s0 # safe copy of T%d", e1->num);
       emit(AS_Move(strdup(buf), L(r1, NULL), L(e1, NULL)));
       S("mv `d0, `s0 # safe copy of T%d", e2->num);
@@ -196,6 +229,7 @@ static void munchStm(T_stm s) {
 static Temp_temp munchExp(T_exp e) {
   static char buf[80];
   Temp_temp r = Temp_newtemp();
+  r->isPointer = e->isCallInit;
   switch (e->kind) {
     case T_BINOP: {
       // note that we have converted all "and" and "or" operators to if..else
@@ -312,6 +346,7 @@ static Temp_temp munchExp(T_exp e) {
       E_enventry fun = TAB_look(SEM_funLabel2funEntry, e->u.CALL.fun->u.NAME);
       if (!fun)
         fun = TAB_look(E_funLabel2funEntry, e->u.CALL.fun->u.NAME);
+      assert(!IS_POINTER(fun->u.fun.result)); // the result is discarded
       Temp_tempList l =
           munchArgs(0, e->u.CALL.args,
                     Tr_formals_with_static_link(fun->u.fun.level), F_args());
@@ -333,14 +368,18 @@ AS_instrList F_codegen(Set last_instr, F_frame f, T_stmList stmList) {
   AS_instrList list = NULL;
   AS_instr prev = NULL;
 
+  if (AS_ptrMapTable == NULL) {
+    AS_ptrMapTable = TAB_empty();
+  }
+
   for (T_stmList sl = stmList; sl; sl = sl->tail) {
     munchStm(sl->head);
   }
-  for (AS_instrList il = iList; il; il = il->tail) {
+  for (AS_instrList il = iList; il; prev = il->head, il = il->tail) {
     // evaluation of conditional exp not in if/while/for cause
     // multiple edge toward done label
     // eg: row[N-1] = N
-    // both branch will points to next instruction, causes a
+    // both branch will point to next instruction, causes a
     // non-block-start instruction has multiple predecessors
     if (prev && prev->kind != I_LABEL &&
         ((il->head->kind == I_LABEL) ||
@@ -348,7 +387,12 @@ AS_instrList F_codegen(Set last_instr, F_frame f, T_stmList stmList) {
           prev->u.OPER.jumps->labels->tail != NULL))) {
       SET_insert(last_instr, prev);
     }
-    prev = il->head;
+    if (prev && prev->kind == I_GC) {
+      Temp_label l = prev->u.GC.ptrMapLabel;
+      F_ptrMap m = TAB_look(AS_ptrMapTable, l);
+      assert(m);
+      m->frame = f;
+    }
   }
   list = iList;
   iList = last = NULL;

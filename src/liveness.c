@@ -59,13 +59,11 @@ struct Live_graph Live_Liveness(G_graph flow) {
     AS_instr instr = G_nodeInfo(l->head);
     fprintf(stderr, "%s\n\tin = ",
             instr->u.LABEL.assem); // the string will always be there
-    SET_FOREACH(in, tptr) {
-        fprintf(stderr, "%d, ", ((Temp_temp) *tptr)->num);
-    }
+    SET_FOREACH(in, tptr) { fprintf(stderr, "%d, ", ((Temp_temp) *tptr)->num); }
     fprintf(stderr, "\n\tout = ");
     SET_FOREACH(out, tptr) {
       Temp_temp t = *tptr;
-        fprintf(stderr, "%d, ", ((Temp_temp) *tptr)->num);
+      fprintf(stderr, "%d, ", t->num);
     }
     fprintf(stderr, "\n");
     for (G_nodeList succL = G_succ(l->head); succL; succL = succL->tail) {

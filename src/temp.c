@@ -7,9 +7,9 @@
 
 #include <stdio.h>
 
-#include "temp.h"
 #include "symbol.h"
 #include "table.h"
+#include "temp.h"
 #include "util.h"
 
 string Temp_labelstring(Temp_label s) { return S_name(s); }

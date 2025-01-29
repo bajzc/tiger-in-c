@@ -18,6 +18,7 @@ typedef S_symbol Temp_label;
 struct Temp_temp_ {
   int num;
   bool isPointer;
+  int stack_offset;
 };
 struct Temp_tempList_ {
   Temp_temp head;

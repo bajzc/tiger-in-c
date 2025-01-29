@@ -47,56 +47,60 @@ static E_enventry E_libFun(Tr_level funLevel, Ty_tyList formals, Ty_ty resulty,
 }
 
 #define T(name) (Temp_namedlabel(name))
-#define U(head, tail) (U_BoolList(head, tail))
-#define L(head, tail) (Ty_TyList(head, tail))
+#define U(head, tail) (U_BoolList((head), (tail)))
+#define L(head, tail) (Ty_TyList((head), (tail)))
 
 S_table E_base_venv(void) {
   if (E_funLabel2funEntry == NULL)
     E_funLabel2funEntry = TAB_empty();
   S_table venv = S_empty();
   S_enter(venv, S_Symbol("printInt"),
-          E_libFun(Tr_libFunLevel(T("printInt"), U(0, NULL)), L(Ty_Int(), NULL),
-                   Ty_Void(), "printInt"));
+          E_libFun(Tr_libFunLevel(T("printInt"), U(0, NULL), U(0, NULL)),
+                   L(Ty_Int(), NULL), Ty_Void(), "printInt"));
   S_enter(venv, S_Symbol("print"),
-          E_libFun(Tr_libFunLevel(T("print"), U(0, NULL)), L(Ty_String(), NULL),
-                   Ty_Void(), "print"));
+          E_libFun(Tr_libFunLevel(T("print"), U(0, NULL), U(1, NULL)),
+                   L(Ty_String(), NULL), Ty_Void(), "print"));
   S_enter(venv, S_Symbol("flush"),
-          E_libFun(Tr_libFunLevel(T("flush"), NULL), NULL, Ty_Void(), "flush"));
+          E_libFun(Tr_libFunLevel(T("flush"), NULL, NULL), NULL, Ty_Void(),
+                   "flush"));
   S_enter(venv, S_Symbol("getchar"),
-          E_libFun(Tr_libFunLevel(T("getchar"), NULL), NULL, Ty_String(),
+          E_libFun(Tr_libFunLevel(T("getchar"), NULL, NULL), NULL, Ty_String(),
                    "getchar"));
   S_enter(venv, S_Symbol("ord"),
-          E_libFun(Tr_libFunLevel(T("ord"), U(0, NULL)), L(Ty_String(), NULL),
-                   Ty_Int(), "ord"));
+          E_libFun(Tr_libFunLevel(T("ord"), U(0, NULL), U(1, NULL)),
+                   L(Ty_String(), NULL), Ty_Int(), "ord"));
   S_enter(venv, S_Symbol("chr"),
-          E_libFun(Tr_libFunLevel(T("chr"), U(0, NULL)), L(Ty_Int(), NULL),
-                   Ty_String(), "chr"));
+          E_libFun(Tr_libFunLevel(T("chr"), U(0, NULL), U(0, NULL)),
+                   L(Ty_Int(), NULL), Ty_String(), "chr"));
   S_enter(venv, S_Symbol("size"),
-          E_libFun(Tr_libFunLevel(T("size"), U(0, NULL)), L(Ty_String(), NULL),
-                   Ty_Int(), "size"));
+          E_libFun(Tr_libFunLevel(T("size"), U(0, NULL), U(1, NULL)),
+                   L(Ty_String(), NULL), Ty_Int(), "size"));
   S_enter(venv, S_Symbol("substring"),
-          E_libFun(Tr_libFunLevel(T("substring"), U(0, U(0, U(0, NULL)))),
+          E_libFun(Tr_libFunLevel(T("substring"), U(0, U(0, U(0, NULL))),
+                                  U(1, U(0, U(0, NULL)))),
                    L(Ty_String(), L(Ty_Int(), L(Ty_Int(), NULL))), Ty_String(),
                    "substring"));
-  S_enter(venv, S_Symbol("concat"),
-          E_libFun(Tr_libFunLevel(T("concat"), U(0, U(0, NULL))),
-                   L(Ty_String(), L(Ty_String(), NULL)), Ty_String(),
-                   "concat"));
+  S_enter(
+      venv, S_Symbol("concat"),
+      E_libFun(Tr_libFunLevel(T("concat"), U(0, U(0, NULL)), U(1, U(1, NULL))),
+               L(Ty_String(), L(Ty_String(), NULL)), Ty_String(), "concat"));
   S_enter(venv, S_Symbol("not"),
-          E_libFun(Tr_libFunLevel(T("not"), U(0, NULL)), L(Ty_Int(), NULL),
-                   Ty_Int(), "not"));
+          E_libFun(Tr_libFunLevel(T("not"), U(0, NULL), U(0, NULL)),
+                   L(Ty_Int(), NULL), Ty_Int(), "not"));
   S_enter(venv, S_Symbol("exit"),
-          E_libFun(Tr_libFunLevel(T("exit"), U(0, NULL)), L(Ty_Int(), NULL),
-                   Ty_Void(), "exit"));
+          E_libFun(Tr_libFunLevel(T("exit"), U(0, NULL), U(0, NULL)),
+                   L(Ty_Int(), NULL), Ty_Void(), "exit"));
   S_enter(venv, S_Symbol("initArray"),
-          E_libFun(Tr_libFunLevel(T("initArray"), U(0, U(0, NULL))),
-                   L(Ty_Int(), L(Ty_Int(), L(Ty_Int(), NULL))), Ty_Int(),
-                   "initArray"));
+          E_libFun(Tr_libFunLevel(T("initArray"), U(0, U(0, U(0, NULL))),
+                                  U(0, U(0, U(1, NULL)))),
+                   L(Ty_Int(), L(Ty_Int(), L(Ty_String(), NULL))),
+                   Ty_Array(Ty_Nil()), "initArray"));
   S_enter(venv, S_Symbol("initRecord"),
-          E_libFun(Tr_libFunLevel(T("initRecord"), U(0, NULL)),
-                   L(Ty_String(), NULL), Ty_Int(), "initRecord"));
+          E_libFun(Tr_libFunLevel(T("initRecord"), U(0, NULL), U(1, NULL)),
+                   L(Ty_String(), NULL), Ty_Record(NULL), "initRecord"));
   S_enter(venv, S_Symbol("stringEqual"),
-          E_libFun(Tr_libFunLevel(T("stringEqual"), U(0, U(0, NULL))),
+          E_libFun(Tr_libFunLevel(T("stringEqual"), U(0, U(0, NULL)),
+                                  U(1, U(1, NULL))),
                    L(Ty_String(), L(Ty_String(), NULL)), Ty_Int(),
                    "stringEqual"));
   return venv;

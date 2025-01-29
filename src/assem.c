@@ -7,9 +7,12 @@
 
 #include "absyn.h"
 #include "assem.h"
+#include "codegen.h"
 #include "symbol.h"
 #include "temp.h"
 #include "util.h"
+
+Set AS_GC_Maps = NULL; // Set<AS_Instr<I_GC>>
 
 AS_targets AS_Targets(Temp_labelList labels) {
   AS_targets p = checked_malloc(sizeof *p);
@@ -41,6 +44,14 @@ AS_instr AS_Move(string a, Temp_tempList d, Temp_tempList s) {
   p->u.MOVE.assem = a;
   p->u.MOVE.dst = d;
   p->u.MOVE.src = s;
+  return p;
+}
+
+AS_instr AS_GC(Temp_label ptrMap) {
+  AS_instr p = (AS_instr) checked_malloc(sizeof *p);
+  p->kind = I_GC;
+  p->u.GC.assem = Temp_labelstring(ptrMap);
+  p->u.GC.ptrMapLabel = ptrMap;
   return p;
 }
 
@@ -165,6 +176,7 @@ void AS_print_graph(FILE *out, AS_instr i, Temp_map m) {
       format_graph(r, i->u.MOVE.assem, i->u.MOVE.dst, i->u.MOVE.src, NULL, m);
       fprintf(out, "%s", r);
       break;
+    case I_GC: fprintf(out, "ptrMap: %s\n", i->u.GC.assem); break;
   }
 }
 
@@ -190,10 +202,49 @@ void AS_print(FILE *out, AS_instr i, Temp_map m) {
       format(r, i->u.MOVE.assem, i->u.MOVE.dst, i->u.MOVE.src, NULL, m);
       fprintf(out, "\t%s", r);
       break;
+    case I_GC: {
+      F_ptrMap ptrMap = TAB_look(AS_ptrMapTable, i->u.GC.ptrMapLabel);
+      int offset = 0;
+#if DEBUG
+      fprintf(out, "\t# ptrMap:%s parent: %s  pointers: ", i->u.GC.assem,
+              Temp_labelstring(ptrMap->prev));
+      SET_FOREACH(ptrMap->live_regs, tptr) {
+        Temp_temp t = *tptr;
+        if (t->isPointer)
+          fprintf(out, "%s(%d), ", Temp_look(m, t), t->num);
+      }
+      U_boolList l = F_stack_markers(ptrMap->frame);
+      while (l) {
+        if (l->head)
+          fprintf(out, "%d(fp), ", offset * -4);
+        l = l->tail;
+        offset++;
+      }
+#endif
+
+      fprintf(out, "\n");
+      // reg a3 is free to use
+      fprintf(out, "\tla a3, %s                     # load ptrMap\n",
+              Temp_labelstring(ptrMap->l));
+      fprintf(out, "\tsw fp, 0(a3)                  # store frame pointer\n");
+      offset = 4;
+      SET_FOREACH(ptrMap->live_regs, tptr) {
+        Temp_temp t = *tptr;
+        if (t->isPointer) {
+          fprintf(out, "\tsw %s, %d(a3) 				  # store reg to ptrMap\n",
+                  Temp_look(m, t), offset * F_wordSize);
+          offset++;
+        }
+      }
+
+      if (AS_GC_Maps == NULL)
+        AS_GC_Maps = SET_empty(SET_default_cmp);
+      SET_insert(AS_GC_Maps, i);
+      break;
+    }
   }
 }
 
-/* c should be COL_color; temporarily it is not */
 void AS_printInstrList(FILE *out, AS_instrList iList, Temp_map m) {
   for (; iList; iList = iList->tail) {
     AS_print(out, iList->head, m);

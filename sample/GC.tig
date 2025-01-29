@@ -1,0 +1,9 @@
+let
+  type list = { link: list, key: int }
+  type intArray = array of int
+  type listArray = array of list
+  var emptyList := list{link=nil, key=0}
+  var lists := listArray[4] of emptyList
+in
+  lists
+  end

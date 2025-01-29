@@ -12,8 +12,7 @@
 #define IS_POINTER(ty)                                                         \
   ({                                                                           \
     Ty_ty _ty = (ty);                                                          \
-    (_ty->kind == Ty_record || _ty->kind == Ty_nil ||                          \
-     _ty->kind == Ty_string || _ty->kind == Ty_array);                         \
+    (_ty->kind == Ty_record || _ty->kind == Ty_array);                         \
   })
 
 typedef struct Ty_ty_ *Ty_ty;

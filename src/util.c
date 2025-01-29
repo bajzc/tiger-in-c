@@ -28,3 +28,14 @@ U_boolList U_BoolList(bool head, U_boolList tail) {
   list->tail = tail;
   return list;
 }
+
+void U_BoolListAppend(U_boolList list, bool head) {
+  U_boolList *l = &list;
+  while (*l) {
+    l = &(*l)->tail;
+  }
+  U_boolList tail = checked_malloc(sizeof(*tail));
+  tail->head = head;
+  tail->tail = NULL;
+  *l = tail;
+}

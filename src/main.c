@@ -4,11 +4,6 @@
 
 #include <stdio.h>
 
-#include "prabsyn.h"
-#include "printtree.h"
-#include "set.h"
-#include "symbol.h"
-#include "util.h"
 #include "absyn.h"
 #include "assem.h"
 #include "canon.h"
@@ -21,9 +16,14 @@
 #include "graph.h"
 #include "liveness.h"
 #include "parse.h"
+#include "prabsyn.h"
+#include "printtree.h"
 #include "semant.h"
+#include "set.h"
+#include "symbol.h"
 #include "temp.h"
 #include "tree.h"
+#include "util.h"
 
 extern bool anyErrors;
 
@@ -58,33 +58,67 @@ static void doProc(FILE *out, char *outfile, F_frame frame, T_stm body) {
   iList = F_procEntryExit2(iList, frame, last_instr);
 
   // add the last instruction appended in F_procEntryExit2 to last_instr
-   AS_instrList p;
+  AS_instrList p;
   for (p = iList; p->tail != NULL; p = p->tail)
     ;
   SET_insert(last_instr, p->head);
 
-  // G_graph graph = FG_AssemFlowGraph(iList);
-  // printFlowgraph(stderr, graph, Temp_layerMap(F_tempMap, Temp_name()),
-  //                Temp_labelstring(F_name(frame)));
-
-  // AS_printInstrList(out, iList, Temp_layerMap(F_tempMap, Temp_name()));
-
   Temp_map color_map = Color_Main(last_instr, iList, frame);
   proc = F_procEntryExit3(frame, iList);
 
-
   fprintf(out, ".text\n%s:\n", Temp_labelstring(F_name(frame)));
   AS_printInstrList(out, proc->body, color_map);
-  // fprintf(out, "END %s\n\n", Temp_labelstring(F_name(frame)));
-  //
-  // G_graph inter_graph = Live_Liveness(graph).graph;
-  //
-  // char graph_file[100];
-  // snprintf(graph_file, 100, "%s-%s.dot", outfile,
-  //          Temp_labelstring(F_name(frame)));
-  // FILE *graph_out = fopen(graph_file, "w");
-  // printInterGraph(graph_out, inter_graph);
-  // fclose(graph_out);
+}
+
+/*
+ptrMap:
+.word fp                  # frame pointer
+.word Lprev               # link to previous
+.word id                  # key
+.word regNum
+...                       # register contents
+.word stackPointerNum
+...                       # stack offset (positive numbers)
+ */
+static void doGC(FILE* out) {
+  fprintf(out, ".data\n");
+  fprintf(out, ".align 2\n");
+  SET_FOREACH(AS_GC_Maps, iptr) {
+    AS_instr instr = *iptr;
+    F_ptrMap ptrMap = TAB_look(AS_ptrMapTable, instr->u.GC.ptrMapLabel);
+    fprintf(out, "%s:\n", Temp_labelstring(ptrMap->l));
+    fprintf(out, "\t.word\t0\t#frame pointer\n"); // frame pointer
+    fprintf(out, "\t.word\t%s\t#previous map\n", Temp_labelstring(ptrMap->prev)); // L_prev
+    fprintf(out, "\t.word\t%d\t#key\n", ptrMap->key->num);
+    int regNum = 0;
+    SET_FOREACH(ptrMap->live_regs, tptr) {
+      Temp_temp t = *tptr;
+      if (t->isPointer)
+        regNum++;
+    }
+    fprintf(out, "\t.word\t%d\t#regNum\n", regNum);
+    for (int  i = 0 ;i<regNum;i++) {
+      fprintf(out, "\t.word\t0\n");
+    }
+    int stackPointerNum = 0;
+    U_boolList l = F_stack_markers(ptrMap->frame);
+    while (l) {
+      if (l->head)
+        stackPointerNum++;
+      l = l->tail;
+    }
+    fprintf(out, "\t.word\t%d\t#stackPointer\n", stackPointerNum);
+    l = F_stack_markers(ptrMap->frame);
+    int i = 0;
+    while (l) {
+      if (l->head)
+        fprintf(out, "\t.word\t%d\t#stack offset\n", i);
+      l=l->tail;
+      i++;
+    }
+  }
+  fprintf(out, "ptrMapHead:\n");
+  fprintf(out, "\t.word\t0\n");
 }
 
 static char *escape(const char *input) {
@@ -193,6 +227,8 @@ int main(int argc, string *argv) {
       else if (frags->head->kind == F_stringFrag)
         doString(out, frags->head->u.stringg.label, frags->head->u.stringg.str);
     }
+
+    doGC(out);
 
     fclose(out);
     return 0;

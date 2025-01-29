@@ -34,10 +34,10 @@ TEST(frame, allocLocals) {
   F_frame frame = frags->tail->head->u.proc.frame;
   EXPECT_STREQ(Temp_labelstring(F_name(frame)), "L0");
   // add locals manually
-  EXPECT_EQ(F_isInReg(F_allocLocal(frame, true, TODO)), false);
-  EXPECT_EQ(F_isInReg(F_allocLocal(frame, false, TODO)), true);
-  EXPECT_EQ(F_isInReg(F_allocLocal(frame, true, TODO)), false);
-  EXPECT_EQ(F_isInReg(F_allocLocal(frame, true, TODO)), false);
+  EXPECT_EQ(F_isInReg(F_allocLocal(frame, true, 0)), false);
+  EXPECT_EQ(F_isInReg(F_allocLocal(frame, false, 0)), true);
+  EXPECT_EQ(F_isInReg(F_allocLocal(frame, true, 1)), false);
+  EXPECT_EQ(F_isInReg(F_allocLocal(frame, true, 0)), false);
   std::vector<F_access> locals;
   for (auto i = (F_locals(frame)); i; i = i->tail) {
     locals.push_back(i->head);

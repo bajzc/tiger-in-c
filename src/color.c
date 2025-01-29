@@ -1,9 +1,9 @@
 #include "color.h"
-#include "frame.h"
-#include "liveness.h"
 #include "codegen.h"
 #include "flowgraph.h"
+#include "frame.h"
 #include "graph.h"
+#include "liveness.h"
 #include "set.h"
 
 #define L(h, t) Temp_TempList((Temp_temp) h, (Temp_tempList) t)
@@ -67,18 +67,8 @@ void buildupLiveOut(Main_struct S) {
 
 int isBlockStart(G_node node, Main_struct S) {
   G_nodeList preds = G_pred(node);
-  return preds == NULL || preds->head == NULL || G_inNodeList(preds->head, S->block_end_list);
-  // bool flag = FALSE;
-  // for (; preds; preds = preds->tail) {
-  //   if (G_inNodeList(node, S->block_end_list))
-  //     flag = TRUE;
-  //   // if (flag) {
-  //   //   // must be T_CJUMP
-  //   //   AS_instr instr = G_nodeInfo(preds->head);
-  //   //   assert(instr->kind == I_OPER &&
-  //   //          instr->u.OPER.jumps->labels->tail != NULL);
-  //   // }
-  // }
+  return preds == NULL || preds->head == NULL ||
+         G_inNodeList(preds->head, S->block_end_list);
 }
 
 /*
@@ -191,11 +181,18 @@ void build(Main_struct S) {
       debug2("liveout = ");
       SET_FOREACH(live, sptr) {
         Temp_temp s = (*sptr);
-        fprintf(stderr, "%d, ", s->num);
+        if (s->isPointer)
+          fprintf(stderr, "P%d, ", s->num);
+        else
+          fprintf(stderr, "%d, ", s->num);
       }
       fprintf(stderr, "\n");
       fprintf(stderr, "\t%s\n\n", cur_instr->u.OPER.assem);
 #endif
+      if (cur_instr->kind == I_GC) { // record all live temps
+        F_ptrMap ptrMap = TAB_look(AS_ptrMapTable, cur_instr->u.GC.ptrMapLabel);
+        ptrMap->live_regs = SET_copy(live);
+      }
       if (FG_isMove(cur_node)) { // if isMoveInstruction(I) then
         live = SET_difference(live, FG_use(cur_node)); // live ← live \ use(I)
         Set defAndUse = SET_union(FG_use(cur_node), FG_def(cur_node));
@@ -670,8 +667,7 @@ void SelectSpill(Main_struct S) {
       choice = m;
     }
   }
-  debug("selectSpill = T%d\n",
-          ((Temp_temp) (G_nodeInfo(choice)))->num);
+  debug("selectSpill = T%d\n", ((Temp_temp) (G_nodeInfo(choice)))->num);
   SET_delete(S->spillWorklist, choice);
   assert(Temp_look(F_tempMap, G_nodeInfo(choice)) == NULL);
   SET_insert(S->simplifyWorklist, choice);
@@ -750,16 +746,15 @@ void RewriteProgram(Main_struct S) {
   char buf[80];
   SET_FOREACH(S->spilledNodes, vptr) {
     G_node v = *vptr;
-    F_access v_access = F_allocLocal(S->frame, 1, TODO);
-    T_exp v_exp = F_Exp(v_access, T_Temp(F_FP()));
-    assert(v_exp->kind == T_MEM && v_exp->u.MEM->kind == T_BINOP);
-    assert(v_exp->u.MEM->u.BINOP.right->kind == T_CONST);
-    int offset = v_exp->u.MEM->u.BINOP.right->u.CONST;
+    Temp_temp v_t = G_nodeInfo(v);
+    F_access v_access = F_allocLocal(S->frame, 1, v_t->isPointer);
+    int offset = F_getOffset(v_access);
     for (G_nodeList instrs = G_nodes(S->flowgraph); instrs;
          instrs = instrs->tail) {
       AS_instr instr = G_nodeInfo(instrs->head);
       if (SET_contains(FG_use(instrs->head), T(v))) {
         Temp_temp v_i = Temp_newtemp();
+        v_i->isPointer = v_t->isPointer;
         G_node v_i_node = G_Node(S->interference_graph, v_i);
         SET_insert(newTemps, v_i_node);
         debug("spilledNode T%d stored as T%d at %d(fp)\n", T(v)->num, v_i->num,
@@ -786,6 +781,7 @@ void RewriteProgram(Main_struct S) {
       }
       if (SET_contains(FG_def(instrs->head), T(v))) {
         Temp_temp v_i = Temp_newtemp();
+        v_i->isPointer = v_t->isPointer;
         G_node v_i_node = G_Node(S->interference_graph, v_i);
         SET_insert(newTemps, v_i_node);
         debug("spilledNode T%d stored as T%d at %d(fp)\n", T(v)->num, v_i->num,

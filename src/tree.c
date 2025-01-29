@@ -1,6 +1,8 @@
 #include <stdio.h>
 
 #include "tree.h"
+
+#include "frame.h"
 #include "symbol.h"
 #include "temp.h"
 #include "util.h"

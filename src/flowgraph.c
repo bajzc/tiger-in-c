@@ -1,4 +1,6 @@
 #include "flowgraph.h"
+
+#include "frame.h"
 #include "set.h"
 
 static Set FG_TempList2Set(Temp_tempList l) {
@@ -17,8 +19,9 @@ Set FG_def(G_node n) {
   AS_instr instr = G_nodeInfo(n);
   switch (instr->kind) {
     case I_OPER: return FG_TempList2Set(instr->u.OPER.dst);
-    case I_LABEL: return FG_TempList2Set(NULL);
+    case I_LABEL: return FG_TempList2Set(Temp_TempList(F_A3(), NULL));
     case I_MOVE: return FG_TempList2Set(instr->u.MOVE.dst);
+    case I_GC: return FG_TempList2Set(NULL);
     default: assert(0);
   }
 }
@@ -33,6 +36,7 @@ Set FG_use(G_node n) {
     case I_OPER: return FG_TempList2Set(instr->u.OPER.src);
     case I_LABEL: return FG_TempList2Set(NULL);
     case I_MOVE: return FG_TempList2Set(instr->u.MOVE.src);
+    case I_GC: return FG_TempList2Set(NULL);
     default: assert(0);
   }
 }
@@ -71,7 +75,8 @@ G_node FG_AssemFlowGraph_Internal(AS_instrList il, G_graph graph,
                                   Temp_labelList headLabels) {
   if (il == NULL)
     return NULL;
-  if (il->head->kind == I_OPER || il->head->kind == I_MOVE) {
+  if (il->head->kind == I_OPER || il->head->kind == I_MOVE ||
+      il->head->kind == I_GC) {
     G_node node = G_Node(graph, il->head);
 
     Temp_labelList curHeadLabels = headLabels;

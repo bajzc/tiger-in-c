@@ -5,7 +5,12 @@
 #include <stdio.h>
 
 #include "canon.h"
+
+#include "env.h"
+#include "errormsg.h"
+#include "semant.h"
 #include "symbol.h"
+#include "table.h"
 #include "temp.h"
 #include "tree.h"
 #include "util.h"
@@ -54,21 +59,30 @@ struct stmExp {
   T_exp e;
 };
 
-static T_stm reorder(expRefList rlist) {
+static T_stm reorder(expRefList rlist, bool src_isInitCall) {
   if (!rlist)
     return T_Exp(T_Const(0)); /* nop */
   else if ((*rlist->head)->kind == T_CALL) {
     Temp_temp t = Temp_newtemp();
+    E_enventry fun =
+        TAB_look(SEM_funLabel2funEntry, (*rlist->head)->u.CALL.fun->u.NAME);
+    if (!fun)
+      fun = TAB_look(E_funLabel2funEntry, (*rlist->head)->u.CALL.fun->u.NAME);
+    assert(fun && fun->kind == E_funEntry);
+    t->isPointer = IS_POINTER(fun->u.fun.result) || src_isInitCall;
+    if (src_isInitCall)
+      assert(0);
     *rlist->head = T_Eseq(T_Move(T_Temp(t), *rlist->head), T_Temp(t));
-    return reorder(rlist);
+    return reorder(rlist, false);
   } else {
     struct stmExp hd = do_exp(*rlist->head);
-    T_stm s = reorder(rlist->tail);
+    T_stm s = reorder(rlist->tail, false);
     if (commute(s, hd.e)) {
       *rlist->head = hd.e;
       return seq(hd.s, s);
     } else {
       Temp_temp t = Temp_newtemp();
+      t->isPointer = hd.e->isCallInit || src_isInitCall;
       *rlist->head = T_Temp(t);
       return seq(hd.s, seq(T_Move(T_Temp(t), hd.e), s));
     }
@@ -97,15 +111,17 @@ static struct stmExp do_exp(T_exp exp) {
   switch (exp->kind) {
     case T_BINOP:
       return StmExp(reorder(ExpRefList(&exp->u.BINOP.left,
-                                       ExpRefList(&exp->u.BINOP.right, NULL))),
+                                       ExpRefList(&exp->u.BINOP.right, NULL)),
+                            false),
                     exp);
-    case T_MEM: return StmExp(reorder(ExpRefList(&exp->u.MEM, NULL)), exp);
+    case T_MEM:
+      return StmExp(reorder(ExpRefList(&exp->u.MEM, NULL), false), exp);
     case T_ESEQ: {
       struct stmExp x = do_exp(exp->u.ESEQ.exp);
       return StmExp(seq(do_stm(exp->u.ESEQ.stm), x.s), x.e);
     }
-    case T_CALL: return StmExp(reorder(get_call_rlist(exp)), exp);
-    default: return StmExp(reorder(NULL), exp);
+    case T_CALL: return StmExp(reorder(get_call_rlist(exp), false), exp);
+    default: return StmExp(reorder(NULL, false), exp);
   }
 }
 
@@ -114,19 +130,24 @@ static T_stm do_stm(T_stm stm) {
   assert(stm);
   switch (stm->kind) {
     case T_SEQ: return seq(do_stm(stm->u.SEQ.left), do_stm(stm->u.SEQ.right));
-    case T_JUMP: return seq(reorder(ExpRefList(&stm->u.JUMP.exp, NULL)), stm);
+    case T_JUMP:
+      return seq(reorder(ExpRefList(&stm->u.JUMP.exp, NULL), false), stm);
     case T_CJUMP:
       return seq(reorder(ExpRefList(&stm->u.CJUMP.left,
-                                    ExpRefList(&stm->u.CJUMP.right, NULL))),
+                                    ExpRefList(&stm->u.CJUMP.right, NULL)),
+                         false),
                  stm);
     case T_MOVE:
       if (stm->u.MOVE.dst->kind == T_TEMP && stm->u.MOVE.src->kind == T_CALL)
-        return seq(reorder(get_call_rlist(stm->u.MOVE.src)), stm);
+        return seq(reorder(get_call_rlist(stm->u.MOVE.src), false), stm);
       else if (stm->u.MOVE.dst->kind == T_TEMP)
-        return seq(reorder(ExpRefList(&stm->u.MOVE.src, NULL)), stm);
+        return seq(reorder(ExpRefList(&stm->u.MOVE.src, NULL),
+                           stm->u.MOVE.src->isCallInit),
+                   stm);
       else if (stm->u.MOVE.dst->kind == T_MEM)
         return seq(reorder(ExpRefList(&stm->u.MOVE.dst->u.MEM,
-                                      ExpRefList(&stm->u.MOVE.src, NULL))),
+                                      ExpRefList(&stm->u.MOVE.src, NULL)),
+                           stm->u.MOVE.src->isCallInit),
                    stm);
       else if (stm->u.MOVE.dst->kind == T_ESEQ) {
         T_stm s = stm->u.MOVE.dst->u.ESEQ.stm;
@@ -136,9 +157,9 @@ static T_stm do_stm(T_stm stm) {
       assert(0); /* dst should be temp or mem only */
     case T_EXP:
       if (stm->u.EXP->kind == T_CALL)
-        return seq(reorder(get_call_rlist(stm->u.EXP)), stm);
+        return seq(reorder(get_call_rlist(stm->u.EXP), false), stm);
       else
-        return seq(reorder(ExpRefList(&stm->u.EXP, NULL)), stm);
+        return seq(reorder(ExpRefList(&stm->u.EXP, NULL), false), stm);
     default: return stm;
   }
 }

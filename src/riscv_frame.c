@@ -36,7 +36,7 @@ struct F_frame_ {
   int arg_reg_count;
   F_accessList formals_list; // the locations of all the formals
   F_accessList locals_list;
-  bool stack_marker[1]; // indict whether a stack slot is a pointer
+  U_boolList stack_marker_list; // indict whether a stack slot is a pointer
 };
 
 /* |  ..       ..  |                  */
@@ -84,10 +84,16 @@ F_access F_allocFormals(F_frame f, bool escape, bool isPointer) {
     debug("%s: call InFrame(%d)\n", Temp_labelstring(f->frame_label),
           f->stack_size * F_wordSize * -1);
     ret = InFrame(f->stack_size * F_wordSize * -1);
+    if (f->stack_marker_list == NULL)
+      f->stack_marker_list = U_BoolList(isPointer, NULL);
+    else
+      U_BoolListAppend(f->stack_marker_list, isPointer);
     f->stack_size += 1;
   } else {
     assert(f->arg_reg_count < ARG_IN_REG);
-    ret = InReg(Temp_newtemp());
+    Temp_temp t = Temp_newtemp();
+    t->isPointer = isPointer;
+    ret = InReg(t);
     f->arg_reg_count++;
   }
   F_accessList *l = &f->formals_list;
@@ -108,6 +114,10 @@ F_access F_allocLocal(F_frame f, bool escape, bool isPointer) {
     debug("%s: call InFrame(%d)\n", Temp_labelstring(f->frame_label),
           f->stack_size * F_wordSize * -1);
     ret = InFrame(f->stack_size * F_wordSize * -1);
+    if (f->stack_marker_list == NULL)
+      f->stack_marker_list = U_BoolList(isPointer, NULL);
+    else
+      U_BoolListAppend(f->stack_marker_list, isPointer);
     f->stack_size += 1;
   } else {
     Temp_temp t = Temp_newtemp();
@@ -125,7 +135,8 @@ F_access F_allocLocal(F_frame f, bool escape, bool isPointer) {
   return ret;
 }
 
-F_frame F_newFrame(Temp_label name, U_boolList formals) {
+F_frame F_newFrame(Temp_label name, U_boolList escape_list,
+                   U_boolList isPointerList) {
   debug2("'%s'\n", Temp_labelstring(name));
   F_frame frame = checked_malloc(sizeof(*frame));
   frame->frame_label = name;
@@ -133,21 +144,15 @@ F_frame F_newFrame(Temp_label name, U_boolList formals) {
   bool escape;
   frame->formals_list = NULL;
   frame->locals_list = NULL;
+  frame->stack_marker_list = isPointerList;
 
-  if (formals) { // the static links
-    escape = formals->head;
-    F_allocFormals(frame, escape, TODO);
-    // assert(frame->formals_list->head->kind == inFrame);
-    debug2("%s: installed static links\n", Temp_labelstring(name));
-    formals = formals->tail;
-  }
-
-  while (formals) {
-    escape = formals->head;
-    F_allocFormals(frame, escape, TODO);
+  while (escape_list) {
+    escape = escape_list->head;
+    F_allocFormals(frame, escape, isPointerList->head);
     debug2("%s: install new param (escape=%d)\n", Temp_labelstring(name),
            escape);
-    formals = formals->tail;
+    escape_list = escape_list->tail;
+    isPointerList = isPointerList->tail;
   }
 
   debug2("finish %s\n", Temp_labelstring(name));
@@ -155,9 +160,11 @@ F_frame F_newFrame(Temp_label name, U_boolList formals) {
 }
 
 Temp_label F_name(F_frame f) { return f->frame_label; }
+int F_getOffset(F_access a) { return a->u.offset; }
 
 F_accessList F_formals(F_frame f) { return f->formals_list; }
 F_accessList F_locals(F_frame f) { return f->locals_list; }
+U_boolList F_stack_markers(F_frame f) { return f->stack_marker_list; }
 
 void F_printAccess(F_access access) {
   assert(access);
@@ -166,6 +173,18 @@ void F_printAccess(F_access access) {
   } else {
     debug("Temp Reg[%d]\n", access->u.reg->num);
   }
+}
+
+F_ptrMap F_newPtrMap(Temp_label l) {
+  static Temp_label prev_label = NULL;
+  if (prev_label == NULL)
+    prev_label = Temp_namedlabel("ptrMapHead");
+  F_ptrMap ptrMap = checked_malloc(sizeof(*ptrMap));
+  ptrMap->l = l;
+  ptrMap->prev = prev_label;
+  ptrMap->key = Temp_newtemp();
+  prev_label = l;
+  return ptrMap;
 }
 
 string F_frameLabel(F_frame f) { return Temp_labelstring(f->frame_label); }
@@ -308,6 +327,7 @@ static Temp_tempList saveCalleeRegs(AS_instrList funEntry, Temp_tempList regs) {
     return NULL;
   char buf[80];
   Temp_temp t = Temp_newtemp();
+  t->isPointer = false;
   S("mv `d0, `s0 # save callee reg %s to T%d", Temp_look(F_tempMap, regs->head),
     t->num);
   AS_splice(funEntry,
@@ -383,6 +403,7 @@ AS_proc F_procEntryExit3(F_frame frame, AS_instrList body) {
   snprintf(buf, 80, "#PROCEDURE %s\n", S_name(frame->frame_label));
   int frameSize = frame->stack_size * F_wordSize;
   S("addi sp, sp, -%d", frameSize);
+  assert(F_wordSize == 4); // change the code!
   AS_instrList insert_entry =
       AS_InstrList(AS_Oper("mv t6, fp # save frame pointer", NULL, NULL, NULL),
                    AS_InstrList(AS_Oper("mv fp, sp", NULL, NULL, NULL),
@@ -390,6 +411,14 @@ AS_proc F_procEntryExit3(F_frame frame, AS_instrList body) {
                                                      L(SP, NULL), NULL),
                                              NULL)));
 
+  int i = 0;
+  for (U_boolList l = frame->stack_marker_list; l; l = l->tail,i++) {
+    if (l->head) {
+      S("sw zero, -%d(fp) # init pointer", i * F_wordSize);
+      AS_splice(insert_entry,
+                AS_InstrList(AS_Oper(strdup(buf), NULL, NULL, NULL), NULL));
+    }
+  }
 
   S("addi sp, sp, %d # restore stack pointer", frameSize);
   AS_instrList insert_exit =
@@ -421,6 +450,8 @@ Temp_temp F_SP(void) {
 int F_isInReg(F_access a) { return a->kind == inReg; }
 
 Temp_tempList F_args(void) { return argRegs; }
+Temp_temp F_A3(void) {return A3;}
+Temp_temp F_A1(void) { return A1;}
 
 Temp_tempList F_callerSaves(void) {
   initRegMap();

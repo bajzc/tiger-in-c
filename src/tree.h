@@ -4,10 +4,13 @@
  */
 #ifndef TREE_H
 #define TREE_H
+
 #include "temp.h"
+
 typedef struct T_stm_ *T_stm;
 typedef struct T_exp_ *T_exp;
 typedef struct T_expList_ *T_expList;
+typedef struct T_frameInfo_ *T_frameInfo;
 struct T_expList_ {
   T_exp head;
   T_expList tail;
@@ -87,7 +90,7 @@ struct T_exp_ {
       T_expList args;
     } CALL;
   } u;
-  bool isPointer;
+  bool isCallInit; // set if this exp is a call to array/recordInit
 };
 
 T_expList T_ExpList(T_exp head, T_expList tail);

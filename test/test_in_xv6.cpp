@@ -2,6 +2,9 @@
 #include <gtest/gtest.h>
 #include <test_utils.h>
 
+// run the whole compiling process changes some static values, which will break
+// later compilation
+// So uncomment single test at once
 TEST(xv6, merge) {
   // char *argv[2] = {"./tigerc", "../sample/merge.tig"};
   // EXPECT_EQ(pseudo_main(2, argv), 0);

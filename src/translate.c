@@ -20,8 +20,9 @@ static patchList joinPatch(patchList first, patchList second);
 static T_exp unEx(Tr_exp e);
 static struct Cx unCx(Tr_exp e);
 
-Tr_exp Tr_simpleVar(Tr_access access, Tr_level level) {
+Tr_exp Tr_simpleVar(Tr_access access, Tr_level level, bool isCallInit) {
   T_exp f = F_Exp(access->access, T_Temp(F_FP()));
+  f->isCallInit = isCallInit;
   if (access->level != level) {
     debug("%p : %p access via static links\n", access->level, level);
     Tr_level l = level->parent;
@@ -41,7 +42,8 @@ Tr_exp Tr_fieldVar(Tr_exp record, int offset) {
   if (record->kind != Tr_ex)
     assert(0);
   return Tr_Ex(
-      T_Mem(T_Binop(T_plus, unEx(record), T_Const(F_wordSize * offset))));
+      T_Mem(
+      T_Binop(T_plus, unEx(record), T_Const(F_wordSize * offset))));
 }
 
 // a[i] -> MEM(+(MEM(a)), BINOP(MUL, i + 1, CONST WordSize))
@@ -92,6 +94,7 @@ Tr_exp Tr_callExp(Temp_label name, Tr_exp *argv, int argc,
   if (isExternCall) {
     return Tr_Ex(T_Call(T_Name(name), l_head));
   }
+  // isPointer is handled in canon.c:reorder()
   return Tr_Ex(T_Call(T_Name(name), T_ExpList(static_link, l_head)));
 }
 
@@ -140,8 +143,9 @@ Tr_exp Tr_eqExpString(Tr_exp l, A_oper op, Tr_exp r) {
  */
 Tr_exp Tr_recordExp(Tr_exp *exps, int size, Ty_ty *types) {
   assert(size > 0);
-  T_exp r = T_Temp(Temp_newtemp());
-  r->isPointer = true;
+  Temp_temp t = Temp_newtemp();
+  t->isPointer = true;
+  T_exp r = T_Temp(t);
 
   char *descriptor = checked_malloc(size);
   char *p = descriptor;
@@ -172,14 +176,30 @@ Tr_exp Tr_recordExp(Tr_exp *exps, int size, Ty_ty *types) {
               NULL);
   }
   *rightmost = ((*rightmost)->u.SEQ.left);
+  res_head->isCallInit = true;
   return Tr_Ex(res_head);
 }
 
-Tr_exp Tr_arrayExp(Tr_exp init, Tr_exp size, bool isPointer) {
-  return Tr_Ex(F_externalCall(
-      "initArray",
-      T_ExpList(unEx(size),
-                T_ExpList(unEx(init), T_ExpList(T_Const(isPointer), NULL)))));
+Tr_exp Tr_arrayExp(Tr_exp init, Tr_exp size, Ty_ty init_ty) {
+  Temp_temp t = Temp_newtemp();
+  t->isPointer = true;
+  Tr_exp str;
+  if (IS_POINTER(init_ty))
+   str = Tr_stringExp("p");
+  else
+    str = Tr_stringExp("n");
+
+  assert(str->kind == Tr_ex);
+
+  T_exp ex = T_Eseq(
+      T_Move(T_Temp(t),
+             F_externalCall(
+                 "initArray",
+                 T_ExpList(unEx(size),
+                           T_ExpList(unEx(init), T_ExpList(str->u.ex, NULL))))),
+      T_Temp(t));
+  ex->isCallInit = true;
+  return Tr_Ex(ex);
 }
 
 Tr_exp Tr_seqExp(Tr_exp *seqs, int size) {
@@ -202,7 +222,9 @@ Tr_exp Tr_seqExp(Tr_exp *seqs, int size) {
 }
 
 Tr_exp Tr_assignExp(Tr_exp lvalue, Tr_exp exp) {
-  return Tr_Nx(T_Move(unEx(lvalue), unEx(exp)));
+  T_exp e = unEx(exp);
+  T_exp l = unEx(lvalue);
+  return Tr_Nx(T_Move(l, e));
 }
 
 Tr_exp Tr_ifExp(Tr_exp test, Tr_exp then, Tr_exp elsee) {
@@ -353,7 +375,6 @@ static T_exp unEx(Tr_exp e) {
     case Tr_cx: {
       Temp_temp r = Temp_newtemp();
       Temp_label t = Temp_newlabel(), f = Temp_newlabel();
-      // FIXME need a merge here
       doPatch(e->u.cx.trues, t);
       doPatch(e->u.cx.falses, f);
       return T_Eseq(
@@ -425,9 +446,7 @@ Tr_level Tr_outermost(void) {
     t->parent = NULL;
     t->name = Temp_namedlabel("prelude");
     t->formals = NULL;
-    // TODO: init the frame pointer before entering "global"
-    // We need the static link in global!
-    t->frame = F_newFrame(Temp_namedlabel("_start"), U_BoolList(TRUE, NULL));
+    t->frame = F_newFrame(Temp_namedlabel("_start"), NULL, NULL);
     OUTER_MOST = t;
     return t;
   }
@@ -441,27 +460,30 @@ Tr_access Tr_allocLocal(Tr_level level, bool escape, bool isPointer) {
     debug("alloc to global scape\n");
 #endif
   t->level = level;
-  t->access = F_allocLocal(level->frame, escape, TODO);
+  t->access = F_allocLocal(level->frame, escape, isPointer);
   return t;
 }
 
-Tr_level Tr_newLevel(Tr_level parent, Temp_label name, U_boolList formals) {
+Tr_level Tr_newLevel(Tr_level parent, Temp_label name, U_boolList escape_list,
+                     U_boolList isPointer_list) {
   Tr_level level = checked_malloc(sizeof(*level));
   level->parent = parent;
   level->name = name;
-  level->formals = formals;
+  level->formals = escape_list;
   // add the static links to the first place, rest is in order
-  level->frame = F_newFrame(name, U_BoolList(TRUE, formals));
+  level->frame = F_newFrame(name, U_BoolList(TRUE, escape_list),
+                            U_BoolList(false, isPointer_list));
   return level;
 }
 
-Tr_level Tr_libFunLevel(Temp_label name, U_boolList formals) {
+Tr_level Tr_libFunLevel(Temp_label name, U_boolList escape_list,
+                        U_boolList isPointer_list) {
   Tr_level level = checked_malloc(sizeof(*level));
   level->parent = Tr_outermost();
   level->name = name;
-  level->formals = formals;
+  level->formals = escape_list;
   // add the static links to the first place, rest is in order
-  level->frame = F_newFrame(name, formals);
+  level->frame = F_newFrame(name, escape_list, isPointer_list);
   return level;
 }
 

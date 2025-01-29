@@ -3,14 +3,22 @@
 #ifndef FRAME_H
 #define FRAME_H
 
-#include "types.h"
 #include "assem.h"
 #include "table.h"
 #include "temp.h"
 #include "tree.h"
+#include "types.h"
 
 typedef struct F_frame_ *F_frame;
 typedef struct F_access_ *F_access;
+
+typedef struct F_ptrMap_ *F_ptrMap;
+struct F_ptrMap_ {
+  Set live_regs; // Set<Temp_temp>
+  F_frame frame;
+  Temp_label l, prev;
+  Temp_temp key;
+};
 
 typedef struct F_accessList_ *F_accessList;
 struct F_accessList_ {
@@ -53,11 +61,15 @@ F_frag F_StringFrag(Temp_label label, string str);
 F_frag F_ProcFrag(T_stm body, F_frame frame);
 F_fragList F_FragList(F_frag head, F_fragList tail);
 
-F_frame F_newFrame(Temp_label name, U_boolList formals);
+F_frame F_newFrame(Temp_label name, U_boolList escape_list,
+                   U_boolList isPointerList);
 Temp_label F_name(F_frame f);
+F_ptrMap F_newPtrMap(Temp_label l);
 
+int F_getOffset(F_access a);
 F_accessList F_formals(F_frame f);
 F_accessList F_locals(F_frame f);
+U_boolList F_stack_markers(F_frame f);
 F_access F_allocLocal(F_frame f, bool escape, bool isPointer);
 
 void F_printAccess(F_access f);
@@ -78,5 +90,7 @@ AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame, Set last_instr);
 AS_proc F_procEntryExit3(F_frame frame, AS_instrList body);
 
 F_accessList F_reverseList(F_accessList list);
+Temp_temp F_A3(void);
+Temp_temp F_A1(void);
 
 #endif
