@@ -39,9 +39,6 @@ static Temp_tempList munchArgs(int n, T_expList args, Tr_accessList formals,
                  L(r, NULL), NULL));
   } else {
     right = munchArgs(n + 1, args->tail, formals->tail, argRegs);
-    /* TODO:
-     * Do we need to record pointers passed by stack?
-     */
     emit(AS_Oper("addi `d0, `s0, -4 # grow up stack", L(F_SP(), NULL),
                  L(F_SP(), NULL), NULL));
     // not sure if we need to use AS_Move here. If this instruction is

@@ -607,7 +607,6 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level level,
       E_enventry var = E_VarEntry(
           e.ty, Tr_allocLocal(level, d->u.var.escape, IS_POINTER(e.ty)));
       S_enter(venv, d->u.var.var, var);
-      // FIXME isPointer update
       return Tr_assignExp(
           Tr_simpleVar(var->u.var.access, level, IS_POINTER(e.ty)), e.exp);
     }
