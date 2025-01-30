@@ -446,7 +446,14 @@ Tr_level Tr_outermost(void) {
     t->parent = NULL;
     t->name = Temp_namedlabel("prelude");
     t->formals = NULL;
-    t->frame = F_newFrame(Temp_namedlabel("_start"), NULL, NULL);
+    /*
+     * calling from C program
+     * the current SP cannot be changed
+     * SP + 4 is used to store 0 to terminate traverse through static link
+     */
+    t->frame = F_newFrame(Temp_namedlabel("_start"),
+                          U_BoolList(1, U_BoolList(1, NULL)),
+                          U_BoolList(0, U_BoolList(0, NULL)));
     OUTER_MOST = t;
     return t;
   }

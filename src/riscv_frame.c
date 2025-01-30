@@ -401,18 +401,35 @@ AS_instrList F_procEntryExit2(AS_instrList body, F_frame frame,
 AS_proc F_procEntryExit3(F_frame frame, AS_instrList body) {
   char buf[80];
   snprintf(buf, 80, "#PROCEDURE %s\n", S_name(frame->frame_label));
-  int frameSize = frame->stack_size * F_wordSize;
-  S("addi sp, sp, -%d", frameSize);
-  assert(F_wordSize == 4); // change the code!
-  AS_instrList insert_entry =
-      AS_InstrList(AS_Oper("mv t6, fp # save frame pointer", NULL, NULL, NULL),
-                   AS_InstrList(AS_Oper("mv fp, sp", NULL, NULL, NULL),
-                                AS_InstrList(AS_Oper(strdup(buf), L(SP, NULL),
-                                                     L(SP, NULL), NULL),
-                                             NULL)));
+  int frameSize = 0;
+  AS_instrList insert_entry = NULL;
+  if (strcmp(Temp_labelstring(frame->frame_label), "_start") == 0) {
+    frameSize = (frame->stack_size - 1) * F_wordSize;
+    S("addi sp, sp, -%d", frameSize);
+    insert_entry = AS_InstrList(
+        AS_Oper("mv t6, fp # save frame pointer", NULL, NULL, NULL),
+        AS_InstrList(
+            AS_Oper(
+                "addi fp, sp, -4 # only for _start, there is no static link",
+                NULL, NULL, NULL),
+            AS_InstrList(AS_Oper("sw zero, 0(fp) # set _start's static to 0",
+                                 NULL, NULL, NULL),
+                         AS_InstrList(AS_Oper(strdup(buf), L(SP, NULL),
+                                              L(SP, NULL), NULL),
+                                      NULL))));
+  } else {
+    frameSize = frame->stack_size * F_wordSize;
+    S("addi sp, sp, -%d", frameSize);
+    insert_entry = AS_InstrList(
+        AS_Oper("mv t6, fp # save frame pointer", NULL, NULL, NULL),
+        AS_InstrList(
+            AS_Oper("mv fp, sp", NULL, NULL, NULL),
+            AS_InstrList(AS_Oper(strdup(buf), L(SP, NULL), L(SP, NULL), NULL),
+                         NULL)));
+  }
 
   int i = 0;
-  for (U_boolList l = frame->stack_marker_list; l; l = l->tail,i++) {
+  for (U_boolList l = frame->stack_marker_list; l; l = l->tail, i++) {
     if (l->head) {
       S("sw zero, -%d(fp) # init pointer", i * F_wordSize);
       AS_splice(insert_entry,
