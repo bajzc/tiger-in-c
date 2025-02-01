@@ -206,7 +206,7 @@ void AS_print(FILE *out, AS_instr i, Temp_map m) {
       F_ptrMap ptrMap = TAB_look(AS_ptrMapTable, i->u.GC.ptrMapLabel);
       int offset = 0;
 #if DEBUG
-      fprintf(out, "\t# ptrMap:%s parent: %s  pointers: ", i->u.GC.assem,
+      fprintf(out, "\t# ptrMap: %s parent: %s  pointers: ", i->u.GC.assem,
               Temp_labelstring(ptrMap->prev));
       SET_FOREACH(ptrMap->live_regs, tptr) {
         Temp_temp t = *tptr;
@@ -224,7 +224,7 @@ void AS_print(FILE *out, AS_instr i, Temp_map m) {
 
       fprintf(out, "\n");
       // reg a3 is free to use
-      fprintf(out, "\tla a3, %s                     # load ptrMap\n",
+      fprintf(out, "\tla a3, %s                    # load ptrMap\n",
               Temp_labelstring(ptrMap->l));
       fprintf(out, "\tsw fp, 0(a3)                  # store frame pointer\n");
       offset = 4;

@@ -1,11 +1,11 @@
 #ifndef UTIL_H
 #define UTIL_H
 #include <assert.h>
-#include <stdio.h>
 #include <stdarg.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 
 #ifndef DEBUG
 #define DEBUG 0

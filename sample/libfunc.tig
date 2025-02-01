@@ -9,6 +9,6 @@ in
   printInt(size(str));print("\n");
   print(substring(str, ord("l"), 2));print("\n");
   printInt(str <> str1);print("\n");
-  (for i:= 0 to 4 do (printInt(i+1);print(strs[i])));
+  (for i := 0 to 4 do (printInt(i+1);print(strs[i])));
   print(substring(str, ord("d"), 4));print("\n") /* error */
 end

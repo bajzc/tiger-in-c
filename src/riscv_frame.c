@@ -467,8 +467,8 @@ Temp_temp F_SP(void) {
 int F_isInReg(F_access a) { return a->kind == inReg; }
 
 Temp_tempList F_args(void) { return argRegs; }
-Temp_temp F_A3(void) {return A3;}
-Temp_temp F_A1(void) { return A1;}
+Temp_temp F_A3(void) { return A3; }
+Temp_temp F_A1(void) { return A1; }
 
 Temp_tempList F_callerSaves(void) {
   initRegMap();

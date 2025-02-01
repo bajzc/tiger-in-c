@@ -80,7 +80,7 @@ ptrMap:
 .word stackPointerNum
 ...                       # stack offset (positive numbers)
  */
-static void doGC(FILE* out) {
+static void doGC(FILE *out) {
   fprintf(out, ".data\n");
   fprintf(out, ".align 2\n");
   SET_FOREACH(AS_GC_Maps, iptr) {
@@ -88,8 +88,9 @@ static void doGC(FILE* out) {
     F_ptrMap ptrMap = TAB_look(AS_ptrMapTable, instr->u.GC.ptrMapLabel);
     fprintf(out, "%s:\n", Temp_labelstring(ptrMap->l));
     fprintf(out, "\t.word\t0\t#frame pointer\n"); // frame pointer
-    fprintf(out, "\t.word\t%s\t#previous map\n", Temp_labelstring(ptrMap->prev)); // L_prev
-    fprintf(out, "\t.word\t%d\t#key\n", ptrMap->key->num);
+    fprintf(out, "\t.word\t%s\t#previous map\n",
+            Temp_labelstring(ptrMap->prev)); // L_prev
+    fprintf(out, "\t.word\t0x%x\t#key\n", (uint32_t) ptrMap->frame);
     int regNum = 0;
     SET_FOREACH(ptrMap->live_regs, tptr) {
       Temp_temp t = *tptr;
@@ -97,7 +98,7 @@ static void doGC(FILE* out) {
         regNum++;
     }
     fprintf(out, "\t.word\t%d\t#regNum\n", regNum);
-    for (int  i = 0 ;i<regNum;i++) {
+    for (int i = 0; i < regNum; i++) {
       fprintf(out, "\t.word\t0\n");
     }
     int stackPointerNum = 0;
@@ -107,13 +108,13 @@ static void doGC(FILE* out) {
         stackPointerNum++;
       l = l->tail;
     }
-    fprintf(out, "\t.word\t%d\t#stackPointer\n", stackPointerNum);
+    fprintf(out, "\t.word\t%d\t#stackPointerNum\n", stackPointerNum);
     l = F_stack_markers(ptrMap->frame);
     int i = 0;
     while (l) {
       if (l->head)
         fprintf(out, "\t.word\t%d\t#stack offset\n", i);
-      l=l->tail;
+      l = l->tail;
       i++;
     }
   }

@@ -425,8 +425,8 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level level,
           transExp(venv, tenv, a->u.array.init, level, break_label);
       debug("arrayExp: init.ty: %p->%s\n", init.ty, str_ty[init.ty->kind]);
       if (init.ty != array->u.array)
-        EM_error(a->pos, "different array type (%s : %s)\n", str_ty[init.ty->kind],
-                 str_ty[array->u.array->kind]);
+        EM_error(a->pos, "different array type (%s : %s)\n",
+                 str_ty[init.ty->kind], str_ty[array->u.array->kind]);
       return expTy(Tr_arrayExp(init.exp, size.exp, init.ty), array);
     }
     default: assert(0);

@@ -1,0 +1,17 @@
+let
+  type list = { link: list, key: int }
+  type intArray = array of int
+  type listArray = array of list
+  var emptyList := list{ link = nil, key = 0 }
+  var lists := listArray[100] of emptyList
+  var i := 0
+  function loop() =
+    (lists[0] := list{ link = lists[3], key = i };
+     lists[1] := list{ link = lists[0], key = i };
+     lists[2] := list{ link = lists[1], key = i };
+     lists[3] := list{ link = lists[2], key = i };
+     i := i+1)
+in
+  while i < 1000 do loop()
+/* should NOT free in this condition */
+end

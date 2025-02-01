@@ -42,8 +42,7 @@ Tr_exp Tr_fieldVar(Tr_exp record, int offset) {
   if (record->kind != Tr_ex)
     assert(0);
   return Tr_Ex(
-      T_Mem(
-      T_Binop(T_plus, unEx(record), T_Const(F_wordSize * offset))));
+      T_Mem(T_Binop(T_plus, unEx(record), T_Const(F_wordSize * offset))));
 }
 
 // a[i] -> MEM(+(MEM(a)), BINOP(MUL, i + 1, CONST WordSize))
@@ -185,9 +184,9 @@ Tr_exp Tr_arrayExp(Tr_exp init, Tr_exp size, Ty_ty init_ty) {
   t->isPointer = true;
   Tr_exp str;
   if (IS_POINTER(init_ty))
-   str = Tr_stringExp("p");
+    str = Tr_stringExp("ap");
   else
-    str = Tr_stringExp("n");
+    str = Tr_stringExp("an");
 
   assert(str->kind == Tr_ex);
 

@@ -117,10 +117,10 @@ static void munchStm(T_stm s) {
             emit(AS_GC(ptrMapLabel));
 
             if (strcmp(funName, "initArray") == 0) {
-              S("la `d0, %s # load ptrMap", Temp_labelstring(ptrMapLabel));
+              S("la `d0, %s # pass ptrMap", Temp_labelstring(ptrMapLabel));
               emit(AS_Oper(strdup(buf), L(F_A3(), NULL), NULL, NULL));
             } else {
-              S("la `d0, %s # load ptrMap", Temp_labelstring(ptrMapLabel));
+              S("la `d0, %s # pass ptrMap", Temp_labelstring(ptrMapLabel));
               emit(AS_Oper(strdup(buf), L(F_A1(), NULL), NULL, NULL));
             }
 
@@ -129,13 +129,13 @@ static void munchStm(T_stm s) {
 
             F_ptrMap ptrMap = F_newPtrMap(ptrMapLabel);
             TAB_enter(AS_ptrMapTable, ptrMapLabel, ptrMap);
-            S("# ptrMap Label %s", Temp_labelstring(ptrMapLabel));
+            S(" # ptrMap Label %s", Temp_labelstring(ptrMapLabel));
             emit(AS_Oper(strdup(buf), NULL, NULL, NULL));
           } else {
             S("call %s", Temp_labelstring(src->u.CALL.fun->u.NAME));
+            emit(AS_Oper(strdup(buf), F_callerSaves(), l, NULL));
           }
 
-          emit(AS_Oper(strdup(buf), F_callerSaves(), l, NULL));
           emit(AS_Move("mv `d0, `s0 # copy return value", L(dst->u.TEMP, NULL),
                        L(F_RV(), NULL)));
 

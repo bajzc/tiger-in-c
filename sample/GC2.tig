@@ -1,0 +1,16 @@
+let
+  type list = { link: list, key: int }
+  type intArray = array of int
+  type listArray = array of list
+  var emptyList := list{ link = nil, key = 0 }
+  var lists := listArray[1000] of emptyList
+in
+  for i := 0 to 1000
+  do(
+      lists[0] := list{ link = lists[3], key = i };
+      lists[1] := list{ link = lists[0], key = i };
+      lists[2] := list{ link = lists[1], key = i };
+      lists[3] := list{ link = nil, key = i }
+    )
+/* should be able to free memory now */
+end
