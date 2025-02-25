@@ -23,7 +23,9 @@ You need to have the necessary build tools installed on your system, including b
 ```shell
 git clone https://github.com/bajzc/tiger-in-c.git
 cd tiger-in-c
-make
+cmake -B build -G 'Unix Makefiles'
+make -C build tigerc
+./build/tigerc
 ```
 
 And the compiler named ``a.out`` will be inside the top dir, here is a sample program you can try:
@@ -64,7 +66,7 @@ end
 
 Copy it to a file somewhere, and compile it!
 ```shell
-./a.out path/to/the/program
+./tigerc path/to/the/program
 ```
 
 And now you should have an assembly file like ``queen.tig.s``. However, this is not the file you can directly
