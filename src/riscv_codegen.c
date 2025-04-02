@@ -76,7 +76,8 @@ static void munchStm(T_stm s) {
           T_exp e1 = dst->u.MEM->u.BINOP.left, e2 = src;
           S("sw `s1, %d(`s0) # MOVE(MEM(BINOP(PLUS,e1,CONST(i))),e2)",
             dst->u.MEM->u.BINOP.right->u.CONST);
-          emit(AS_Oper(strdup(buf), NULL,
+          char *dup = strdup(buf);
+          emit(AS_Oper(dup, NULL,
                        L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
         } else if (dst->u.MEM->kind == T_BINOP &&
                    dst->u.MEM->u.BINOP.op == T_plus &&
@@ -85,7 +86,8 @@ static void munchStm(T_stm s) {
           T_exp e1 = dst->u.MEM->u.BINOP.right, e2 = src;
           S("sw `s1, %d(`s0) # MOVE(MEM(BINOP(PLUS, CONST(i),e1)),e2)",
             dst->u.MEM->u.BINOP.left->u.CONST);
-          emit(AS_Oper(strdup(buf), NULL,
+          char *dup = strdup(buf);
+          emit(AS_Oper(dup, NULL,
                        L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
         } else {
           /* MOVE(MEM(e1),e2) */
@@ -227,7 +229,8 @@ static Temp_temp munchExp(T_exp e) {
           case T_minus: S("addi `d0, `s0, -%d", constt); break;
           default: assert(0);
         }
-        emit(AS_Oper(strdup(buf), L(r, NULL), L(munchExp(var), NULL), NULL));
+        char *dup = strdup(buf);
+        emit(AS_Oper(dup, L(r, NULL), L(munchExp(var), NULL), NULL));
         return r;
       } else {
         /* BINOP(*,e1,e2) */
@@ -264,12 +267,14 @@ static Temp_temp munchExp(T_exp e) {
         if (op == T_plus && e2->kind == T_CONST) {
           /* MEM(BINOP(PLUS,e1,CONST(i))) */
           S("lw `d0, %d(`s0) # MEM(BINOP(PLUS,e1,CONST(i)))", e2->u.CONST);
-          emit(AS_Oper(strdup(buf), L(r, NULL), L(munchExp(e1), NULL), NULL));
+          char *dup = strdup(buf);
+          emit(AS_Oper(dup, L(r, NULL), L(munchExp(e1), NULL), NULL));
           return r;
         } else if (op == T_plus && e1->kind == T_CONST) {
           /* MEM(BINOP(PLUS,CONST(i),e2)) */
           S("lw `d0, %d(`s0) # MEM(BINOP(PLUS,CONST(i),e2))", e1->u.CONST);
-          emit(AS_Oper(strdup(buf), L(r, NULL), L(munchExp(e2), NULL), NULL));
+          char *dup = strdup(buf);
+          emit(AS_Oper(dup, L(r, NULL), L(munchExp(e2), NULL), NULL));
           return r;
         } else {
           /* MEM(e) */
